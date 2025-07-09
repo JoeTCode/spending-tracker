@@ -29,10 +29,21 @@ async function updateTransactions(token, data) {
         {
             headers: {
                 "authorization": `Bearer ${token}`
-            },
-            timeout: 2000
+            }
         }
     );
 };
 
-export { getTransactions, uploadTransactions, updateTransactions }
+async function deleteTransaction(token, data) {
+    await axios.delete(
+        'http://localhost:5000/api/transactions/delete', 
+        {
+            headers: {
+                "authorization": `Bearer ${token}`
+            },
+            data: data
+        }
+    );
+};
+
+export { getTransactions, uploadTransactions, updateTransactions, deleteTransaction }

@@ -100,6 +100,16 @@ app.put('/api/transactions/update', checkJwt, async (req, res) => {
     };
 });
 
+app.delete('/api/transactions/delete', checkJwt, async (req, res) => {
+    const deletedRow = req.body;
+    try {
+        await Transactions.deleteOne({ _id: deletedRow._id });
+        res.sendStatus(200);
+    } catch (err) {
+        res.status(500).send('Error deleting transaction');
+    };
+});
+
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
 });
