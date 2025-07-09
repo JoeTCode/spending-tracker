@@ -13,6 +13,7 @@ const formatHeaders = (headers, token) => {
         const obj = {}
         if (header === deleteRowName) {
             obj['field'] = header
+            obj['width'] = 90
             obj['cellRenderer'] = (props) => {
                 const deleteRow = async () => {
                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })

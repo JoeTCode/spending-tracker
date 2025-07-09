@@ -88,11 +88,10 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
 });
 
 app.put('/api/transactions/update', checkJwt, async (req, res) => {
-    const transactions = req.body.data;
+    const transaction = req.body.data;
     try {
-        for (const row of transactions) {
-            await Transactions.updateOne({ _id: row._id }, row);
-        };
+
+        await Transactions.updateOne({ _id: transaction._id }, transaction);
         return res.sendStatus(200);
     } catch (err) {
         console.error(err);
