@@ -14,6 +14,7 @@ const Navbar = () => {
             <div>
                 <Link to="/">Home</Link>
                 <Link to="/dashboard">Dashboard</Link>
+                <Link to="/transactions">Transactions</Link>
                 {isAuthenticated ? <button onClick={
                     () => logout({ logoutParams: { returnTo: 'http://localhost:5173/login' } })
                 }>Log Out</button> : null}

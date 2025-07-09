@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Auth0Provider } from '@auth0/auth0-react';
 import './index.css';
-import { Login, Upload, Dashboard } from './pages';
+import { Login, Upload, Dashboard, Transactions } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 
 createRoot(document.getElementById('root')).render(
@@ -35,6 +35,14 @@ createRoot(document.getElementById('root')).render(
                             <Dashboard />
                         </ProtectedRoute>
                     } 
+                />
+                <Route
+                    path='/transactions'
+                    element={
+                        <ProtectedRoute>
+                            <Transactions />
+                        </ProtectedRoute>
+                    }
                 />
             </Routes>
             </BrowserRouter>

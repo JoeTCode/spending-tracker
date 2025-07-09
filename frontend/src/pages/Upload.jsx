@@ -1,5 +1,5 @@
 import NavBar from '../components/NavBar';
-import uploadTransactions from '../api/transactions';
+import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
 import React, { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -13,8 +13,8 @@ const Upload = () => {
         const sendData = async () => {
             if (transactions.length > 0) {
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                await uploadTransactions(transactions, token);
-            }
+                await uploadTransactions(token, transactions);
+            };
         };
 
         sendData();
