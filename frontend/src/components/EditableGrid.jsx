@@ -13,7 +13,8 @@ const EditableGrid = ({ rowInfo, colNames }) => {
     
     // Row Data: The data to be displayed.
     const [ rowData, setRowData ] = useState(rowInfo);
-    const [ prevRow, setPrevRow ] = useState(null);
+    const [ undos, setUndos ] = useState([]);
+    const [ redos, setRedos ] = useState([]);
     // Column Definitions: Defines the columns to be displayed.
     const [ colDefs, setColDefs ] = useState(colNames);
     // const [editedRows, setEditedRows] = useState([]);
@@ -21,9 +22,6 @@ const EditableGrid = ({ rowInfo, colNames }) => {
     // Save edited cells to state
     const onCellValueChanged = async (params) => {
         const edited_row_data = params.data
-        console.log(params.oldValue)
-        console.log(params.column)
-        console.log(params.rowIndex)
         // setEditedRows(prev => {
         //     const updated = [...prev]
         //     const idx = updated.findIndex(val => val._id === edited_row_data._id);
@@ -38,10 +36,14 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         try {
             await updateTransactions(token, edited_row_data);
-            setPrevRow(params.oldValue)
-            const column = params.column.colId
-            const prevRow = {...edited_row_data, [column]: params.oldValue}
-            localStorage.setItem('prevRow', JSON.stringify(prevRow))
+            const column = params.column.colId;
+            setUndos((prev) => {
+                if (prev) {
+                    return [...prev, {...edited_row_data, [column]: params.oldValue}]
+                } else {
+                    return [{...edited_row_data, [column]: params.oldValue}]
+                };
+            });
         } catch (err) {
             console.error(err);
         };
@@ -62,15 +64,27 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                     getRowId={params => params.data._id}
                 />
             </div>
-            {prevRow ? (
+            {undos.length > 0 ? (
                 <button type='button' onClick={() => { 
-                    const data = localStorage.getItem('prevRow');
-                    const parsed = JSON.parse(data);
-                    console.log('Prev Row', parsed);
+                    console.log('Undos', undos);
+                    const undosCopy = [...undos];
+                    const mostRecentUndo = undosCopy.pop()
+
+                    // add row state before undo to redo
+                    for (const row of rowData) {
+                        if (row._id === mostRecentUndo._id) {
+                            setRedos(prev => {
+                                if (prev.length > 0) {
+                                    return [...prev, row];
+                                } else return [row];
+                            });
+                        };
+                    };
+
                     gridRef.current.api.applyTransaction({
-                        update: [parsed]
+                        update: [mostRecentUndo]
                     });
-                    setPrevRow(null);
+                    setUndos(undosCopy);
                 }}> Undo </button> )  
                 : ( <button disabled> Undo </button> )
             }
