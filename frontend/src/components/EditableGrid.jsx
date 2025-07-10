@@ -21,7 +21,8 @@ const EditableGrid = ({ rowInfo, colNames }) => {
 
     // Save edited cells to state
     const onCellValueChanged = async (params) => {
-        const edited_row_data = params.data
+        setRedos([]);
+        const edited_row_data = params.data;
         // setEditedRows(prev => {
         //     const updated = [...prev]
         //     const idx = updated.findIndex(val => val._id === edited_row_data._id);
@@ -37,6 +38,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         try {
             await updateTransactions(token, edited_row_data);
             const column = params.column.colId;
+            
             setUndos((prev) => {
                 if (prev) {
                     return [...prev, {...edited_row_data, [column]: params.oldValue}]
@@ -64,11 +66,12 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                     getRowId={params => params.data._id}
                 />
             </div>
+
             {undos.length > 0 ? (
-                <button type='button' onClick={() => { 
-                    console.log('Undos', undos);
-                    const undosCopy = [...undos];
-                    const mostRecentUndo = undosCopy.pop()
+                <button onClick={() => { 
+                    // console.log('Undos', undos);
+                    const undosPopped = [...undos];
+                    const mostRecentUndo = undosPopped.pop()
 
                     // add row state before undo to redo
                     for (const row of rowData) {
@@ -84,11 +87,45 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                     gridRef.current.api.applyTransaction({
                         update: [mostRecentUndo]
                     });
-                    setUndos(undosCopy);
+                    setRowData(prevRows => {
+                        return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
+                    });
+                    setUndos(undosPopped);
                 }}> Undo </button> )  
                 : ( <button disabled> Undo </button> )
             }
-            
+
+            {console.log('Redos', redos)}
+
+            {redos.length > 0 ? (
+                <button onClick={() => {
+                    const redosPopped = [...redos];
+                    const mostRecentRedo = redosPopped.pop();
+
+                    // add row state before redo to undo
+                    console.log(rowData)
+                    for (const row of rowData) {
+                        if (row._id === mostRecentRedo._id) {
+                            setUndos(prev => {
+                                if (prev.length > 0) {
+                                    return [...prev, row];
+                                } else return [row];
+                            });
+                        };
+                    };
+
+                    gridRef.current.api.applyTransaction({
+                        update: [mostRecentRedo]
+                    });
+                    setRowData(prevRows => {
+                        return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
+                    });
+                    setRedos(redosPopped);
+
+                }}> Redo </button>
+            ) : ( <button disabled > Redo </button> )}
+
+            {console.log('Undos', undos)}
             {/* <button onClick={saveEditedRows}>Save</button> */}
         </>
     )
