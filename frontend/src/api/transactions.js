@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-async function getTransactions(token, rangeType) {
-    const res = await axios.get(`http://localhost:5000/api/transactions/get?rangeType=${rangeType}`, {
+async function getTransactions(token, rangeType, selectedMonth=null) {
+    const res = await axios.get(`http://localhost:5000/api/transactions/get?rangeType=${rangeType}&selectedMonth=${selectedMonth}`, {
         headers: {
             "authorization": `Bearer ${token}`
         }

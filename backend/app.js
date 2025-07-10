@@ -28,12 +28,17 @@ const checkJwt = auth({
 });
 
 app.get('/api/transactions/get', checkJwt, async (req, res) => {
-    // d, w, m, q, y
+    // d, w, m, q, y, a
     // d = default (last 7 days), w = calendar week, m = calendar month, q = last 3 calendar months, y = calendar year
+    // a = all, vm = variable month
     // const rangeType = req.body.rangeType
 
     const uid = req.auth.payload.sub;
-    const { rangeType } = req.query;
+    const rangeType = req.query?.rangeType;
+    const selectedMonth = req.query?.selectedMonth;
+
+    let transactions;
+    
     switch (rangeType) {
         case 'd':
             const today = new Date();
@@ -43,9 +48,29 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
             const end = new Date(today);
             end.setHours(23, 59, 59, 999);
 
-            const transactions = await Transactions.find({
+            transactions = await Transactions.find({
                 uid: uid,
                 date: { $gte: weekAgo, $lte: end }
+            }).select('-__v');
+            return res.send({ transactions });
+        case 'a':
+            transactions = await Transactions.find({
+                uid: uid,
+            }).select('-__v');
+            return res.send({ transactions });
+        case 'vm':
+            // 6 - July
+            const monthStart = new Date();
+            monthStart.setMonth(selectedMonth);
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
+
+            const monthEnd = new Date(monthStart);
+            monthEnd.setMonth(monthEnd.getMonth() + 1)
+
+            transactions = await Transactions.find({
+                uid: uid,
+                date: { $gte: monthStart, $lte: monthEnd }
             }).select('-__v');
             return res.send({ transactions });
     };

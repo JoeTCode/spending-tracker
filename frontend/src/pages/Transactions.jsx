@@ -13,7 +13,7 @@ const formatHeaders = (headers, token) => {
         const obj = {}
         if (header === deleteRowName) {
             obj['field'] = header
-            obj['width'] = 90
+            obj['width'] = 80
             obj['cellRenderer'] = (props) => {
                 const deleteRow = async () => {
                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
@@ -31,7 +31,8 @@ const formatHeaders = (headers, token) => {
                             height: '20px',
                             filter: 'grayscale(100%)',
                             opacity: 0.7,
-                            marginTop: '10px'
+                            marginTop: '10px',
+                            marginLeft: '11px'
                         }}
                         onMouseDown={(e) => {
                             e.currentTarget.style.transform = 'translateY(1px)';
@@ -67,7 +68,7 @@ const Transactions = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions(token, 'd');
+            const data = await getTransactions(token, 'a');
             const tx = data.transactions
             const filtered = tx.map(({ date, ...rest }) => ({
                 ...rest,
