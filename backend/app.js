@@ -53,6 +53,7 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 date: { $gte: weekAgo, $lte: end }
             }).select('-__v');
             return res.send({ transactions });
+
         case 'm':
             const thisMonth = new Date();
             thisMonth.setDate(1);
@@ -68,6 +69,7 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 uid: uid,
             }).select('-__v');
             return res.send({ transactions });
+
         case 'vm':
             const monthStart = new Date();
             monthStart.setMonth(selectedMonth);
@@ -80,6 +82,21 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
             transactions = await Transactions.find({
                 uid: uid,
                 date: { $gte: monthStart, $lte: monthEnd }
+            }).select('-__v');
+            return res.send({ transactions });
+
+        case 'y':
+            const yearStart = new Date();
+            yearStart.setMonth(0);
+            yearStart.setDate(1);
+            yearStart.setHours(0, 0, 0, 0);
+
+            const yearEnd = new Date(yearStart);
+            yearEnd.setFullYear(yearEnd.getFullYear() + 1);
+
+            transactions = await Transactions.find({
+                uid: uid,
+                date: { $gte: yearStart, $lte: yearEnd }
             }).select('-__v');
             return res.send({ transactions });
     };
