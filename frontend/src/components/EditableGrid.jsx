@@ -28,6 +28,60 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         getToken();
         
     }, []);
+
+    async function undo() {
+        const undosPopped = [...undos];
+        const mostRecentUndo = undosPopped.pop()
+
+        // add row state before undo to redo
+        for (const row of rowData) {
+            if (row._id === mostRecentUndo._id) {
+                setRedos(prev => {
+                    if (prev.length > 0) {
+                        return [...prev, row];
+                    } else return [row];
+                });
+            };
+        };
+
+        gridRef.current.api.applyTransaction({
+            update: [mostRecentUndo]
+        });
+
+        await updateTransactions(token, mostRecentUndo);
+
+        setRowData(prevRows => {
+            return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
+        });
+        setUndos(undosPopped);
+    };
+
+    async function redo() {
+        const redosPopped = [...redos];
+        const mostRecentRedo = redosPopped.pop();
+
+        // add row state before redo to undo
+        for (const row of rowData) {
+            if (row._id === mostRecentRedo._id) {
+                setUndos(prev => {
+                    if (prev.length > 0) {
+                        return [...prev, row];
+                    } else return [row];
+                });
+            };
+        };
+
+        gridRef.current.api.applyTransaction({
+            update: [mostRecentRedo]
+        });
+        
+        await updateTransactions(token, mostRecentRedo);
+
+        setRowData(prevRows => {
+            return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
+        });
+        setRedos(redosPopped);
+    };
     
     // Save edited cells to state
     const onCellValueChanged = async (params) => {
@@ -65,67 +119,15 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                     getRowId={params => params.data._id}
                 />
             </div>
-
             {undos.length > 0 ? (
-                <button onClick={async () => { 
-                    const undosPopped = [...undos];
-                    const mostRecentUndo = undosPopped.pop()
-
-                    // add row state before undo to redo
-                    for (const row of rowData) {
-                        if (row._id === mostRecentUndo._id) {
-                            setRedos(prev => {
-                                if (prev.length > 0) {
-                                    return [...prev, row];
-                                } else return [row];
-                            });
-                        };
-                    };
-
-                    gridRef.current.api.applyTransaction({
-                        update: [mostRecentUndo]
-                    });
-
-                    await updateTransactions(token, mostRecentUndo);
-
-                    setRowData(prevRows => {
-                        return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
-                    });
-                    setUndos(undosPopped);
-                }}> Undo </button> )  
+                <button onClick={async () => { await undo() }}> Undo </button> )  
                 : ( <button disabled className='disabled-button'> Undo </button> )
             }
 
             
 
             {redos.length > 0 ? (
-                <button onClick={async () => {
-                    const redosPopped = [...redos];
-                    const mostRecentRedo = redosPopped.pop();
-
-                    // add row state before redo to undo
-                    for (const row of rowData) {
-                        if (row._id === mostRecentRedo._id) {
-                            setUndos(prev => {
-                                if (prev.length > 0) {
-                                    return [...prev, row];
-                                } else return [row];
-                            });
-                        };
-                    };
-
-                    gridRef.current.api.applyTransaction({
-                        update: [mostRecentRedo]
-                    });
-                    
-                    await updateTransactions(token, mostRecentRedo);
-
-                    setRowData(prevRows => {
-                        return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
-                    });
-                    setRedos(redosPopped);
-
-                }}> Redo </button>
+                <button onClick={async () => { await redo() }}> Redo </button>
             ) : ( <button disabled className='disabled-button'> Redo </button> )}
 
             <button onClick={async () => {
@@ -133,11 +135,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                 const prevMonth = new Date()
                 prevMonth.setMonth(selectedMonth - 1)
                 const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
-                const filtered = prevTransactions.transactions.map(({ date, ...rest }) => ({
-                    ...rest,
-                    date: date.split('T')[0]
-                }))
-                setRowData(filtered);
+                setRowData(prevTransactions);
                 setSelectedMonth(prev => {
                     return prev - 1;
                 });
@@ -149,11 +147,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                 const nextMonth = new Date()
                 nextMonth.setMonth(selectedMonth + 1)
                 const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
-                const filtered = nextTransactions.transactions.map(({ date, ...rest }) => ({
-                    ...rest,
-                    date: date.split('T')[0]
-                }))
-                setRowData(filtered);
+                setRowData(nextTransactions);
                 setSelectedMonth(prev => {
                     return prev + 1;
                 });
@@ -162,11 +156,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
             </button>
             <button onClick={async () => {
                 const allTransactions = await getTransactions(token, 'a');
-                const filtered = allTransactions.transactions.map(({ date, ...rest }) => ({
-                    ...rest,
-                    date: date.split('T')[0]
-                }))
-                setRowData(filtered);
+                setRowData(allTransactions);
             }}>
                 All
             </button>

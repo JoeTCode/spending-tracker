@@ -69,13 +69,8 @@ const Transactions = () => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             const data = await getTransactions(token, 'a');
-            const tx = data.transactions
-            const filtered = tx.map(({ date, ...rest }) => ({
-                ...rest,
-                date: date.split('T')[0]
-            }))
-            setTransactions(filtered);
-            const hdrs = Object.keys(tx[0]).slice(2);
+            setTransactions(data);
+            const hdrs = Object.keys(data[0]).slice(2);
             setHeaders(formatHeaders(hdrs, token));
         };
 

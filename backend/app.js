@@ -28,7 +28,7 @@ const checkJwt = auth({
 });
 
 app.get('/api/transactions/get', checkJwt, async (req, res) => {
-    // d, w, m, q, y, a
+    // d, w, m, q, y, a, vm
     // d = default (last 7 days), w = calendar week, m = calendar month, q = last 3 calendar months, y = calendar year
     // a = all, vm = variable month
     // const rangeType = req.body.rangeType
@@ -53,13 +53,22 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 date: { $gte: weekAgo, $lte: end }
             }).select('-__v');
             return res.send({ transactions });
+        case 'm':
+            const thisMonth = new Date();
+            thisMonth.setDate(1);
+            thisMonth.setHours(0, 0, 0, 0);
+            transactions = await Transactions.find({
+                uid: uid,
+                date: { $gte: thisMonth }
+            }).select('-__v');
+            return res.send({ transactions });
+
         case 'a':
             transactions = await Transactions.find({
                 uid: uid,
             }).select('-__v');
             return res.send({ transactions });
         case 'vm':
-            // 6 - July
             const monthStart = new Date();
             monthStart.setMonth(selectedMonth);
             monthStart.setDate(1);

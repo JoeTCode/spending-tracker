@@ -1,7 +1,6 @@
-import { NavBar } from '../components';
+import { NavBar, AreaFillChart, StackedBarChart } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getTransactions } from '../api/transactions';
 
 const gradientOffset = (data) => {
@@ -20,57 +19,79 @@ const gradientOffset = (data) => {
 
 const Dashboard = () => {
     const { getAccessTokenSilently } = useAuth0();
-
-    const [ transactions, setTransactions ] = useState([]);;
+    const [ vmTransactions, setVmTransactions ] = useState([]);;
     const [ offset, setOffset ] = useState(null);
+    const [ totalExpenses, setTotalExpenses ] = useState(0);
+    const [ totalIncome, setTotalIncome ] = useState(0);
+    const  [net, setNet ] = useState(0);
+    const [ dataRetrievalRange, setDataRetrievalRange]  = useState('vm');
+    const thisMonth = new Date();
+    const [ selectedMonth, setSelectedMonth ] = useState(thisMonth.getMonth());
+    const [ selectedYear, setSelectedYear ] = useState(thisMonth.getFullYear());
 
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions(token, 'd');
-            const tx = data.transactions
-            const filtered = tx.map(({ date, ...rest }) => ({
-                ...rest,
-                date: date.split('T')[0]
-            }))
-            setTransactions(filtered);
-            console.log(filtered)
-            setOffset(gradientOffset(filtered))
+            const data = await getTransactions(token, dataRetrievalRange, selectedMonth);
+            setVmTransactions(data);
+            console.log(data)
+            setOffset(gradientOffset(data))
         };
 
         retrieveData();
     
-    }, []);
+    }, [selectedMonth]);
+
+    useEffect(() => {
+        let expenses = 0;
+        let profit = 0;
+        setTotalExpenses(() => {
+            for (let tx of vmTransactions) {
+                if (tx.amount < 0) {
+                    expenses += tx.amount;
+                }  
+            }
+            return expenses;
+        })
+        setTotalIncome(() => {
+            for (let tx of vmTransactions) {
+                if (tx.amount > 0) {
+                    profit += tx.amount;
+                }  
+            }
+            return profit;
+        })
+        setNet(() => {return (expenses + profit).toFixed(2)})
+    }, [vmTransactions, selectedMonth])
 
     return (
         <>
             <NavBar />
             <h1>Dashboard</h1>
-            <ResponsiveContainer width={1000} height={600}>
-                <AreaChart
-                    width={500}
-                    height={400}
-                    data={transactions}
-                    margin={{
-                        top: 10,
-                        right: 30,
-                        left: 0,
-                        bottom: 0,
-                    }}
-                >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <defs>
-                        <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset={offset} stopColor="green" stopOpacity={1} />
-                            <stop offset={offset} stopColor="red" stopOpacity={1} />
-                        </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="amount" stroke="#000" fill="url(#splitColor)" />
-                </AreaChart>
-            </ResponsiveContainer>
+            
+            <AreaFillChart transactions={vmTransactions} offset={offset}  />
+            
+            <button onClick={async () => {
+                setSelectedMonth(prev => (prev - 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
+            }}>
+                Prev
+            </button>
+            <button onClick={async () => {
+                setSelectedMonth(prev => (prev + 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
+            }}>
+                Next
+            </button>
+
+            <div>
+                <div>
+                    {MONTHS[monthIdx]} {year}
+                </div>
+                Total Expenses: {totalExpenses} <br></br>
+                Total Income: {totalIncome} <br></br>
+                Net: {net}
+            </div>
+            
+            <StackedBarChart transactions={vmTransactions}/>
         </>
     )
 }
