@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
+    "@huggingface/transformers": "^3.7.2",
+    "@tensorflow/tfjs": "^4.22.0",
     "ag-grid-react": "^34.0.1",
     "axios": "^1.10.0",
+    "i": "^0.3.7",
+    "npm": "^11.5.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-papaparse": "^4.4.0",

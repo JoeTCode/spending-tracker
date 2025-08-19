@@ -3,6 +3,10 @@ import { auth } from 'express-oauth2-jwt-bearer';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import Transactions from './models/transactions.js';
+import GlobalModel from './models/globalModel.js';
+import * as tf from '@tensorflow/tfjs';
+import { pipeline } from '@huggingface/transformers';
+
 const app = express();
 const port = 5000;
 
@@ -105,13 +109,13 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
 app.post('/api/transactions/upload', checkJwt, async (req, res) => {
     const uid = req.auth.payload.sub;
     const transactions = req.body.data.slice(1);
-
+    const categories = req.body.predictedCategories;
     const filtered = transactions.filter(row => {
         return row.length == 6
     });
 
     // format the transactions data and create the document to be inserted to the database
-    const document = filtered.map(row => {
+    const document = filtered.map((row, i) => {
         const [ d, m, y ] = row[1].split('/');
         const formatted_date = `${y}-${m}-${d}`;
         return {
@@ -119,7 +123,7 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
             date: new Date(formatted_date),
             amount: parseFloat(row[3]),
             type: row[4],
-            category: '',
+            category: categories[i]?.predicted_category,
             description: row[5].split('\t')[0].trim()
         };
     });
@@ -159,6 +163,64 @@ app.delete('/api/transactions/delete', checkJwt, async (req, res) => {
         res.status(500).send('Error deleting transaction');
     };
 });
+
+
+async function getGlobalModelWeights(clientModelDate) {
+    // get latest global model weights
+    const globalModelWeights = await GlobalModel.findOne({ date: 'desc' });
+
+    if (!globalModelWeights) {
+        throw new Error('No global model weights found');
+    }
+    return globalModelWeights;
+};
+
+// TO-DO: MAKE SECURE - ONLY SERVER ACCESS NOT USER/NON-USER ACCESS
+app.get('/global-model/get-weights', checkJwt, async (req, res) => {
+    try {
+        const clientModelDate = req.query.clientDate; // usually GET requests use req.query instead of body
+        const globalWeights = await getGlobalModelWeights(clientModelDate=null);
+        res.status(200).json(globalWeights);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch global model weights" });
+    }
+});
+
+app.post('/global-model/weight-average', checkJwt, async (req, res) => {
+    const {clientWeights, clientModelDate } = req.body;
+
+    function weightAverage(globalWeights, clientWeights, eta=0.2) {
+        const newWeights = [];
+
+        for (let i = 0; i < globalWeights.length; i++) {
+            const gw = globalWeights[i];
+            const cw = clientWeights[i];
+            const updated = gw.mul(1 - eta).add(cw.mul(eta));
+            newWeights.push(updated);
+        };
+
+        return newWeights;
+    };
+
+    const globalWeights = getGlobalModelWeights(clientModelDate);
+    try {
+        const newWeights = weightAverage(globalWeights, clientWeights);
+
+        try {
+            const now = new Date();
+            await GlobalModel.insertOne({ newWeights, now });
+        } catch (err) {
+            console.error(err);
+        };
+
+        res.status(200).json(newWeights);
+
+    } catch (err) {
+        res.status(500).json({ error: "Failed to generate new model weights"});
+    };
+});
+
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);

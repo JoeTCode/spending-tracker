@@ -3,6 +3,8 @@ import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
 import { getTransactions, deleteTransaction } from '../api/transactions';
 
+const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
+
 // customise column format and functions for the EditableGrid cols argument
 const formatHeaders = (headers, token) => {
     const deleteRowName = 'Delete';
@@ -11,6 +13,13 @@ const formatHeaders = (headers, token) => {
 
     for (const header of headersCopy) {
         const obj = {}
+        if (header === 'category') {
+            obj['field'] = header
+            obj['cellEditor'] = 'agSelectCellEditor'
+            obj['cellEditorParams'] = {
+                values: CATEGORIES
+            }
+        }
         if (header === deleteRowName) {
             obj['field'] = header
             obj['width'] = 80
@@ -70,6 +79,7 @@ const Transactions = () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             const data = await getTransactions(token, 'a');
             setTransactions(data);
+            console.log(Object.keys(data[0]))
             const hdrs = Object.keys(data[0]).slice(2);
             setHeaders(formatHeaders(hdrs, token));
         };

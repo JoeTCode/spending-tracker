@@ -3,10 +3,14 @@ import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { getTransactions, updateTransactions } from '../api/transactions';
+import { train, predict } from '../utils/model';
+import { getClientModel, saveClientModel } from '../utils/clientModel';
+import { weightAverage } from '../api/globalModel';
 // import '../App.css';
 
 // Register all Community features
 ModuleRegistry.registerModules([AllCommunityModule]);
+const CORRECTIONSTRIGGER = 10;
 
 const EditableGrid = ({ rowInfo, colNames }) => {
     const gridRef = useRef();
@@ -19,6 +23,24 @@ const EditableGrid = ({ rowInfo, colNames }) => {
     const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
     // Column Definitions: Defines the columns to be displayed.
     const [ colDefs, setColDefs ] = useState(colNames);
+    const [ clientModel, setClientModel ] = useState(null);
+    const [correctionsCount, setCorrectionsCount] = useState(() => {
+        const saved = localStorage.getItem("count");
+        if (saved === null) {
+            localStorage.setItem("count", "0");
+            return 0;
+        }
+        return parseInt(saved);
+    });
+
+    const [corrections, setCorrections] = useState(() => {
+        const saved = localStorage.getItem("corrections");
+        if (saved === null) {
+            localStorage.setItem("corrections", JSON.stringify([]));
+            return [];
+        }
+        return JSON.parse(saved);
+    });
 
     useEffect(() => {
         const getToken = async () => {
@@ -28,6 +50,38 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         getToken();
         
     }, []);
+
+    // Set client model on page load - from local storage if available - else from db
+    useEffect(() => {
+        const setClientModelFunction = async () => {
+            const model = await getClientModel(token);
+            setClientModel(model);
+        };
+
+        setClientModelFunction();
+    }, []);
+
+    // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
+    // corrected/not-corrected transactions and perform federated averaging with the global model
+    useEffect(() => {
+        if (correctionsCount < CORRECTIONSTRIGGER) {
+            return -1;
+        } else {
+            const descriptions = corrections.map(correction => correction.description);
+            const categories = corrections.map(correction => correction.category);
+
+            const executeWeightAverage = async (model, descriptions, categories) => {
+                const model = await trainModel(model, descriptions, categories);
+                const weights = model.getWeights()
+                // post to weight averaging route
+                weightAverage(token, weights)
+            };
+            
+            const newModelWeights = executeWeightAverage(clientModel, descriptions, categories);
+            const model = saveClientModel(newModelWeights);
+            setClientModel(model);
+        };
+    }, [correctionsCount])
 
     async function undo() {
         const undosPopped = [...undos];
@@ -106,7 +160,6 @@ const EditableGrid = ({ rowInfo, colNames }) => {
 
     // On save button press, reflect changes to rows in db
     
-
     return (
         <>
             {/* Data Grid will fill the size of the parent container */}
@@ -124,14 +177,11 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                 : ( <button disabled className='disabled-button'> Undo </button> )
             }
 
-            
-
             {redos.length > 0 ? (
                 <button onClick={async () => { await redo() }}> Redo </button>
             ) : ( <button disabled className='disabled-button'> Redo </button> )}
 
             <button onClick={async () => {
-                console.log(selectedMonth - 1);
                 const prevMonth = new Date()
                 prevMonth.setMonth(selectedMonth - 1)
                 const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
@@ -143,7 +193,6 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                 Prev
             </button>
             <button onClick={async () => {
-                console.log(selectedMonth + 1);
                 const nextMonth = new Date()
                 nextMonth.setMonth(selectedMonth + 1)
                 const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
@@ -160,8 +209,10 @@ const EditableGrid = ({ rowInfo, colNames }) => {
             }}>
                 All
             </button>
-
-
+            
+            {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
+            row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
+            <button>Train</button>
         </>
     )
 }

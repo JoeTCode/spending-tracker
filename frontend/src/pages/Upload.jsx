@@ -4,19 +4,56 @@ import { useCSVReader } from 'react-papaparse';
 import React, { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 
+const formatTransactions = (transactions) => {
+    const cols = transactions[0];
+    const desc_idx = cols.indexOf('Memo');
+    const amount_idx = cols.indexOf('Amount');
+    transactions = transactions.slice(1);
+
+    return transactions.map(tx => {
+        const amount = parseFloat(tx[amount_idx]) ? parseFloat(tx[amount_idx]) : 0;
+        return {
+            description: tx[desc_idx],
+            amount: amount
+        };
+    })
+    .filter(tx => tx.description && !isNaN(tx.amount));
+};
+
 const Upload = () => {
     const { CSVReader } = useCSVReader();
     const [ transactions, setTransactions ] = useState([]);
     const { getAccessTokenSilently } = useAuth0();
     
     useEffect(() => {
-        const sendData = async () => {
+        const categoriseTransactions = async () => {
             if (transactions.length > 0) {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                await uploadTransactions(token, transactions);
+                const formattedTransactions = formatTransactions(transactions);
+
+                try {
+                    const response = await fetch("http://127.0.0.1:8000/predict", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            transactions: formattedTransactions
+                        })
+                    });
+                    const res = await response.json();
+                    return res;
+                } catch (err) {
+                    console.error(err);
+                };
             };
         };
 
+        const sendData = async () => {
+            if (transactions.length > 0) {
+                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+                const predictedCategories = await categoriseTransactions();
+                await uploadTransactions(token, transactions, predictedCategories);
+            };
+        };
+        
         sendData();
     }, [transactions]);
 
@@ -51,28 +88,7 @@ const Upload = () => {
                 )}
             </CSVReader>
                 
-            {/* {transactions.length ? 
-            <table>
-                <thead>
-                    <tr>
-                        {transactions[0].map((val, i) => {
-                            return <th key={i}>{val}</th>
-                        })}
-                    </tr>
-                </thead>
-                <tbody>
-                    {transactions.slice(1).map((row, i) => {
-                        return (
-                            <tr key={i}>
-                                {row.map((value, j) => {
-                                    return <td key={j}>{value}</td>
-                                })}
-                            </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
-            : null} */}
+            
             
 
         </>

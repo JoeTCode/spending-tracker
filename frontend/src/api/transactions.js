@@ -15,10 +15,10 @@ async function getTransactions(token, rangeType, selectedMonth=null) {
     return formatted; 
 };
 
-async function uploadTransactions(token, data) {
+async function uploadTransactions(token, data, predictedCategories) {
     await axios.post(
         'http://localhost:5000/api/transactions/upload', 
-        { data },
+        { data, predictedCategories },
         {
             headers: {
                 "authorization": `Bearer ${token}`

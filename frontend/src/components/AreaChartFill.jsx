@@ -42,7 +42,6 @@ const AreaFillChart = () => {
                 const dates = {}
                 const formatted = []
                 for (const row of data) {
-                    console.log(row.amount, row.date)
                     const dateIdx = new Date(row.date).getDate();
                     if (!dates[dateIdx]) {
                         dates[dateIdx] = row.amount;
@@ -63,9 +62,6 @@ const AreaFillChart = () => {
                     const day = DAYS[date.getDay()];
                     row.date = day.substring(0, 3) + ' ' + date.getDate();
                 };
-                console.log(dates)
-                console.log(data)
-                console.log(formatted)
 
                 setTransactions(formatted);
                 setOffset(gradientOffset(formatted))
@@ -95,7 +91,7 @@ const AreaFillChart = () => {
             }
             return profit;
         })
-        setNet(() => {return (expenses + profit).toFixed(2)})
+        setNet(() => {return (expenses + profit)})
     }, [transactions, selectedMonth])
 
     return ( 
@@ -143,9 +139,9 @@ const AreaFillChart = () => {
                 <div>
                     {MONTHS[selectedMonth]} {selectedYear}
                 </div>
-                Total Expenses: {totalExpenses} <br></br>
-                Total Income: {totalIncome} <br></br>
-                Net: {net}
+                Total Expenses: {totalExpenses.toFixed(2)} <br></br>
+                Total Income: {totalIncome.toFixed(2)} <br></br>
+                Net: {net.toFixed(2)}
             </div>
         </>
      );
