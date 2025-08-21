@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { getTransactions, updateTransactions } from '../api/transactions';
 import { train, predict } from '../utils/model';
-import { getClientModel, saveClientModel } from '../utils/clientModel';
+import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { weightAverage } from '../api/globalModel';
 // import '../App.css';
 
@@ -51,35 +51,33 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         
     }, []);
 
-    // Set client model on page load - from local storage if available - else from db
+    // getClientModel: Set client model on page load - from local storage if available - else load from db and save to localstorage
     useEffect(() => {
         const setClientModelFunction = async () => {
             const model = await getClientModel(token);
-            setClientModel(model);
+            // setClientModel(model);
         };
 
         setClientModelFunction();
-    }, []);
+    }, [token]);
 
     // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
     // corrected/not-corrected transactions and perform federated averaging with the global model
     useEffect(() => {
-        if (correctionsCount < CORRECTIONSTRIGGER) {
-            return -1;
-        } else {
+        if (correctionsCount >= CORRECTIONSTRIGGER) {
             const descriptions = corrections.map(correction => correction.description);
             const categories = corrections.map(correction => correction.category);
 
             const executeWeightAverage = async (model, descriptions, categories) => {
-                const model = await trainModel(model, descriptions, categories);
-                const weights = model.getWeights()
+                const trainedModel = await train(model, descriptions, categories);
+                const weights = trainedModel.getWeights()
                 // post to weight averaging route
                 weightAverage(token, weights)
             };
             
             const newModelWeights = executeWeightAverage(clientModel, descriptions, categories);
             const model = saveClientModel(newModelWeights);
-            setClientModel(model);
+            // setClientModel(model);
         };
     }, [correctionsCount])
 

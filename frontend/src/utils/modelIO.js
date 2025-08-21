@@ -1,15 +1,13 @@
 import * as tf from '@tensorflow/tfjs';
-import { getModel } from '../api/globalModel';
+import { getModelWeights } from '../api/globalModel';
 import { createModel } from './model';
 
 export async function getClientModel(token) {
     const models = await tf.io.listModels();
 
     if (Object.keys(models).length === 0) {
-        const globalModel = await getModel(token);
-        const model = createModel();
-        model.setWeights(globalModel);
-        await model.save('indexeddb://client-model');
+        const weights = await getModelWeights(token);
+        const model = await saveClientModel(weights);
         return model;
     } else {
         const clientModel = await tf.loadLayersModel('indexeddb://client-model');

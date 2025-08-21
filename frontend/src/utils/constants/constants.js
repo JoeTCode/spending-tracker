@@ -8,3 +8,4 @@ export const IDX_TO_LABELS = Object.fromEntries(
 export const LABELS_TO_IDX = Object.fromEntries(
     CATEGORIES.map((v, k) => [v, k])
 );
+export const MIN_CONF_SCORE = 0.7

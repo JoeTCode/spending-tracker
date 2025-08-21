@@ -5,7 +5,8 @@ import mongoose from 'mongoose';
 import Transactions from './models/transactions.js';
 import GlobalModel from './models/globalModel.js';
 import * as tf from '@tensorflow/tfjs';
-import { pipeline } from '@huggingface/transformers';
+import multer from 'multer';
+import { debugPort } from 'process';
 
 const app = express();
 const port = 5000;
@@ -15,6 +16,8 @@ app.use(cors({
     origin: 'http://localhost:5173',
     credentials: true
 }));
+
+const upload = multer();
 
 mongoose.connect("mongodb+srv://joejoe98t:6AL1fNc8HG8W@cluster0.iyofak5.mongodb.net/spending-tracker-db?retryWrites=true&w=majority&appName=Cluster0")
     .then(() => {
@@ -123,7 +126,7 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
             date: new Date(formatted_date),
             amount: parseFloat(row[3]),
             type: row[4],
-            category: categories[i]?.predicted_category,
+            category: categories[i],
             description: row[5].split('\t')[0].trim()
         };
     });
@@ -164,63 +167,185 @@ app.delete('/api/transactions/delete', checkJwt, async (req, res) => {
     };
 });
 
+async function getWeightsFromBuffer(buffer, shapes) {
+    // doc = MongoDB document with weights + shapes
+    // const buffer = doc.weights; // Buffer 
+    const floatArray = new Float32Array(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.length / 4
+    );
 
-async function getGlobalModelWeights(clientModelDate) {
-    // get latest global model weights
-    const globalModelWeights = await GlobalModel.findOne({ date: 'desc' });
+    // Split back into tensors
+    const tensors = [];
+    let offset = 0;
 
-    if (!globalModelWeights) {
-        throw new Error('No global model weights found');
+    for (const shape of shapes) {
+        const size = shape.reduce((a, b) => a * b, 1);
+        const slice = floatArray.subarray(offset, offset + size);
+        tensors.push(tf.tensor(slice, shape));
+        offset += size;
     }
-    return globalModelWeights;
+
+    return tensors;
+}
+
+// Convert model weights to a flat array of bytes
+async function getBufferFromWeights(weightTensors) {
+    const arrays = await Promise.all(weightTensors.map(t => t.data())); // Float32Array
+    const totalLength = arrays.reduce((sum, a) => sum + a.length, 0);
+
+    // Combine into single Float32Array
+    const combined = new Float32Array(totalLength);
+    let offset = 0;
+    const shapes = [];
+
+    for (let i = 0; i < arrays.length; i++) {
+        combined.set(arrays[i], offset);
+        offset += arrays[i].length;
+        shapes.push(weightTensors[i].shape); // store original shape
+    }
+
+    // Convert to Buffer and return buffer and shapes
+    return [Buffer.from(combined.buffer), shapes];
 };
 
-// TO-DO: MAKE SECURE - ONLY SERVER ACCESS NOT USER/NON-USER ACCESS
-app.get('/global-model/get-weights', checkJwt, async (req, res) => {
+
+async function getLatestGlobalModelValues(clientModelDate=null, id=null) {
+    let doc;
+
+    if (id) {
+        // get latest global model weights
+        doc = await GlobalModel
+            .findOne({ '_id': id })
+    } else {
+        // get latest global model weights
+        doc = await GlobalModel
+            .findOne()
+            .sort({ date: -1 }); // -1 = descending, 1 = ascending
+    }
+
+    if (!doc) {
+        throw new Error('No global model found');
+    };    
+
+    return [doc._id, doc.weights, doc.shapes];
+};
+
+app.get('/global-model/get-shapes', checkJwt, async (req, res) => {
     try {
-        const clientModelDate = req.query.clientDate; // usually GET requests use req.query instead of body
-        const globalWeights = await getGlobalModelWeights(clientModelDate=null);
-        res.status(200).json(globalWeights);
+        const clientModelDate = req.query.clientDate;
+        const [ id, buffer, shapes ] = await getLatestGlobalModelValues();
+        res.status(200).json({ shapes, id });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch global model weights" });
+        res.status(500).json({ error: "Failed to fetch global model shapes" });
     }
 });
 
-app.post('/global-model/weight-average', checkJwt, async (req, res) => {
-    const {clientWeights, clientModelDate } = req.body;
+// TO-DO: MAKE SECURE - ONLY SERVER ACCESS NOT USER/NON-USER ACCESS
+app.get('/global-model/get-weights', checkJwt, async (req, res) => {
+    // MongoDB stores Buffer as ArrayBuffer
+    try {
+        const clientModelDate = req.query?.clientDate; 
+        const doc_id = req.query.id;
+        if (!doc_id) {
+            throw new Error("doc_id not provided");
+        };
 
-    function weightAverage(globalWeights, clientWeights, eta=0.2) {
+        const [ id, buffer, shapes ] = await getLatestGlobalModelValues(doc_id);
+        res.set("Content-Type", "application/octet-stream");
+        res.status(200).send(buffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch global model weights" });
+    };
+});
+
+// adds client deltas to global weights, and saves to db - returns nothing
+app.post('/global-model/weight-average', checkJwt, async (req, res) => {
+    const { clientModelDeltas, clientModelDate } = req.body;
+
+    function weightAverage(globalWeights, clientDeltas, eta=1) {
         const newWeights = [];
 
         for (let i = 0; i < globalWeights.length; i++) {
             const gw = globalWeights[i];
-            const cw = clientWeights[i];
-            const updated = gw.mul(1 - eta).add(cw.mul(eta));
+            const cw = clientDeltas[i];
+            const updated = gw.add(cw.mul(eta));
             newWeights.push(updated);
         };
 
         return newWeights;
     };
 
-    const globalWeights = getGlobalModelWeights(clientModelDate);
+    const [ id, buffer, shapes ] = await getLatestGlobalModelValues();
+    const globalModelWeights = await getWeightsFromBuffer(buffer, shapes);
+
     try {
-        const newWeights = weightAverage(globalWeights, clientWeights);
+        const newWeights = weightAverage(globalModelWeights, clientModelDeltas);
 
         try {
-            const now = new Date();
-            await GlobalModel.insertOne({ newWeights, now });
+            const [ buffer, shapes ] = await getBufferFromWeights(newWeights);
+            await GlobalModel.create({ buffer, shapes });
         } catch (err) {
             console.error(err);
         };
 
-        res.status(200).json(newWeights);
+        res.status(200);
 
     } catch (err) {
-        res.status(500).json({ error: "Failed to generate new model weights"});
+        res.status(500).json({ error: "Failed to generate and or insert new model weights"});
     };
 });
 
+// DEV ROUTES
+
+app.post('/global-model/dev/save-model', upload.single("weights"), async (req, res) => {
+    const buffer = req.file.buffer;
+    const shapes = JSON.parse(req.body.shapes);
+
+    try {
+        const doc = new GlobalModel({
+            weights: buffer, // raw bytes
+            shapes,
+        });
+        await doc.save();
+        res.status(200);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("DEV: Failed to save model weights to DB.")
+    };
+});
+
+
+app.get('/global-model/dev/get-shapes', async (req, res) => {
+    try {
+        const [ id, buffer, shapes ] = await getLatestGlobalModelValues();
+        res.status(200).json({ shapes, id });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch global model shapes" });
+    }
+});
+
+
+app.get('/global-model/dev/get-weights', async (req, res) => {
+    try {
+        const doc_id = req.query.id;
+        if (!doc_id) {
+            throw new Error("doc_id not provided");
+        };
+
+        const [ id, buffer, shapes ] = await getLatestGlobalModelValues(doc_id);
+        console.log('BACKEND BUFFER TYPE', buffer);
+        res.set("Content-Type", "application/octet-stream");
+        res.status(200).send(buffer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch global model weights" });
+    };
+});
 
 app.listen(port, () => {
   console.log(`App listening on port ${port}`);
