@@ -1,4 +1,4 @@
-import NavBar from '../components/NavBar';
+import { NavBar, EditableGrid } from '../components';
 import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
 import React, { useState, useEffect } from 'react';
@@ -18,79 +18,105 @@ const Upload = () => {
     const { CSVReader } = useCSVReader();
     const [ transactions, setTransactions ] = useState([]); // list of dicts
     const { getAccessTokenSilently } = useAuth0();
-    const [ clientModel, setClientModel ] = useState(null);
+    const [ previewCSV, setPreviewCSV ] = useState(false);
+    const [ lowConfTx, setLowConfTx ] = useState([]);
+    const [ cols, setCols ] = useState([]);
+    const [ headers, setHeaders ] = useState(null);
 
-    const formatTransactions = (transactions, setColCount) => {
-        const cols = transactions[0];
-        console.log(cols);
+    const formatTransactions = (transactions, cols) => {
+        const propertyToDelete = cols.indexOf('Number');
         const desc_idx = cols.indexOf('Memo');
         const amount_idx = cols.indexOf('Amount');
         const formattedTransactions = transactions.slice(1); // remove cols
 
         return formattedTransactions.map(tx => {
+            delete tx[propertyToDelete];
             const amount = parseFloat(tx[amount_idx]) ? parseFloat(tx[amount_idx]) : 0;
             tx[amount_idx] = amount;
             tx[desc_idx] = formatDescription(tx[desc_idx]);
-            return tx;
+            return {
+                [cols[1]]: tx[1],
+                [cols[2]]: tx[2],
+                [cols[3]]: tx[3],
+                [cols[4]]: tx[4],
+                [cols[5]]: tx[5],
+            }
         })
-        .filter(tx => tx[desc_idx] && !isNaN(tx[amount_idx]));
+        .filter(tx => tx['Memo'] && !isNaN(tx['Amount']));
     };
 
     const getLowConfTransactions = (transactions, predictedCategories, confScores, colCount) => {
         const res = [];
         for (let i = 0; i < transactions.length; i++) {
             if (confScores[i] < MIN_CONF_SCORE) {
-                res.push({ ...transactions[i], [colCount]: predictedCategories[i] });
-            }
+                res.push({ ...transactions[i], 'Category': predictedCategories[i], 'Confidence': Math.round(confScores[i] * 100) });
+            };
         };
 
         return res;
     }
 
     useEffect(() => {
-        const categoriseTransactions = async (token) => {
-            // if (transactions.length > 0) {
-            //     const formattedTransactions = formatTransactions(transactions);
-
-            //     try {
-            //         const response = await fetch("http://127.0.0.1:8000/predict", {
-            //             method: "POST",
-            //             headers: { "Content-Type": "application/json" },
-            //             body: JSON.stringify({
-            //                 transactions: formattedTransactions
-            //             })
-            //         });
-            //         const res = await response.json();
-            //         return res;
-            //     } catch (err) {
-            //         console.error(err);
-            //     };
-            // };
+        const categoriseTransactions = async (token, formattedTransactions) => {
             if (transactions.length > 0) {
-                const formattedTransactions = formatTransactions(transactions);
+                
                 const model = await getClientModel(token);
-                const getConfScores = true;
-                const transactionsDescriptions = formattedTransactions.map(tx => tx[5])
+                const transactionsDescriptions = formattedTransactions.map(tx => tx['Memo'])
+
                 console.log('txdesc', transactionsDescriptions);
+
+                const getConfScores = true;
                 const [ predictions, confidenceScores ] = await predict(model, transactionsDescriptions, getConfScores);
                 return [predictions, confidenceScores];
             };
         };
 
-        const sendData = async () => {
+        const createCSVPreview = async () => {
             if (transactions.length > 0) {
+                const CSV_COLUMNS = transactions[0];
+                console.log(CSV_COLUMNS)
+                setCols(CSV_COLUMNS);
+                const CSV_COLUMNS_COUNT = CSV_COLUMNS.length;
+                console.log(CSV_COLUMNS);
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(token);
                 
-                const colCount = transactions[0].length;
-                const lowConfTransactions = getLowConfTransactions(transactions.slice(1), predictedCategories, confidenceScores, colCount);
+                const formattedTransactions = formatTransactions(transactions, CSV_COLUMNS);
+                console.log('formatted', formattedTransactions);
+                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(token, formattedTransactions);                
+                
+                const lowConfTransactions = getLowConfTransactions(formattedTransactions, predictedCategories, confidenceScores, CSV_COLUMNS_COUNT);
                 console.log(lowConfTransactions);
-                // await uploadTransactions(token, transactions, predictedCategories);
+                const headers = Object.keys(lowConfTransactions[0]);
+                console.log(headers)
+                setLowConfTx(lowConfTransactions);
+                
+                setHeaders(() => {
+                    const formatted = [];
+
+                    for (let header of headers) {
+                        const obj = {};
+                        obj['field'] = header;
+                        obj['editable'] = true;
+                        formatted.push(obj);
+                    }
+                    return formatted;
+                });
+
+                setPreviewCSV(true);
+                
             };
         };
+
+        createCSVPreview();
+    }, [transactions]);
+
+    useEffect(() => {
+        const sendData = async () => {
+            // await uploadTransactions(token, transactions, predictedCategories);
+        }
         
         sendData();
-    }, [transactions]);
+    }, [])
 
     return (
         <>
@@ -111,12 +137,16 @@ const Upload = () => {
                 }) => (
                     <>
                     <div {...getRootProps()}>
-                        {acceptedFile ? (
-                        <>
-                            <div></div>
-                        </>
-                        ) : (
-                        <button>Upload CSV file</button>
+                        {acceptedFile ? // nested ternary operator on acceptedFile true, else display Upload CSV button
+                            previewCSV ? (
+                                <>
+                                    <EditableGrid rowInfo={lowConfTx} colNames={headers} />
+                                </>
+                            ) : (
+                                <div>Loading...</div>
+                            ) 
+                        : (
+                            <button>Upload CSV file</button>
                         )}
                     </div>
                     </>

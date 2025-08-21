@@ -291,4 +291,5 @@ async function test2() {
     // console.log(`${count}/${Object.values(testJSON['Memo']).length} predictions with score less than ${MINIMUM_CONF_SCORE}:`);
 };
 
+
 export { createModel, train, predict, getWeightsFromBuffer };
