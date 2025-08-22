@@ -2,7 +2,7 @@ import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { getTransactions, updateTransactions } from '../api/transactions';
+// import { getTransactions, updateTransactions } from '../api/transactions';
 import { train, predict } from '../utils/model';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { weightAverage } from '../api/globalModel';
@@ -12,14 +12,19 @@ import { weightAverage } from '../api/globalModel';
 ModuleRegistry.registerModules([AllCommunityModule]);
 const CORRECTIONSTRIGGER = 10;
 
-const EditableGrid = ({ rowInfo, colNames }) => {
-    const gridRef = useRef();
+// TEST - UNCOMMENT IMPORT UPON DELTING THIS
+async function updateTransactions(val1, val2) {
+    
+};
+
+const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
+    // const gridRef = useRef();
     const { getAccessTokenSilently } = useAuth0();
     const [ token, setToken ] = useState(null);
     // Row Data: The data to be displayed.
-    const [ rowData, setRowData ] = useState(rowInfo);
-    const [ undos, setUndos ] = useState([]);
-    const [ redos, setRedos ] = useState([]);
+    // const [ rowData, setRowData ] = useState(rowInfo);
+    // const [ undos, setUndos ] = useState([]);
+    // const [ redos, setRedos ] = useState([]);
     const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
     // Column Definitions: Defines the columns to be displayed.
     const [ colDefs, setColDefs ] = useState(colNames);
@@ -58,7 +63,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
             // setClientModel(model);
         };
 
-        setClientModelFunction();
+        // setClientModelFunction();
     }, [token]);
 
     // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
@@ -81,83 +86,85 @@ const EditableGrid = ({ rowInfo, colNames }) => {
         };
     }, [correctionsCount])
 
-    async function undo() {
-        const undosPopped = [...undos];
-        const mostRecentUndo = undosPopped.pop()
+    // async function undo() {
+    //     const undosPopped = [...undos];
+    //     const mostRecentUndo = undosPopped.pop()
 
-        // add row state before undo to redo
-        for (const row of rowData) {
-            if (row._id === mostRecentUndo._id) {
-                setRedos(prev => {
-                    if (prev.length > 0) {
-                        return [...prev, row];
-                    } else return [row];
-                });
-            };
-        };
+    //     // add row state before undo to redo
+    //     for (const row of rowData) {
+    //         if (row._id === mostRecentUndo._id) {
+    //             setRedos(prev => {
+    //                 if (prev.length > 0) {
+    //                     return [...prev, row];
+    //                 } else return [row];
+    //             });
+    //         };
+    //     }; 
 
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentUndo]
-        });
+    //     gridRef.current.api.applyTransaction({
+    //         update: [mostRecentUndo]
+    //     });
 
-        await updateTransactions(token, mostRecentUndo);
+    //     await updateTransactions(token, mostRecentUndo);
 
-        setRowData(prevRows => {
-            return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
-        });
-        setUndos(undosPopped);
-    };
+    //     setRowData(prevRows => {
+    //         return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
+    //     });
+    //     setUndos(undosPopped);
+    // };
 
-    async function redo() {
-        const redosPopped = [...redos];
-        const mostRecentRedo = redosPopped.pop();
+    // async function redo() {
+    //     const redosPopped = [...redos];
+    //     const mostRecentRedo = redosPopped.pop();
 
-        // add row state before redo to undo
-        for (const row of rowData) {
-            if (row._id === mostRecentRedo._id) {
-                setUndos(prev => {
-                    if (prev.length > 0) {
-                        return [...prev, row];
-                    } else return [row];
-                });
-            };
-        };
+    //     // add row state before redo to undo
+    //     for (const row of rowData) {
+    //         if (row._id === mostRecentRedo._id) {
+    //             setUndos(prev => {
+    //                 if (prev.length > 0) {
+    //                     return [...prev, row];
+    //                 } else return [row];
+    //             });
+    //         };
+    //     };
 
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentRedo]
-        });
+    //     gridRef.current.api.applyTransaction({
+    //         update: [mostRecentRedo]
+    //     });
         
-        await updateTransactions(token, mostRecentRedo);
+    //     await updateTransactions(token, mostRecentRedo);
 
-        setRowData(prevRows => {
-            return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
-        });
-        setRedos(redosPopped);
-    };
+    //     setRowData(prevRows => {
+    //         return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
+    //     });
+    //     setRedos(redosPopped);
+    // };
     
     // Save edited cells to state
+    
     const onCellValueChanged = async (params) => {
-        setRedos([]);
+        // setRedos([]);
         const edited_row_data = params.data;
+        onCellChange(edited_row_data, params);
         
-        try {
-            await updateTransactions(token, edited_row_data);
-            const column = params.column.colId;
+        // try {
+        //     await updateTransactions(token, edited_row_data);
+        //     const column = params.column.colId;
             
-            setUndos((prev) => {
-                if (prev) {
-                    return [...prev, {...edited_row_data, [column]: params.oldValue}]
-                } else {
-                    return [{...edited_row_data, [column]: params.oldValue}]
-                };
-            });
-        } catch (err) {
-            console.error(err);
-        };
+        //     setUndos((prev) => {
+        //         if (prev) {
+        //             return [...prev, {...edited_row_data, [column]: params.oldValue}]
+        //         } else {
+        //             return [{...edited_row_data, [column]: params.oldValue}]
+        //         };
+        //     });
+        // } catch (err) {
+        //     console.error(err);
+        // };
     };
 
     // On save button press, reflect changes to rows in db
-    
+    console.log(rowData);
     return (
         <>
             {/* Data Grid will fill the size of the parent container */}
@@ -170,16 +177,16 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                     getRowId={params => params.data._id}
                 />
             </div>
-            {undos.length > 0 ? (
+            {/* {undos.length > 0 ? (
                 <button onClick={async () => { await undo() }}> Undo </button> )  
                 : ( <button disabled className='disabled-button'> Undo </button> )
             }
 
             {redos.length > 0 ? (
                 <button onClick={async () => { await redo() }}> Redo </button>
-            ) : ( <button disabled className='disabled-button'> Redo </button> )}
+            ) : ( <button disabled className='disabled-button'> Redo </button> )} */}
 
-            <button onClick={async () => {
+            {/* <button onClick={async () => {
                 const prevMonth = new Date()
                 prevMonth.setMonth(selectedMonth - 1)
                 const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
@@ -206,11 +213,7 @@ const EditableGrid = ({ rowInfo, colNames }) => {
                 setRowData(allTransactions);
             }}>
                 All
-            </button>
-            
-            {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
-            row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
-            <button>Train</button>
+            </button> */}
         </>
     )
 }

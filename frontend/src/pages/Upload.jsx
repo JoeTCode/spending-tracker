@@ -1,11 +1,11 @@
 import { NavBar, EditableGrid } from '../components';
 import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { createModel, predict } from '../utils/model';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
-import { MIN_CONF_SCORE } from '../utils/constants/constants';
+import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
 import { devGetModelWeights } from '../api/globalModel';
 
 function formatDescription(desc) {
@@ -20,32 +20,38 @@ const Upload = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ previewCSV, setPreviewCSV ] = useState(false);
     const [ lowConfTx, setLowConfTx ] = useState([]);
-    const [ cols, setCols ] = useState([]);
     const [ headers, setHeaders ] = useState(null);
+    const gridRef = useRef(null);
 
-    const formatTransactions = (transactions, cols) => {
-        const propertyToDelete = cols.indexOf('Number');
-        const desc_idx = cols.indexOf('Memo');
-        const amount_idx = cols.indexOf('Amount');
+    const formatTransactions = (transactions, keepCols, amountCol, descriptionCol) => {
+        const cols = Object.values(transactions[0]); // array of col names
+        const desc_idx = cols.indexOf(descriptionCol);
+        const amount_idx = cols.indexOf(amountCol);
+        const keepColsToIdx = {}
+        for (let i = 0; i < cols.length; i ++) {
+            const col = cols[i];
+            if (keepCols.find(el => el == col)) {
+                keepColsToIdx[cols[i]] = i;
+            };
+        };
+        console.log(keepColsToIdx);
+        
         const formattedTransactions = transactions.slice(1); // remove cols
-
         return formattedTransactions.map(tx => {
-            delete tx[propertyToDelete];
             const amount = parseFloat(tx[amount_idx]) ? parseFloat(tx[amount_idx]) : 0;
             tx[amount_idx] = amount;
             tx[desc_idx] = formatDescription(tx[desc_idx]);
-            return {
-                [cols[1]]: tx[1],
-                [cols[2]]: tx[2],
-                [cols[3]]: tx[3],
-                [cols[4]]: tx[4],
-                [cols[5]]: tx[5],
-            }
+            const obj = {};
+            for (let col of keepCols) {
+                obj[col] = tx[keepColsToIdx[col]];
+            };
+            obj["_id"] = tx["_id"]
+            return obj
         })
-        .filter(tx => tx['Memo'] && !isNaN(tx['Amount']));
+        .filter(tx => tx[descriptionCol] && tx[descriptionCol] !== "undefined" && !isNaN(tx[amountCol]));
     };
 
-    const getLowConfTransactions = (transactions, predictedCategories, confScores, colCount) => {
+    const getLowConfTransactions = (transactions, predictedCategories, confScores) => {
         const res = [];
         for (let i = 0; i < transactions.length; i++) {
             if (confScores[i] < MIN_CONF_SCORE) {
@@ -63,8 +69,6 @@ const Upload = () => {
                 const model = await getClientModel(token);
                 const transactionsDescriptions = formattedTransactions.map(tx => tx['Memo'])
 
-                console.log('txdesc', transactionsDescriptions);
-
                 const getConfScores = true;
                 const [ predictions, confidenceScores ] = await predict(model, transactionsDescriptions, getConfScores);
                 return [predictions, confidenceScores];
@@ -72,33 +76,63 @@ const Upload = () => {
         };
 
         const createCSVPreview = async () => {
+            console.log('CATEGORIES', CATEGORIES)
             if (transactions.length > 0) {
-                const CSV_COLUMNS = transactions[0];
-                console.log(CSV_COLUMNS)
-                setCols(CSV_COLUMNS);
-                const CSV_COLUMNS_COUNT = CSV_COLUMNS.length;
-                console.log(CSV_COLUMNS);
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 
-                const formattedTransactions = formatTransactions(transactions, CSV_COLUMNS);
+                const formattedTransactions = formatTransactions(transactions, [ "_id", "Date", "Account", "Amount", "Subcategory", "Memo" ], "Amount", "Memo");
                 console.log('formatted', formattedTransactions);
                 const [ predictedCategories, confidenceScores ] = await categoriseTransactions(token, formattedTransactions);                
                 
-                const lowConfTransactions = getLowConfTransactions(formattedTransactions, predictedCategories, confidenceScores, CSV_COLUMNS_COUNT);
+                const lowConfTransactions = getLowConfTransactions(formattedTransactions, predictedCategories, confidenceScores);
                 console.log(lowConfTransactions);
                 const headers = Object.keys(lowConfTransactions[0]);
-                console.log(headers)
+                const reordered = ["Confidence", "Category", ...headers.filter(col => col !== "Category" && col !== "Confidence")];
+                console.log(reordered)
                 setLowConfTx(lowConfTransactions);
                 
                 setHeaders(() => {
                     const formatted = [];
-
-                    for (let header of headers) {
+                    
+                    for (let header of reordered) {
                         const obj = {};
-                        obj['field'] = header;
-                        obj['editable'] = true;
+                        if (header === '_id') {
+                            continue;
+                        }
+                        if (header === 'Confidence') {
+                            obj['field'] = header;
+                            obj['editable'] = true;
+                            obj['width'] = 120
+                            obj['valueFormatter'] = params => {
+                                if (params.value == null) return '';
+                                return `${params.value}%`;
+                            };
+                        };
+                        if (header === 'Date') {
+                            obj['field'] = header;
+                            obj['editable'] = true;
+                            obj['width'] = 120
+                        }
+                        if (header === 'Amount') {
+                            obj['field'] = header;
+                            obj['editable'] = true;
+                            obj['width'] = 120
+                        }
+                        else if (header === 'Category') {
+                            obj['field'] = header;
+                            obj['editable'] = true; // <-- must be true
+                            obj['cellEditor'] = 'agSelectCellEditor';
+                            obj['cellEditorParams'] = {
+                                values: CATEGORIES
+                            };
+                        } else {
+                            obj['field'] = header;
+                            obj['editable'] = true;
+                        };
+
                         formatted.push(obj);
-                    }
+                    };
+
                     return formatted;
                 });
 
@@ -118,13 +152,28 @@ const Upload = () => {
         sendData();
     }, [])
 
+    const handleCellChange = (updatedRow, params) => {
+        console.log(updatedRow);
+    };
+
     return (
         <>
             <NavBar />
             <h1>Upload</h1>
             <CSVReader 
                 onUploadAccepted={(results) => {
-                    setTransactions(results.data)
+                    const resultsWithId = results.data.map((row, idx) => ({
+                        _id: idx,
+                        ...row
+                    }));
+                    // const cols = Object.values(resultsWithId[0]);
+                    // const colsWithId = ["_id", ...cols];
+                    // const colsWithIdObj = {}
+                    // for (let i = 0; i < colsWithId.length; i ++) {
+                    //     colsWithIdObj[i] = colsWithId[i];
+                    // };
+                    // resultsWithId[0] = colsWithIdObj;
+                    setTransactions(resultsWithId)
                 }}
                 noDrag
             >
@@ -136,19 +185,20 @@ const Upload = () => {
                     Remove,
                 }) => (
                     <>
-                    <div {...getRootProps()}>
+                    
                         {acceptedFile ? // nested ternary operator on acceptedFile true, else display Upload CSV button
                             previewCSV ? (
                                 <>
-                                    <EditableGrid rowInfo={lowConfTx} colNames={headers} />
+                                    <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
                                 </>
                             ) : (
                                 <div>Loading...</div>
                             ) 
                         : (
-                            <button>Upload CSV file</button>
+                            <div {...getRootProps()}>
+                                <button>Upload CSV file</button>
+                            </div>
                         )}
-                    </div>
                     </>
                 )}
             </CSVReader>
