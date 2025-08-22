@@ -1,14 +1,7 @@
 import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
-import { getTransactions, deleteTransaction } from '../api/transactions';
-
-
-// TEST - UNCOMMENT IMPORT UPON DELTING THIS
-async function updateTransactions(val1, val2) {
-    
-};
-
+import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
 
 const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
 
@@ -86,6 +79,8 @@ const Transactions = () => {
     const [ redos, setRedos ] = useState([]);
     const gridRef = useRef(null);
     const [ token, setToken ] = useState(null)
+    const [timerId, setTimerId] = useState(null);
+    const UNDO_REDO_DELAY = 2000;
 
     useEffect(() => {
         const getToken = async () => {
@@ -118,6 +113,14 @@ const Transactions = () => {
         const undosPopped = [...undos];
         const mostRecentUndo = undosPopped.pop()
 
+        gridRef.current.api.applyTransaction({
+            update: [mostRecentUndo]
+        });
+
+        // cancel any existing timer
+        if (timerId) clearTimeout(timerId);
+
+
         // add row state before undo to redo
         for (const row of rowData) {
             if (row._id === mostRecentUndo._id) {
@@ -129,11 +132,13 @@ const Transactions = () => {
             };
         }; 
 
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentUndo]
-        });
+        // start timer
+        const id = setTimeout(async () => {
+            await updateTransactions(token, mostRecentUndo);
+            setTimerId(null);
+        }, UNDO_REDO_DELAY);
 
-        await updateTransactions(token, mostRecentUndo);
+        setTimerId(id);
 
         setRowData(prevRows => {
             return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
@@ -145,6 +150,12 @@ const Transactions = () => {
         const redosPopped = [...redos];
         const mostRecentRedo = redosPopped.pop();
 
+        gridRef.current.api.applyTransaction({
+            update: [mostRecentRedo]
+        });
+
+        if (timerId) clearTimeout(timerId);
+
         // add row state before redo to undo
         for (const row of rowData) {
             if (row._id === mostRecentRedo._id) {
@@ -155,12 +166,13 @@ const Transactions = () => {
                 });
             };
         };
-
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentRedo]
-        });
         
-        await updateTransactions(token, mostRecentRedo);
+        const id = setTimeout(async () => {
+            await updateTransactions(token, mostRecentRedo);
+            setTimerId(null);
+        }, UNDO_REDO_DELAY);
+
+        setTimerId(id);
 
         setRowData(prevRows => {
             return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
@@ -169,19 +181,11 @@ const Transactions = () => {
     };
 
 
-    const handleCellChange = (updatedRow, params) => {
-        // // apply update to parent state
-        // setRowData(prev =>
-        //     prev.map(row => row._id === updatedRow._id ? updatedRow : row)
-        // );
-        // optionally: save to API here
-        
-        // console.log(updatedRow);
-        // console.log("Cell changed:", params.colDef.field, params.oldValue, "→", params.newValue);
+    const handleCellChange = async (updatedRow, params) => {
         
         setRedos([]);
         try {
-            // await updateTransactions(token, updatedRow);
+            await updateTransactions(token, updatedRow); // undo redo wont trigger handleCellChange
             const column = params.column.colId;
             
             setUndos((prev) => {

@@ -38,14 +38,14 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
         return parseInt(saved);
     });
 
-    const [corrections, setCorrections] = useState(() => {
-        const saved = localStorage.getItem("corrections");
-        if (saved === null) {
-            localStorage.setItem("corrections", JSON.stringify([]));
-            return [];
-        }
-        return JSON.parse(saved);
-    });
+    // const [corrections, setCorrections] = useState(() => {
+    //     const saved = localStorage.getItem("corrections");
+    //     if (saved === null) {
+    //         localStorage.setItem("corrections", JSON.stringify([]));
+    //         return [];
+    //     }
+    //     return JSON.parse(saved);
+    // });
 
     useEffect(() => {
         const getToken = async () => {
@@ -164,7 +164,6 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
     };
 
     // On save button press, reflect changes to rows in db
-    console.log(rowData);
     return (
         <>
             {/* Data Grid will fill the size of the parent container */}

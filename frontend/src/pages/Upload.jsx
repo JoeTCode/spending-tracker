@@ -21,7 +21,32 @@ const Upload = () => {
     const [ previewCSV, setPreviewCSV ] = useState(false);
     const [ lowConfTx, setLowConfTx ] = useState([]);
     const [ headers, setHeaders ] = useState(null);
+    const [ saveData, setSaveData ] = useState([]);
     const gridRef = useRef(null);
+    const [ token, setToken ] = useState(async () => {
+        const tken = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+        setToken(tken);        
+    });
+    const [correctionsCount, setCorrectionsCount] = useState(() => {
+            const saved = localStorage.getItem("count");
+            if (saved === null) {
+                localStorage.setItem("count", "0");
+                return 0;
+            }
+            return parseInt(saved);
+    });
+
+    
+
+    const incrementCorrectionsCount = () => {
+        setCorrectionsCount(prevCount => {
+            const newCount = prevCount + 1;
+            localStorage.setItem("count", newCount.toString());
+            return newCount;
+        });
+    };
+
+    const CATEGORIES_SET = new Set(CATEGORIES);
 
     const formatTransactions = (transactions, keepCols, amountCol, descriptionCol) => {
         const cols = Object.values(transactions[0]); // array of col names
@@ -34,7 +59,6 @@ const Upload = () => {
                 keepColsToIdx[cols[i]] = i;
             };
         };
-        console.log(keepColsToIdx);
         
         const formattedTransactions = transactions.slice(1); // remove cols
         return formattedTransactions.map(tx => {
@@ -76,20 +100,15 @@ const Upload = () => {
         };
 
         const createCSVPreview = async () => {
-            console.log('CATEGORIES', CATEGORIES)
             if (transactions.length > 0) {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                
                 const formattedTransactions = formatTransactions(transactions, [ "_id", "Date", "Account", "Amount", "Subcategory", "Memo" ], "Amount", "Memo");
-                console.log('formatted', formattedTransactions);
                 const [ predictedCategories, confidenceScores ] = await categoriseTransactions(token, formattedTransactions);                
                 
                 const lowConfTransactions = getLowConfTransactions(formattedTransactions, predictedCategories, confidenceScores);
-                console.log(lowConfTransactions);
                 const headers = Object.keys(lowConfTransactions[0]);
                 const reordered = ["Confidence", "Category", ...headers.filter(col => col !== "Category" && col !== "Confidence")];
-                console.log(reordered)
                 setLowConfTx(lowConfTransactions);
+                
                 
                 setHeaders(() => {
                     const formatted = [];
@@ -137,6 +156,12 @@ const Upload = () => {
                 });
 
                 setPreviewCSV(true);
+                const saveData = formattedTransactions.map((tx, i) => ({
+                    ...tx,
+                    'Category': predictedCategories[i]
+                }));
+                console.log(saveData);
+                setSaveData(saveData);
                 
             };
         };
@@ -144,22 +169,35 @@ const Upload = () => {
         createCSVPreview();
     }, [transactions]);
 
-    useEffect(() => {
-        const sendData = async () => {
-            // await uploadTransactions(token, transactions, predictedCategories);
-        }
-        
-        sendData();
-    }, [])
+
+    const sendData = async () => {
+        await uploadTransactions(token, saveData);
+    };
+
 
     const handleCellChange = (updatedRow, params) => {
-        console.log(updatedRow);
+        setLowConfTx(prev =>
+            prev.map(row => row._id === updatedRow._id ? updatedRow : row)
+        );
+
+        const column = params.column.colId;
+        if (column === 'Category') {
+            console.log(correctionsCount);
+            if (CATEGORIES_SET.has(updatedRow[column])) {
+                incrementCorrectionsCount();
+            };
+        };
     };
 
     return (
         <>
             <NavBar />
-            <h1>Upload</h1>
+            {previewCSV ? (
+                <h2>Review low-confidence predictions</h2>
+            ) : (
+                <h1>Upload</h1>
+            )}
+            
             <CSVReader 
                 onUploadAccepted={(results) => {
                     const resultsWithId = results.data.map((row, idx) => ({
@@ -190,6 +228,7 @@ const Upload = () => {
                             previewCSV ? (
                                 <>
                                     <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
+                                    <button onClick={sendData}>Done</button>
                                 </>
                             ) : (
                                 <div>Loading...</div>

@@ -8,6 +8,9 @@ import * as tf from '@tensorflow/tfjs';
 import multer from 'multer';
 import { debugPort } from 'process';
 
+const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Transfer", "Other / Misc"];
+const CATEGORIES_SET = new Set(CATEGORIES);
+
 const app = express();
 const port = 5000;
 
@@ -112,22 +115,30 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
 app.post('/api/transactions/upload', checkJwt, async (req, res) => {
     const uid = req.auth.payload.sub;
     const transactions = req.body.data.slice(1);
-    const categories = req.body.predictedCategories;
-    const filtered = transactions.filter(row => {
-        return row.length == 6
-    });
 
     // format the transactions data and create the document to be inserted to the database
-    const document = filtered.map((row, i) => {
-        const [ d, m, y ] = row[1].split('/');
+    const document = transactions.map((row, i) => {
+        const [ d, m, y ] = row["Date"].split('/');
         const formatted_date = `${y}-${m}-${d}`;
-        return {
-            uid: uid,
-            date: new Date(formatted_date),
-            amount: parseFloat(row[3]),
-            type: row[4],
-            category: categories[i],
-            description: row[5].split('\t')[0].trim()
+        if (CATEGORIES_SET.has(row["Category"])) { // if row category value is not custom category
+            return {
+                uid: uid,
+                date: new Date(formatted_date),
+                amount: parseFloat(row["Amount"]),
+                type: row["Subcategory"],
+                category: row["Category"],
+                description: row["Memo"]
+            };
+        } else { // else set is_trainable = false
+            return {
+                uid: uid,
+                date: new Date(formatted_date),
+                amount: parseFloat(row["Amount"]),
+                type: row["Subcategory"],
+                category: row["Category"],
+                description: row["Memo"],
+                is_trainable: false
+            };
         };
     });
 
@@ -148,8 +159,12 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
 app.put('/api/transactions/update', checkJwt, async (req, res) => {
     const transaction = req.body.data;
     try {
-
-        await Transactions.updateOne({ _id: transaction._id }, transaction);
+        if (CATEGORIES_SET.has(transaction["Category"])) {
+            await Transactions.updateOne({ _id: transaction._id }, { ...transaction, trained: false });
+        } else {
+            await Transactions.updateOne({ _id: transaction._id }, { ...transaction, is_trainable: false });
+        };
+        
         return res.sendStatus(200);
     } catch (err) {
         console.error(err);

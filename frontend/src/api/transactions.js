@@ -8,17 +8,17 @@ async function getTransactions(token, rangeType, selectedMonth=null) {
     });
     // if type == 'barclays'?
     // data needs to be in form (amount: float, type (optional): String, category, Description: String, Date: Date)
-    const formatted = res.data.transactions.map(({ date, ...rest }) => ({
+    const formatted = res.data.transactions.map(({ is_trainable, trained, date, ...rest }) => ({
         ...rest,
         date: date.split('T')[0]
     }))
     return formatted; 
 };
 
-async function uploadTransactions(token, data, predictedCategories) {
+async function uploadTransactions(token, data) {
     await axios.post(
         'http://localhost:5000/api/transactions/upload', 
-        { data, predictedCategories },
+        { data },
         {
             headers: {
                 "authorization": `Bearer ${token}`
