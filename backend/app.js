@@ -62,7 +62,7 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 uid: uid,
                 date: { $gte: weekAgo, $lte: end }
             }).select('-__v');
-            return res.send({ transactions });
+            break;
 
         case 'm':
             const thisMonth = new Date();
@@ -72,13 +72,13 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 uid: uid,
                 date: { $gte: thisMonth }
             }).select('-__v');
-            return res.send({ transactions });
+            break;
 
         case 'a':
             transactions = await Transactions.find({
                 uid: uid,
             }).select('-__v');
-            return res.send({ transactions });
+            break;
 
         case 'vm':
             const monthStart = new Date();
@@ -93,7 +93,7 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 uid: uid,
                 date: { $gte: monthStart, $lte: monthEnd }
             }).select('-__v');
-            return res.send({ transactions });
+            break;
 
         case 'y':
             const yearStart = new Date();
@@ -108,8 +108,30 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
                 uid: uid,
                 date: { $gte: yearStart, $lte: yearEnd }
             }).select('-__v');
-            return res.send({ transactions });
+            break;
     };
+
+    console.log(transactions);
+    const response = [];
+    for (let tx of transactions) {
+        response.push(
+            {
+                _id: tx['_id'],
+                date: new Date(tx['date']).toISOString().split('T')[0],
+                amount: tx['amount'],
+                type: tx['type'],
+                category: tx['category'],
+                description: tx['description']
+            }
+        );
+    };
+
+    // transactions = transactions.map(({ is_trainable, trained, date, ...rest }) => ({
+    //     ...rest,
+    //     date: date.toISOString().split('T')[0]
+    // }))
+
+    return res.send({ transactions: response })
 });
 
 app.post('/api/transactions/upload', checkJwt, async (req, res) => {

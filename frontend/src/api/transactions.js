@@ -8,11 +8,12 @@ async function getTransactions(token, rangeType, selectedMonth=null) {
     });
     // if type == 'barclays'?
     // data needs to be in form (amount: float, type (optional): String, category, Description: String, Date: Date)
-    const formatted = res.data.transactions.map(({ is_trainable, trained, date, ...rest }) => ({
-        ...rest,
-        date: date.split('T')[0]
-    }))
-    return formatted; 
+    // const formatted = res.data.transactions.map(({ is_trainable, trained, date, ...rest }) => ({
+    //     ...rest,
+    //     date: date.split('T')[0]
+    // }))
+    console.log(res.data.transactions)
+    return res.data.transactions; 
 };
 
 async function uploadTransactions(token, data) {

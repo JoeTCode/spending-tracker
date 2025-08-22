@@ -10,17 +10,21 @@ const formatHeaders = (headers, token) => {
     const deleteRowName = 'Delete';
     const headersCopy = [...headers, deleteRowName];
     const formatted = []
+    
 
     for (const header of headersCopy) {
         const obj = {}
-        if (header === 'category') {
+        if (header === '_id') {
+            continue;
+        }
+        else if (header === 'category') {
             obj['field'] = header
             obj['cellEditor'] = 'agSelectCellEditor'
             obj['cellEditorParams'] = {
                 values: CATEGORIES
             }
         }
-        if (header === deleteRowName) {
+        else if (header === deleteRowName) {
             obj['field'] = header
             obj['width'] = 80
             obj['cellRenderer'] = (props) => {
@@ -57,13 +61,13 @@ const formatHeaders = (headers, token) => {
                     />
                 );
             };
-            formatted.push(obj);
-        }
+        } 
         else {
             obj['field'] = header;
             obj['editable'] = true;
-            formatted.push(obj);
         };
+
+        formatted.push(obj);
     };
 
     return formatted;
@@ -80,6 +84,7 @@ const Transactions = () => {
     const gridRef = useRef(null);
     const [ token, setToken ] = useState(null)
     const [timerId, setTimerId] = useState(null);
+    const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
     const UNDO_REDO_DELAY = 2000;
 
     useEffect(() => {
@@ -94,13 +99,12 @@ const Transactions = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const data = await getTransactions(token, 'a');
-
+            console.log(data);
             setTransactions(data);
 
             setRowData(data); // new
 
-            console.log(Object.keys(data[0]))
-            const hdrs = Object.keys(data[0]).slice(2);
+            const hdrs = Object.keys(data[0])
             setHeaders(formatHeaders(hdrs, token));
         };
 
@@ -217,6 +221,35 @@ const Transactions = () => {
             {redos.length > 0 ? (
                 <button onClick={async () => { await redo() }}> Redo </button>
             ) : ( <button disabled className='disabled-button'> Redo </button> )}
+
+            <button onClick={async () => {
+                const prevMonth = new Date()
+                prevMonth.setMonth(selectedMonth - 1)
+                const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
+                setRowData(prevTransactions);
+                setSelectedMonth(prev => {
+                    return prev - 1;
+                });
+            }}>
+                Prev
+            </button>
+            <button onClick={async () => {
+                const nextMonth = new Date()
+                nextMonth.setMonth(selectedMonth + 1)
+                const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
+                setRowData(nextTransactions);
+                setSelectedMonth(prev => {
+                    return prev + 1;
+                });
+            }}>
+                Next
+            </button>
+            <button onClick={async () => {
+                const allTransactions = await getTransactions(token, 'a');
+                setRowData(allTransactions);
+            }}>
+                All
+            </button>
 
             {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
             row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}

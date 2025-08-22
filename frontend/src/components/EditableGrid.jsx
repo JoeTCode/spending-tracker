@@ -70,6 +70,7 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
     // corrected/not-corrected transactions and perform federated averaging with the global model
     useEffect(() => {
         if (correctionsCount >= CORRECTIONSTRIGGER) {
+            return
             const descriptions = corrections.map(correction => correction.description);
             const categories = corrections.map(correction => correction.category);
 
