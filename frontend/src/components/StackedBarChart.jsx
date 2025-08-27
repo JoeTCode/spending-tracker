@@ -12,27 +12,45 @@ const CustomTooltip = ({ active, payload, label }) => {
     const [ pinIncomeCategories, setPinIncomeCategories ] = useState(false);
 
     function calculateExpenseCategories() {
-        if (isVisible && payload[1].value !== 0) {
-            return payload[1]?.payload.expenseCategories
-                .filter(category => category.amount > 0)   // skip zero amounts
-                .map(category => {
-                    const percentage = (category.amount * 100) / payload[1].value;
-                    return `${category.name} (${Math.round(percentage)}%)`;
-                });
-        }
-        else return []
+        if (!isVisible || payload[1].value === 0) return [];
+
+        // Build array of { name, percentage }
+        const expenseCategories = Object.entries(payload[1]?.payload.expenseCategories)
+            .map(([category, amount]) => ({
+                name: category,
+                percentage: (amount * 100) / payload[1].value,
+            }))
+            .filter(cat => Math.round(cat.percentage) > 0);
+
+        // Sort descending by percentage
+        expenseCategories.sort((a, b) => b.percentage - a.percentage);
+
+        // Return display strings
+        return expenseCategories.map(
+            cat => `${cat.name} (${Math.round(cat.percentage)}%)`
+        );
     };
 
     const expenseCategories = calculateExpenseCategories();
 
     function calculateIncomeCategories() {
-        if (isVisible && payload[0].value !== 0) {
-            return payload[0]?.payload.incomeCategories.map(category => {
-                const percentage = (category.amount * 100) / payload[0].value;
-                return category.name + ' ' + `(${Math.round(percentage)}%)`;
-            });
-        }
-        else return []
+        if (!isVisible || payload[0].value === 0) return [];
+
+        // Build array of { name, percentage }
+        const incomeCategories = Object.entries(payload[0]?.payload.incomeCategories)
+            .map(([category, amount]) => ({
+                name: category,
+                percentage: (amount * 100) / payload[0].value,
+            }))
+            .filter(cat => Math.round(cat.percentage) > 0);
+
+        // Sort descending by percentage
+        incomeCategories.sort((a, b) => b.percentage - a.percentage);
+
+        // Return display strings
+        return incomeCategories.map(
+            cat => `${cat.name} (${Math.round(cat.percentage)}%)`
+        );
     };
 
     const incomeCategories = calculateIncomeCategories();
@@ -117,44 +135,40 @@ const StackedBarChart = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions(token, 'y', selectedMonth);
-            console.log(data);
+            const data = await getTransactions(token, 'y');
+            // console.log(data);
+            const makeCategoryDict = () => {
+                const dict = {};
+                for (let category of CATEGORIES) {
+                    dict[category] = 0;
+                }
+                return dict;
+            };
 
             const dataByMonth = []
             // create defualt objects for each month and populate them later
             for (let i = 0; i < 12; i++) {
                 dataByMonth.push({
-                    month: MONTHS[i].substring(0, 3),
-                    income: 0,
-                    expense: 0,
+                    'month': MONTHS[i].substring(0, 3),
+                    'income': 0,
+                    'expense': 0,
                     // TEMP multi-transaction dummy categories object - will be empty arrays in future to be populated in next loop
-                    expenseCategories: [
-                        // { name: 'rent', amount: 566.56 },
-                        // { name: 'recreational', amount: 320.43 },
-                        // { name: 'transport', amount: 168.24 }
-                    ],
-                    incomeCategories: [
-                        // { name: 'job', amount: 0 },
-                        // { name: 'friend', amount: 0 },
-                        // { name: 'commerce', amount: 0 }
-                    ]
-                })
+                    // expenseCategories: [
+                    //     // { name: 'rent', amount: 566.56 },
+                    //     // { name: 'recreational', amount: 320.43 },
+                    //     // { name: 'transport', amount: 168.24 }
+                    // ],
+                    // incomeCategories: [
+                    //     // { name: 'job', amount: 0 },
+                    //     // { name: 'friend', amount: 0 },
+                    //     // { name: 'commerce', amount: 0 }
+                    // ]
+                    'expenseCategories': makeCategoryDict(),
+                    'incomeCategories': makeCategoryDict()
+                });
             };
 
-            for (let monthObj of dataByMonth) {
-                const expenseCategories = CATEGORIES.map(category => ({
-                    name: category,
-                    amount: 0
-                }));
-
-                const incomeCategories = CATEGORIES.map(category => ({
-                    name: category,
-                    amount: 0
-                }));
-                
-                monthObj['expenseCategories'] = expenseCategories;
-                monthObj['incomeCategories'] = incomeCategories;
-            };
+            console.log(dataByMonth);
             
             // categorisation logic here
             for (let row of data) {
@@ -166,18 +180,10 @@ const StackedBarChart = () => {
                     continue;
                 }
                 else if (amount > 0) {
-                    for (let obj of monthObj['incomeCategories']) {
-                        if (obj['name'] === category) {
-                            obj['amount'] += amount;
-                        };
-                    };
+                    monthObj['incomeCategories'][category] += Number(amount);
                 }
                 else {
-                    for (let obj of monthObj['expenseCategories']) {
-                        if (obj['name'] === category) {
-                            obj['amount'] += Math.abs(amount);
-                        };
-                    };
+                    monthObj['expenseCategories'][category] += Math.abs(Number(amount));
                 };
             };
             

@@ -91,7 +91,7 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
 
             transactions = await Transactions.find({
                 uid: uid,
-                date: { $gte: monthStart, $lte: monthEnd }
+                date: { $gte: monthStart, $lt: monthEnd }
             }).select('-__v');
             break;
 

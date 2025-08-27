@@ -10,7 +10,8 @@ const AreaFillChart = () => {
     const thisMonth = new Date();
     const [ selectedMonth, setSelectedMonth ] = useState(thisMonth.getMonth());
     const [ selectedYear, setSelectedYear ] = useState(thisMonth.getFullYear());
-    const [ transactions, setTransactions ] = useState([]);;
+    const [ transactions, setTransactions ] = useState([]);
+    const [ summedTransactions, setSummedTransactions ] = useState([]);
     const [ offset, setOffset ] = useState(null);
     const [ totalExpenses, setTotalExpenses ] = useState(0);
     const [ totalIncome, setTotalIncome ] = useState(0);
@@ -34,72 +35,70 @@ const AreaFillChart = () => {
 
     // Retrieve data
     useEffect(() => {
-            const retrieveData = async () => {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                const data = await getTransactions(token, dataRetrievalRange, selectedMonth);
-                
-                // sum all transactions that occur on the same day
-                const dates = {}
-                const formatted = []
-                for (const row of data) {
-                    const dateIdx = new Date(row.date).getDate();
-                    if (!dates[dateIdx]) {
-                        dates[dateIdx] = row.amount;
-                        formatted.push(row);
-                    } else {
-                        dates[dateIdx] += row.amount;
-                    };
-                }
+        const retrieveData = async () => {
+            const token = await getAccessTokenSilently({
+            audience: "http://localhost:5000",
+            scope: "read:current_user",
+            });
 
-                formatted.map((object) => {
-                    const date = new Date(object.date).getDate()
-                    object.amount = dates[date];
-                })
+            const data = await getTransactions(token, dataRetrievalRange, selectedMonth);
 
-                // Format date from dd/mm/yyyy to e.g. Jan 1
-                for (const row of formatted) {
-                    const date = new Date(row.date);
-                    const day = DAYS[date.getDay()];
-                    row.date = day.substring(0, 3) + ' ' + date.getDate();
-                };
+            // Aggregate transactions per day
+            const dailyTotals = {};
+            data.forEach(tx => {
+            const dayKey = new Date(tx.date).toISOString().split("T")[0]; // YYYY-MM-DD
+            if (!dailyTotals[dayKey]) dailyTotals[dayKey] = 0;
+            dailyTotals[dayKey] += Number(tx.amount);
+            });
 
-                setTransactions(formatted);
-                setOffset(gradientOffset(formatted))
+            // Build formatted array
+            const formatted = Object.entries(dailyTotals).map(([dateStr, amount]) => {
+            const date = new Date(dateStr);
+            const dayName = DAYS[date.getDay()].substring(0, 3);
+            return {
+                date: `${dayName} ${date.getDate()}`,
+                amount,
             };
-    
-            retrieveData();
-        
-        }, [selectedMonth]);
+            });
+
+            setSummedTransactions(formatted);
+            setTransactions(data); // original raw data
+            setOffset(gradientOffset(formatted));
+        };
+
+        retrieveData();
+    }, [selectedMonth]);
     
     // Compute data for transaction breakdown widget
     useEffect(() => {
         let expenses = 0;
         let profit = 0;
-        setTotalExpenses(() => {
-            for (let tx of transactions) {
-                if (tx.amount < 0) {
-                    expenses += tx.amount;
-                }  
-            }
-            return expenses;
-        })
-        setTotalIncome(() => {
-            for (let tx of transactions) {
-                if (tx.amount > 0) {
-                    profit += tx.amount;
-                }  
-            }
-            return profit;
-        })
-        setNet(() => {return (expenses + profit)})
-    }, [transactions, selectedMonth])
+        
+        for (let tx of transactions) {
+            console.log(tx);
+            if (tx.amount < 0) {
+                expenses += tx.amount;
+            }  
+        }
+        setTotalExpenses(expenses);
+
+        for (let tx of transactions) {
+            if (tx.amount > 0) {
+                console.log(tx);
+                profit += tx.amount;
+            }  
+        }
+        setTotalIncome(profit);
+
+        setNet(expenses + profit)
+    }, [transactions])
 
     return ( 
         <>
-            <div style={{ width: 900, height: 600 }}>
+            <div style={{ width: 900, height: 600, marginBottom: 200 }}>
                 <ResponsiveContainer>
                     <AreaChart
-                        data={transactions}
+                        data={summedTransactions}
                         margin={{
                             top: 10,
                             right: 30,
