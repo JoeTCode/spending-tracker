@@ -111,7 +111,6 @@ app.get('/api/transactions/get', checkJwt, async (req, res) => {
             break;
     };
 
-    console.log(transactions);
     const response = [];
     for (let tx of transactions) {
         response.push(
@@ -142,25 +141,14 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
     const document = transactions.map((row, i) => {
         const [ d, m, y ] = row["Date"].split('/');
         const formatted_date = `${y}-${m}-${d}`;
-        if (CATEGORIES_SET.has(row["Category"])) { // if row category value is not custom category
-            return {
-                uid: uid,
-                date: new Date(formatted_date),
-                amount: parseFloat(row["Amount"]),
-                type: row["Subcategory"],
-                category: row["Category"],
-                description: row["Memo"]
-            };
-        } else { // else set is_trainable = false
-            return {
-                uid: uid,
-                date: new Date(formatted_date),
-                amount: parseFloat(row["Amount"]),
-                type: row["Subcategory"],
-                category: row["Category"],
-                description: row["Memo"],
-                is_trainable: false
-            };
+
+        return {
+            uid: uid,
+            date: new Date(formatted_date),
+            amount: parseFloat(row["Amount"]),
+            type: row["Subcategory"],
+            category: row["Category"],
+            description: row["Memo"]
         };
     });
 
@@ -184,7 +172,7 @@ app.put('/api/transactions/update', checkJwt, async (req, res) => {
         if (CATEGORIES_SET.has(transaction["Category"])) {
             await Transactions.updateOne({ _id: transaction._id }, { ...transaction, trained: false });
         } else {
-            await Transactions.updateOne({ _id: transaction._id }, { ...transaction, is_trainable: false });
+            await Transactions.updateOne({ _id: transaction._id }, transaction);
         };
         
         return res.sendStatus(200);
@@ -264,7 +252,9 @@ async function getLatestGlobalModelValues(clientModelDate=null, id=null) {
 
     if (!doc) {
         throw new Error('No global model found');
-    };    
+    };   
+    
+    console.log(doc);
 
     return [doc._id, doc.weights, doc.shapes];
 };
@@ -300,8 +290,10 @@ app.get('/global-model/get-weights', checkJwt, async (req, res) => {
 });
 
 // adds client deltas to global weights, and saves to db - returns nothing
-app.post('/global-model/weight-average', checkJwt, async (req, res) => {
-    const { clientModelDeltas, clientModelDate } = req.body;
+app.post('/global-model/weight-average', checkJwt, upload.single("weights"), async (req, res) => {
+    const clientBuffer = req.file.buffer;
+    const clientShapes = JSON.parse(req.body.shapes);
+    const clientModelDeltas = await getWeightsFromBuffer(clientBuffer, clientShapes);
 
     function weightAverage(globalWeights, clientDeltas, eta=1) {
         const newWeights = [];
@@ -324,7 +316,7 @@ app.post('/global-model/weight-average', checkJwt, async (req, res) => {
 
         try {
             const [ buffer, shapes ] = await getBufferFromWeights(newWeights);
-            await GlobalModel.create({ buffer, shapes });
+            await GlobalModel.create({ weights: buffer, shapes: shapes });
         } catch (err) {
             console.error(err);
         };

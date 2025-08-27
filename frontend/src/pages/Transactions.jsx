@@ -2,12 +2,20 @@ import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
 import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
+import { CATEGORY_TO_EMOJI } from '../utils/constants/constants';
+import { getClientModel, saveClientModel } from '../utils/modelIO';
+import { getModelWeights, weightAverage } from '../api/globalModel';
+import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
 
 const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
+const CATEGORIES_SET = new Set(CATEGORIES);
+const CORRECTIONSTRIGGER = 10;
+const UNDO_REDO_DELAY = 500;
 
 // customise column format and functions for the EditableGrid cols argument
 const formatHeaders = (headers, token) => {
     const deleteRowName = 'Delete';
+    headers = headers.map(header => CATEGORY_TO_EMOJI[header] || header);
     const headersCopy = [...headers, deleteRowName];
     const formatted = []
     
@@ -19,10 +27,15 @@ const formatHeaders = (headers, token) => {
         }
         else if (header === 'category') {
             obj['field'] = header
-            obj['cellEditor'] = 'agSelectCellEditor'
+            obj['editable'] = true;
+            obj['cellEditor'] = 'agSelectCellEditor';
             obj['cellEditorParams'] = {
                 values: CATEGORIES
-            }
+            };
+            obj['singleClickEdit'] = true;
+            obj['valueFormatter'] = params => {
+                return CATEGORY_TO_EMOJI[params.value] || params.value;
+            };
         }
         else if (header === deleteRowName) {
             obj['field'] = header
@@ -73,6 +86,47 @@ const formatHeaders = (headers, token) => {
     return formatted;
 };
 
+const trainModel = async (transactions) => {
+    const descriptions = [];
+    const targets = [];
+    for (let tx of transactions) {
+        if (CATEGORIES_SET.has(tx['category'])) {
+            descriptions.push(tx['description']);
+            targets.push(tx['category']);
+        };
+    };
+
+    const model = await getClientModel();
+    const trainedModel = await train(model, descriptions, targets);
+    const predictions = await predict(trainedModel, descriptions);
+    console.log(accuracy(predictions, targets));
+};
+
+const testWeightAvg = async (transactions, token) => {
+    const descriptions = [];
+    const targets = [];
+    for (let tx of transactions) {
+        if (CATEGORIES_SET.has(tx['category'])) {
+            descriptions.push(tx['description']);
+            targets.push(tx['category']);
+        };
+    };
+    const clientModel = await getClientModel(token);
+    const globalModelWeights = await getModelWeights(token);
+    const trainedModel = await train(clientModel, descriptions, targets);
+    const weights = trainedModel.getWeights();
+    // const weights = clientModel.getWeights();
+    const deltas = getDeltas(weights, globalModelWeights);
+    const [ buffer, shapes ] = await getBufferFromWeights(deltas);
+
+    // post to weight averaging route
+    await weightAverage(token, buffer, shapes);
+    
+    // get new model from db via api and save it to indexedDB clientside
+    const newGlobalModelWeights = await getModelWeights(token);
+    saveClientModel(newGlobalModelWeights);
+};
+
 const Transactions = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
@@ -82,24 +136,60 @@ const Transactions = () => {
     const [ undos, setUndos ] = useState([]);
     const [ redos, setRedos ] = useState([]);
     const gridRef = useRef(null);
-    const [ token, setToken ] = useState(null)
     const [timerId, setTimerId] = useState(null);
     const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
-    const UNDO_REDO_DELAY = 2000;
+    const [correctionsCount, setCorrectionsCount] = useState(() => {
+        const saved = localStorage.getItem("count");
+        if (saved === null) {
+            localStorage.setItem("count", "0");
+            return 0;
+        }
+        return parseInt(saved);
+    });
 
-    useEffect(() => {
-        const getToken = async () => {
-            const tokenValue = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            return setToken(tokenValue);
-        };
-        getToken();
-        
-    }, []);
+    // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
+    // corrected/not-corrected transactions and perform federated averaging with the global model
+    // useEffect(() => {
+    //     const executeWeightAverage = async (descriptions, categories) => {
+    //             const clientModel = await getClientModel();
+    //             const globalModelWeights = await getModelWeights();
+    //             const trainedModel = await train(clientModel, descriptions, categories);
+    //             const weights = trainedModel.getWeights();
+    //             const deltas = getDeltas(weights, globalModelWeights);
+    //             // post to weight averaging route
+    //             const newWeights = await weightAverage(token, deltas);
+    //             const avgModel = createModel();
+    //             avgModel.setWeights(newWeights);
+
+    //             const d = [];
+    //             const t = [];
+    //             for (let tx of transactions) {
+    //                 if (CATEGORIES_SET.has(tx['category'])) {
+    //                     d.push(tx['description']);
+    //                     t.push(tx['category']);
+    //                 };
+    //             };
+
+    //             const predictions = await predict(avgModel, t);
+    //             console.log(accuracy(predictions, t));
+
+    //     };
+
+    //     if (correctionsCount >= CORRECTIONSTRIGGER) {
+    //         const descriptions = corrections.map(correction => correction.description);
+    //         const categories = corrections.map(correction => correction.category);
+            
+    //         executeWeightAverage(descriptions, categories);
+    //         // const model = saveClientModel(newModelWeights);
+    //         // setClientModel(model);
+    //     };
+
+    // }, [correctionsCount])
     
     useEffect(() => {
         const retrieveData = async () => {
+            const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             const data = await getTransactions(token, 'a');
-            console.log(data);
             setTransactions(data);
 
             setRowData(data); // new
@@ -110,10 +200,11 @@ const Transactions = () => {
 
         retrieveData();
     
-    }, [token]);
+    }, []);
 
 
     async function undo() {
+        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         const undosPopped = [...undos];
         const mostRecentUndo = undosPopped.pop()
 
@@ -151,6 +242,7 @@ const Transactions = () => {
     };
 
     async function redo() {
+        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         const redosPopped = [...redos];
         const mostRecentRedo = redosPopped.pop();
 
@@ -172,6 +264,7 @@ const Transactions = () => {
         };
         
         const id = setTimeout(async () => {
+            const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             await updateTransactions(token, mostRecentRedo);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
@@ -186,8 +279,16 @@ const Transactions = () => {
 
 
     const handleCellChange = async (updatedRow, params) => {
-        
+        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         setRedos([]);
+
+        const column = params.column.colId;
+        if (column === 'Category') {
+            if (CATEGORIES_SET.has(updatedRow[column])) {
+                updatedRow['trained'] = false;
+            };
+        };
+
         try {
             await updateTransactions(token, updatedRow); // undo redo wont trigger handleCellChange
             const column = params.column.colId;
@@ -223,6 +324,7 @@ const Transactions = () => {
             ) : ( <button disabled className='disabled-button'> Redo </button> )}
 
             <button onClick={async () => {
+                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 const prevMonth = new Date()
                 prevMonth.setMonth(selectedMonth - 1)
                 const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
@@ -234,6 +336,7 @@ const Transactions = () => {
                 Prev
             </button>
             <button onClick={async () => {
+                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 const nextMonth = new Date()
                 nextMonth.setMonth(selectedMonth + 1)
                 const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
@@ -245,6 +348,7 @@ const Transactions = () => {
                 Next
             </button>
             <button onClick={async () => {
+                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 const allTransactions = await getTransactions(token, 'a');
                 setRowData(allTransactions);
             }}>
@@ -253,7 +357,13 @@ const Transactions = () => {
 
             {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
             row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
-            <button>Train</button>
+            <button onClick={() => trainModel(rowData)}>Train</button>
+            <button onClick={async () => {
+                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+                testWeightAvg(rowData, token);
+            }}>
+                Test Weight Average
+            </button>
         </>
     )
 }

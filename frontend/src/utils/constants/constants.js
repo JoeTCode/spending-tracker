@@ -9,3 +9,15 @@ export const LABELS_TO_IDX = Object.fromEntries(
     CATEGORIES.map((v, k) => [v, k])
 );
 export const MIN_CONF_SCORE = 0.7
+export const CATEGORY_TO_EMOJI = {
+    "Groceries": "🛒 Groceries",
+    "Housing & Bills": "🏠 Housing & Bills",
+    "Finance & Fees": "💰 Finance & Fees",
+    "Transport": "🚌 Transport",
+    "Income": "💵 Income",
+    "Shopping": "🛍️ Shopping",
+    "Eating Out": "🍽️ Eating Out",
+    "Entertainment": "🎬 Entertainment",
+    "Health & Fitness": "🏋️ Health & Fitness",
+    "Other / Misc": "📦 Other / Misc"
+};

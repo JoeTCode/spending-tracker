@@ -25,14 +25,14 @@ function createModel(input=BERT_DIM, num_classes=NUM_LABELS) {
     return model;
 };
 
-async function train(model, transactions, labels, epochs=10) {
+async function train(model, descriptions, labels, epochs=10) {
     const labels_idx = labels.map(label => LABELS_TO_IDX[label]);
     // Create a feature-extraction pipeline
     const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
 
     // Compute sentence embeddings
     // const sentences = ['This is an example sentence', 'Each sentence is converted'];
-    const embeddingsArray = await extractor(transactions, { pooling: 'mean', normalize: true });
+    const embeddingsArray = await extractor(descriptions, { pooling: 'mean', normalize: true });
     // Convert flat array to tensor
     const embeddings = tf.tensor2d(embeddingsArray.ort_tensor.cpuData, embeddingsArray.ort_tensor.dims, tf.float32);
 
@@ -61,12 +61,12 @@ function formatMemo(memo) {
     return formattedMemo;
 }
 
-async function predict(model, transactions, returnConfScores=false) {
+async function predict(model, descriptions, returnConfScores=false) {
     // Create a feature-extraction pipeline
     const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    const formattedTransactions = transactions.map(t => formatMemo(t));
+    const formattedDescriptions = descriptions.map(t => formatMemo(t));
     // Compute sentence embeddings
-    const embeddingsArray = await extractor(formattedTransactions, { pooling: 'mean', normalize: true });
+    const embeddingsArray = await extractor(formattedDescriptions, { pooling: 'mean', normalize: true });
     // Convert flat array to tensor
     const embeddings = tf.tensor2d(embeddingsArray.ort_tensor.cpuData, embeddingsArray.ort_tensor.dims, tf.float32);
     const predictions = model.predict(embeddings);
@@ -85,6 +85,20 @@ async function predict(model, transactions, returnConfScores=false) {
     const indicesArray = await classIndices.array(); // Convert to plain JS array
     const predictedLabels = indicesArray.map(idx => IDX_TO_LABELS[idx]);
     return predictedLabels;
+};
+
+const getDeltas = (trainedModelWeights, globalModelWeights) => {
+    const deltas = [];
+    for (let i = 0; i < trainedModelWeights.length; i ++) {
+        const cw = trainedModelWeights[i];
+        const gw = globalModelWeights[i];
+        const delta = cw.sub(gw);
+        deltas.push(delta);
+        cw.dispose();
+        gw.dispose();
+    };
+
+    return deltas;
 };
 
 // Convert model weights to a flat array of bytes
@@ -292,4 +306,4 @@ async function test2() {
 };
 
 
-export { createModel, train, predict, getWeightsFromBuffer };
+export { createModel, train, predict, accuracy, getDeltas, getWeightsFromBuffer, getBufferFromWeights };

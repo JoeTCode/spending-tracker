@@ -17,22 +17,41 @@ export async function getModelWeights(token) {
         params: { id },
         responseType: 'arraybuffer'
     });
-
     const buffer = res2.data;
+    
     const weights = await getWeightsFromBuffer(buffer, shapes);
     return weights;
 };
 
-export async function weightAverage(token, clientModelDeltas) {
-    await axios.post(
-        'http://localhost:5000/global-model/weight-average', 
-        { clientModelDeltas },
-        {
-            headers: {
-                "authorization": `Bearer ${token}`
+export async function weightAverage(token, buffer, shapes) {
+    // await axios.post(
+    //     'http://localhost:5000/global-model/weight-average', 
+    //     { clientModelDeltas },
+    //     {
+    //         headers: {
+    //             "authorization": `Bearer ${token}`
+    //         }
+    //     }
+    // );
+    const formData = new FormData();
+    formData.append("weights", new Blob([buffer], { type: "application/octet-stream" }));
+    formData.append("shapes", JSON.stringify(shapes));
+    try {
+        await axios.post(
+            'http://localhost:5000/global-model/weight-average',
+            formData,
+            {
+                headers: { 
+                    "Content-Type": "multipart/form-data",
+                    "Authorization": `Bearer ${token}`
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity,
             }
-        }
-    );
+        );
+    } catch (err) {
+        console.error(err);
+    };
 };
 
 export async function devSaveModel(buffer, shapes) {

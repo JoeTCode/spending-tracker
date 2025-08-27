@@ -12,7 +12,7 @@ async function getTransactions(token, rangeType, selectedMonth=null) {
     //     ...rest,
     //     date: date.split('T')[0]
     // }))
-    console.log(res.data.transactions)
+
     return res.data.transactions; 
 };
 

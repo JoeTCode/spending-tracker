@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { MONTHS } from '../utils/constants/constants.js';
+import { MONTHS, CATEGORIES } from '../utils/constants/constants.js';
 import { getTransactions } from '../api/transactions';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
@@ -13,10 +13,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     function calculateExpenseCategories() {
         if (isVisible && payload[1].value !== 0) {
-            return payload[1]?.payload.expenseCategories.map(category => {
-                const percentage = (category.amount * 100) / payload[1].value;
-                return category.name + ' ' + `(${Math.round(percentage)}%)`;
-            });
+            return payload[1]?.payload.expenseCategories
+                .filter(category => category.amount > 0)   // skip zero amounts
+                .map(category => {
+                    const percentage = (category.amount * 100) / payload[1].value;
+                    return `${category.name} (${Math.round(percentage)}%)`;
+                });
         }
         else return []
     };
@@ -116,6 +118,7 @@ const StackedBarChart = () => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             const data = await getTransactions(token, 'y', selectedMonth);
+            console.log(data);
 
             const dataByMonth = []
             // create defualt objects for each month and populate them later
@@ -126,31 +129,75 @@ const StackedBarChart = () => {
                     expense: 0,
                     // TEMP multi-transaction dummy categories object - will be empty arrays in future to be populated in next loop
                     expenseCategories: [
-                        { name: 'rent', amount: 566.56 },
-                        { name: 'recreational', amount: 320.43 },
-                        { name: 'transport', amount: 168.24 }
+                        // { name: 'rent', amount: 566.56 },
+                        // { name: 'recreational', amount: 320.43 },
+                        // { name: 'transport', amount: 168.24 }
                     ],
                     incomeCategories: [
-                        { name: 'job', amount: 0 },
-                        { name: 'friend', amount: 0 },
-                        { name: 'commerce', amount: 0 }
+                        // { name: 'job', amount: 0 },
+                        // { name: 'friend', amount: 0 },
+                        // { name: 'commerce', amount: 0 }
                     ]
                 })
             };
+
+            for (let monthObj of dataByMonth) {
+                const expenseCategories = CATEGORIES.map(category => ({
+                    name: category,
+                    amount: 0
+                }));
+
+                const incomeCategories = CATEGORIES.map(category => ({
+                    name: category,
+                    amount: 0
+                }));
+                
+                monthObj['expenseCategories'] = expenseCategories;
+                monthObj['incomeCategories'] = incomeCategories;
+            };
             
-            // categorisation logic here in future
+            // categorisation logic here
             for (let row of data) {
                 const date = new Date(row.date)
                 const monthObj = dataByMonth[date.getMonth()];
+                const category = row['category'];
+                const amount = row['amount'];
+                if (amount === 0) {
+                    continue;
+                }
+                else if (amount > 0) {
+                    for (let obj of monthObj['incomeCategories']) {
+                        if (obj['name'] === category) {
+                            obj['amount'] += amount;
+                        };
+                    };
+                }
+                else {
+                    for (let obj of monthObj['expenseCategories']) {
+                        if (obj['name'] === category) {
+                            obj['amount'] += Math.abs(amount);
+                        };
+                    };
+                };
+            };
+            
+            let tempIncome = 0;
+            let tempExpenses = 0;
+            for (let row of data) {
+                const date = new Date(row.date)
+                const monthObj = dataByMonth[date.getMonth()];
+               
                 if (row.amount >= 0) {
                     monthObj.income += row.amount;
-                    setTotalIncome(prev => prev + row.amount);
+                    tempIncome += row.amount;
                 } else {
                     monthObj.expense += Math.abs(row.amount)
-                    setTotalExpenses(prev => prev + row.amount);
+                    tempExpenses += Math.abs(row.amount);
                 };
-            }
-
+            };
+            
+            setTotalIncome(tempIncome);
+            setTotalExpenses(tempExpenses);
             setTransactions(dataByMonth);
         };
 
@@ -160,38 +207,38 @@ const StackedBarChart = () => {
 
     return ( 
         <>
-            <ResponsiveContainer width={700} height={600}>
-                <BarChart
-                    width={500}
-                    height={300}
-                    data={transactions}
-                    margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                    }}
-                    onClick={() => {
-                        setDc((prev) => !prev);
-                    }}
-                    onMouseLeave={() => setDc(false)}
-                >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                    trigger= {dc ? 'click' : 'hover'}
-                    content={CustomTooltip}
-                />
-                <Legend />
-                <Bar dataKey="income" stackId="a" fill="#3fad44ff" />
-                <Bar dataKey="expense" stackId="a" fill="#b34f36ff" />
-                </BarChart>
-            </ResponsiveContainer>
-            <div>
-                Total Expenses: {totalExpenses.toFixed(2)} <br></br>
-                Total Income: {totalIncome.toFixed(2)} <br></br>
-                Net: {(totalIncome + totalExpenses).toFixed(2)}
+            <div style={{ width: 900, height: 600 }}>
+                <ResponsiveContainer>
+                    <BarChart
+                        data={transactions}
+                        margin={{
+                            top: 20,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                        }}
+                        onClick={() => {
+                            setDc((prev) => !prev);
+                        }}
+                        onMouseLeave={() => setDc(false)}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip 
+                            trigger= {dc ? 'click' : 'hover'}
+                            content={CustomTooltip}
+                        />
+                        <Legend />
+                        <Bar dataKey="income" stackId="a" fill="#3fad44ff" />
+                        <Bar dataKey="expense" stackId="a" fill="#b34f36ff" />
+                    </BarChart>
+                </ResponsiveContainer>
+                <div>
+                    Total Expenses: {totalExpenses.toFixed(2)} <br></br>
+                    Total Income: {totalIncome.toFixed(2)} <br></br>
+                    Net: {(totalIncome + totalExpenses).toFixed(2)}
+                </div>
             </div>
         </>
      );

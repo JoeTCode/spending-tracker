@@ -4,15 +4,33 @@ import { createModel } from './model';
 
 export async function getClientModel(token) {
     const models = await tf.io.listModels();
+    let model;
 
     if (Object.keys(models).length === 0) {
         const weights = await getModelWeights(token);
-        const model = await saveClientModel(weights);
-        return model;
+        model = await saveClientModel(weights);
     } else {
-        const clientModel = await tf.loadLayersModel('indexeddb://client-model');
-        return clientModel;
+        model = await tf.loadLayersModel('indexeddb://client-model');
     };
+
+    model.compile({
+        optimizer: 'adam',
+        loss: 'sparseCategoricalCrossentropy',
+        metrics: ['accuracy']
+    });
+
+    return model;
+
+    // // TEMP
+    // const weights = await getModelWeights(token);
+    // const model = createModel();
+    // model.setWeights(weights);
+    // model.compile({
+    //     optimizer: 'adam',
+    //     loss: 'sparseCategoricalCrossentropy',
+    //     metrics: ['accuracy']
+    // });
+    // return model;
 };
 
 export async function saveClientModel(modelWeights) {

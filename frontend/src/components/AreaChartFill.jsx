@@ -96,53 +96,54 @@ const AreaFillChart = () => {
 
     return ( 
         <>
-            <ResponsiveContainer width={900} height={600}>
-                <AreaChart
-                    width={500}
-                    height={400}
-                    data={transactions}
-                    margin={{
-                        top: 10,
-                        right: 30,
-                        left: 0,
-                        bottom: 0,
-                    }}
-                >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date"/>
-                    <YAxis />
-                    <Tooltip 
-                        formatter={(value) => Number(value).toFixed(2)}
-                    />
-                    <defs>
-                        <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset={offset} stopColor="green" stopOpacity={1} />
-                            <stop offset={offset} stopColor="red" stopOpacity={1} />
-                        </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="amount" stroke="#000" fill="url(#splitColor)" />
-                </AreaChart>
-            </ResponsiveContainer>
+            <div style={{ width: 900, height: 600 }}>
+                <ResponsiveContainer>
+                    <AreaChart
+                        data={transactions}
+                        margin={{
+                            top: 10,
+                            right: 30,
+                            left: 0,
+                            bottom: 0,
+                        }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date"/>
+                        <YAxis />
+                        <Tooltip 
+                            formatter={(value) => Number(value).toFixed(2)}
+                        />
+                        <defs>
+                            <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset={offset} stopColor="green" stopOpacity={1} />
+                                <stop offset={offset} stopColor="red" stopOpacity={1} />
+                            </linearGradient>
+                        </defs>
+                        <Area type="monotone" dataKey="amount" stroke="#000" fill="url(#splitColor)" />
+                    </AreaChart>
+                </ResponsiveContainer>
 
-            <button onClick={async () => {
-                setSelectedMonth(prev => (prev - 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
-            }}>
-                Prev
-            </button>
-            <button onClick={async () => {
-                setSelectedMonth(prev => (prev + 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
-            }}>
-                Next
-            </button>
+                <button onClick={async () => {
+                    setSelectedMonth(prev => (prev - 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
+                }}>
+                    Prev
+                </button>
+                <button onClick={async () => {
+                    setSelectedMonth(prev => (prev + 1 + 12) % 12) // wraps to 11 (Dec) if below 0 (Jan)
+                }}>
+                    Next
+                </button>
 
-            <div>
                 <div>
-                    {MONTHS[selectedMonth]} {selectedYear}
+                    <div>
+                        {MONTHS[selectedMonth]} {selectedYear}
+                    </div>
+                    Total Expenses: {totalExpenses.toFixed(2)} <br></br>
+                    Total Income: {totalIncome.toFixed(2)} <br></br>
+                    Net: {net.toFixed(2)}
                 </div>
-                Total Expenses: {totalExpenses.toFixed(2)} <br></br>
-                Total Income: {totalIncome.toFixed(2)} <br></br>
-                Net: {net.toFixed(2)}
             </div>
+            
         </>
      );
 }
