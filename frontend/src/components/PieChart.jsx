@@ -4,13 +4,8 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { getTransactions } from '../api/transactions';
 import { CATEGORIES } from '../utils/constants/constants';
 
-const data = [
-  { name: 'Group A', value: 400 },
-  { name: 'Group B', value: 300 },
-  { name: 'Group C', value: 300 },
-  { name: 'Group D', value: 200 },
-];
-
+const toRemove = new Set(['Income', 'Transfer'])
+const FILTERED_CATEGORIES = CATEGORIES.filter(category => !toRemove.has(category));
 const CATEGORY_COLORS = {
   "Groceries": "#4caf50",       // green
   "Housing & Bills": "#ff9800", // orange
@@ -87,16 +82,19 @@ export default function CategoryPieChart() {
     const { getAccessTokenSilently } = useAuth0();
 
     useEffect(() => {
-        const saveData = async () => {
+      const saveData = async () => {
 			const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
 			const data = await getTransactions(token, 'a');
 			const categories = {};
-			for (let category of CATEGORIES) {
+			
+			for (let category of FILTERED_CATEGORIES) {
 				categories[category] = 0;
 			};
 
 			for (let row of data) {
-				categories[row['category']] = categories[row['category']] + row['amount']
+				if (categories.hasOwnProperty(row['category'])) {
+					categories[row['category']] = categories[row['category']] + row['amount']
+				}
 			}
 
 			const formatted = [];
@@ -108,9 +106,9 @@ export default function CategoryPieChart() {
 			};
 
 			setSpendingPerCategory(formatted);
-		};
+        };
 
-          saveData();
+        saveData();
         
     }, []);
 
