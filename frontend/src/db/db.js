@@ -1,6 +1,9 @@
 // db.js
 import Dexie from 'dexie';
 import { v5 as uuidv5 } from "uuid";
+import { CATEGORIES } from '../utils/constants/constants';
+
+const CATEGORIES_SET = new Set(CATEGORIES);
 
 // '++id, date, amount, type, category, description, is_trainable, trained'
 const db = new Dexie('transactionsDB');
@@ -86,5 +89,111 @@ function validateTransaction(tx, row) {
         trained: trained ?? false
     };
 };
+
+export async function getTransactionsTest(rangeType, selectedMonth=null) {
+    let transactions = [];
+    switch (rangeType) {
+        case 'd':
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            weekAgo.setHours(0, 0, 0, 0);
+            
+            const end = new Date(today);
+            end.setHours(23, 59, 59, 999);
+
+            transactions = await db.barclaysTransactions
+                                    .where('date')
+                                    .between(weekAgo, end, true, false) // true=true includes bounds
+                                    .toArray();
+            break;
+
+        case 'm':
+            const thisMonth = new Date();
+            thisMonth.setDate(1);
+            thisMonth.setHours(0, 0, 0, 0);
+            // transactions = await Transactions.find({
+            //     uid: uid,
+            //     date: { $gte: thisMonth }
+            // }).select('-__v');
+            transactions = await db.barclaysTransactions
+                                    .where('date')
+                                    .aboveOrEqual(thisMonth)
+                                    .toArray();
+            break;
+
+        case 'a':
+            // transactions = await Transactions.find({
+            //     uid: uid,
+            // }).select('-__v');
+            transactions = await db.barclaysTransactions.toArray();
+            break;
+
+        case 'vm':
+            const monthStart = new Date();
+            monthStart.setMonth(selectedMonth);
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
+
+            const monthEnd = new Date(monthStart);
+            monthEnd.setMonth(monthEnd.getMonth() + 1)
+
+            // transactions = await Transactions.find({
+            //     uid: uid,
+            //     date: { $gte: monthStart, $lt: monthEnd }
+            // }).select('-__v');
+            transactions = await db.barclaysTransactions
+                        .where('date')
+                        .between(monthStart, monthEnd, true, false) // true=true includes bounds
+                        .toArray();
+            break;
+
+        case 'y':
+            const yearStart = new Date();
+            yearStart.setMonth(0);
+            yearStart.setDate(1);
+            yearStart.setHours(0, 0, 0, 0);
+
+            const yearEnd = new Date(yearStart);
+            yearEnd.setFullYear(yearEnd.getFullYear() + 1);
+
+            // transactions = await Transactions.find({
+            //     uid: uid,
+            //     date: { $gte: yearStart, $lte: yearEnd }
+            // }).select('-__v');
+            transactions = await db.barclaysTransactions
+                .where('date')
+                .between(yearStart, yearEnd, true, false) // true=true includes bounds
+                .toArray();
+            break;
+    };
+
+    const response = [];
+    for (let tx of transactions) {
+        response.push(
+            {
+                _id: tx['_id'],
+                date: new Date(tx['date']).toISOString().split('T')[0],
+                amount: tx['amount'],
+                type: tx['type'],
+                category: tx['category'],
+                description: tx['description']
+            }
+        );
+    };
+
+    return response;
+};
+
+export async function updateTransactionTest(transaction) {
+    if (CATEGORIES_SET.has(transaction["Category"])) {
+        await db.barclaysTransactions.update(transaction._id, { ...transaction, trained: false });
+    } else {
+        await db.barclaysTransactions.update(transaction._id, transaction);
+    };
+};
+
+export async function deleteTransactionTest() {
+
+}
 
 export { db, validateTransaction };
