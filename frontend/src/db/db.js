@@ -192,8 +192,8 @@ export async function updateTransactionTest(transaction) {
     };
 };
 
-export async function deleteTransactionTest() {
-
+export async function deleteTransactionTest(transaction) {
+    await db.barclaysTransactions.delete(transaction._id);
 }
 
 export { db, validateTransaction };

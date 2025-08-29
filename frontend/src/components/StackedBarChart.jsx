@@ -1,8 +1,9 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MONTHS, CATEGORIES } from '../utils/constants/constants.js';
-import { getTransactions } from '../api/transactions';
+// import { getTransactions } from '../api/transactions';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
+import { getTransactionsTest } from '../db/db.js';
 
 const CustomTooltip = ({ active, payload, label }) => {
     const isVisible = active && payload && payload.length > 0;
@@ -135,7 +136,7 @@ const StackedBarChart = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions(token, 'y');
+            const data = await getTransactionsTest('y');
             // console.log(data);
             const makeCategoryDict = () => {
                 const dict = {};

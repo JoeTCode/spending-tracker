@@ -6,7 +6,7 @@ import { CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
-import { getTransactionsTest, validateTransaction, updateTransactionTest } from '../db/db';
+import { getTransactionsTest, validateTransaction, updateTransactionTest, deleteTransactionTest } from '../db/db';
 
 const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
 const CATEGORIES_SET = new Set(CATEGORIES);
@@ -53,7 +53,7 @@ const formatHeaders = (headers, token) => {
             obj['cellRenderer'] = (props) => {
                 const deleteRow = async () => {
                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
-                    await deleteTransaction(token, deletedRow.remove[0].data);
+                    await deleteTransactionTest(deletedRow.remove[0].data);
                 };
 
                 return (

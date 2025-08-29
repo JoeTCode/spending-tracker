@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
 import { MONTHS, DAYS } from '../utils/constants/constants.js';
 import { getTransactions } from '../api/transactions';
+import { getTransactionsTest } from '../db/db.js';
 
 const AreaFillChart = () => {
     const { getAccessTokenSilently } = useAuth0();
@@ -41,7 +42,7 @@ const AreaFillChart = () => {
             scope: "read:current_user",
             });
 
-            const data = await getTransactions(token, dataRetrievalRange, selectedMonth);
+            const data = await getTransactionsTest(dataRetrievalRange, selectedMonth);
 
             // Aggregate transactions per day
             const dailyTotals = {};
