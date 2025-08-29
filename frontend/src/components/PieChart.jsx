@@ -2,7 +2,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Sector, Legend } from 'rechar
 import React, { useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 // import { getTransactions } from '../api/transactions';
-import { getTransactionsTest } from '../db/db.js';
+import { getTransactions } from '../db/db.js';
 import { CATEGORIES } from '../utils/constants/constants';
 
 const toRemove = new Set(['Income', 'Transfer'])
@@ -85,7 +85,7 @@ export default function CategoryPieChart() {
     useEffect(() => {
       const saveData = async () => {
 			const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-			const data = await getTransactionsTest('a');
+			const data = await getTransactions('a');
 			const categories = {};
 			
 			for (let category of FILTERED_CATEGORIES) {

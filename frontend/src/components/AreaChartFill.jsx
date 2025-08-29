@@ -2,8 +2,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useState, useEffect } from 'react';
 import { MONTHS, DAYS } from '../utils/constants/constants.js';
-import { getTransactions } from '../api/transactions';
-import { getTransactionsTest } from '../db/db.js';
+// import { getTransactions } from '../api/transactions';
+import { getTransactions } from '../db/db.js';
 
 const AreaFillChart = () => {
     const { getAccessTokenSilently } = useAuth0();
@@ -42,7 +42,7 @@ const AreaFillChart = () => {
             scope: "read:current_user",
             });
 
-            const data = await getTransactionsTest(dataRetrievalRange, selectedMonth);
+            const data = await getTransactions(dataRetrievalRange, selectedMonth);
 
             // Aggregate transactions per day
             const dailyTotals = {};

@@ -1,5 +1,5 @@
 import { NavBar, EditableGrid } from '../components';
-import { uploadTransactions } from '../api/transactions';
+// import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';

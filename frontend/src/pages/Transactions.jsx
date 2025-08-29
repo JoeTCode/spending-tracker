@@ -1,12 +1,12 @@
 import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
-import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
+// import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
 import { CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
-import { getTransactionsTest, validateTransaction, updateTransactionTest, deleteTransactionTest } from '../db/db';
+import { getTransactions, updateTransaction, deleteTransaction } from '../db/db';
 
 const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
 const CATEGORIES_SET = new Set(CATEGORIES);
@@ -53,7 +53,7 @@ const formatHeaders = (headers, token) => {
             obj['cellRenderer'] = (props) => {
                 const deleteRow = async () => {
                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
-                    await deleteTransactionTest(deletedRow.remove[0].data);
+                    await deleteTransaction(deletedRow.remove[0].data);
                 };
 
                 return (
@@ -200,7 +200,7 @@ const Transactions = () => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             // const data = await getTransactions(token, 'a');
-            const data = await getTransactionsTest('a');
+            const data = await getTransactions('a');
             // console.log('test', test);
             console.log('actual', data);
             setTransactions(data);
@@ -243,7 +243,7 @@ const Transactions = () => {
         // start timer
         const id = setTimeout(async () => {
             // await updateTransactions(token, mostRecentUndo);
-            await updateTransactionTest(mostRecentUndo);
+            await updateTransaction(mostRecentUndo);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
 
@@ -280,7 +280,7 @@ const Transactions = () => {
         const id = setTimeout(async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             // await updateTransactions(token, mostRecentRedo);
-            await updateTransactionTest(mostRecentRedo);
+            await updateTransaction(mostRecentRedo);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
 
@@ -307,7 +307,7 @@ const Transactions = () => {
 
         try {
             // await updateTransactions(token, updatedRow); // undo redo wont trigger handleCellChange
-            await updateTransactionTest(updatedRow);
+            await updateTransaction(updatedRow);
             const column = params.column.colId;
             
             setUndos((prev) => {
@@ -346,7 +346,7 @@ const Transactions = () => {
                 prevMonth.setMonth(selectedMonth - 1)
                 // const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
 
-                const prevTransactions = await getTransactionsTest('vm', prevMonth.getMonth());
+                const prevTransactions = await getTransactions('vm', prevMonth.getMonth());
                 // console.log('test prev', prev)
                 // console.log('actual prev', prevTransactions);
 
@@ -363,7 +363,7 @@ const Transactions = () => {
                 nextMonth.setMonth(selectedMonth + 1)
                 // const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
 
-                const nextTransactions = await getTransactionsTest('vm', nextMonth.getMonth());
+                const nextTransactions = await getTransactions('vm', nextMonth.getMonth());
                 // console.log('test prev', next)
                 // console.log('actual prev', nextTransactions);
 
@@ -377,7 +377,7 @@ const Transactions = () => {
             <button onClick={async () => {
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 // const allTransactions = await getTransactions(token, 'a');
-                const allTransactions = await getTransactionsTest('a');
+                const allTransactions = await getTransactions('a');
                 setRowData(allTransactions);
             }}>
                 All
