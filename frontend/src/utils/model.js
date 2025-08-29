@@ -49,8 +49,8 @@ async function train(model, descriptions, labels, epochs=10) {
     });
 
     console.log("Training history:", history.history);
-    labelTensor.dispose();
-    embeddings.dispose();
+
+    tf.dispose([embeddings, labelTensor]);
     return model;
 };
 
@@ -61,15 +61,17 @@ function formatMemo(memo) {
     return formattedMemo;
 }
 
-async function predict(model, descriptions, returnConfScores=false) {
-    // Create a feature-extraction pipeline
-    const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    const formattedDescriptions = descriptions.map(t => formatMemo(t));
+async function predict(model, extractor, descriptions, returnConfScores=false) {
+    // // Create a feature-extraction pipeline
+    // const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    // const formattedDescriptions = descriptions.map(t => formatMemo(t));
+    
     // Compute sentence embeddings
-    const embeddingsArray = await extractor(formattedDescriptions, { pooling: 'mean', normalize: true });
+    const embeddingsArray = await extractor(descriptions, { pooling: 'mean', normalize: true });
     // Convert flat array to tensor
     const embeddings = tf.tensor2d(embeddingsArray.ort_tensor.cpuData, embeddingsArray.ort_tensor.dims, tf.float32);
     const predictions = model.predict(embeddings);
+    // const predictions = model.predict(descriptions);
     
     if (returnConfScores === true) {
         const maxProbs = predictions.max(-1)
@@ -84,6 +86,8 @@ async function predict(model, descriptions, returnConfScores=false) {
     const classIndices = predictions.argMax(-1);  // Pick highest-probability index per row
     const indicesArray = await classIndices.array(); // Convert to plain JS array
     const predictedLabels = indicesArray.map(idx => IDX_TO_LABELS[idx]);
+
+    tf.dispose([embeddings, predictions]);
     return predictedLabels;
 };
 

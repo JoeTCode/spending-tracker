@@ -49,7 +49,7 @@ const formatHeaders = (headers, token) => {
                 return (
                     <img
                         src="/circle-xmark-solid.svg"
-                        alt="Delete"
+                        alt="X"
                         onClick={deleteRow}
                         style={{
                             cursor: 'pointer',

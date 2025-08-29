@@ -138,16 +138,16 @@ app.post('/api/transactions/upload', checkJwt, async (req, res) => {
 
     // format the transactions data and create the document to be inserted to the database
     const document = transactions.map((row, i) => {
-        const [ d, m, y ] = row["Date"].split('/');
+        const [ d, m, y ] = row["date"].split('/');
         const formatted_date = `${y}-${m}-${d}`;
 
         return {
             uid: uid,
             date: new Date(formatted_date),
-            amount: parseFloat(row["Amount"]),
+            amount: parseFloat(row["amount"]),
             type: row["Subcategory"],
-            category: row["Category"],
-            description: row["Memo"]
+            category: row["category"],
+            description: row["memo"]
         };
     });
 

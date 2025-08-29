@@ -7,6 +7,11 @@ import { createModel, predict } from '../utils/model';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
 import { devGetModelWeights } from '../api/globalModel';
+import { db, validateTransaction } from '../db/db';
+import { pipeline } from '@huggingface/transformers';
+import * as tf from '@tensorflow/tfjs';
+
+const CATEGORIES_SET = new Set(CATEGORIES);
 
 // TEMP
 const targetCategories = {
@@ -426,6 +431,13 @@ function formatDescription(desc) {
     let formattedDesc = String(desc).split('\t')[0].trim();
     formattedDesc = formattedDesc.replace(/\s+/g, ' ').trim();
     return formattedDesc;
+};
+
+function formatDate(date) {
+    // input format (String) DD/MM/YYYY
+    // convert to ISO YYYY-MM-DD
+    const [ day, month, year ] = date.split("/");
+    return `${year}-${month}-${day}`;
 }
 
 const Upload = () => {
@@ -437,6 +449,10 @@ const Upload = () => {
     const [ headers, setHeaders ] = useState(null);
     const [ saveData, setSaveData ] = useState([]);
     const gridRef = useRef(null);
+    const [duplicateWarning, setDuplicateWarning] = useState(false);
+    const [duplicateRows, setDuplicateRows] = useState([]);
+    const [ fileParsed, setFileParsed ] = useState(false);
+
     const [correctionsCount, setCorrectionsCount] = useState(() => {
             const saved = localStorage.getItem("count");
             if (saved === null) {
@@ -454,68 +470,74 @@ const Upload = () => {
         });
     };
 
-    const CATEGORIES_SET = new Set(CATEGORIES);
-
-    const formatTransactions = (transactions, keepCols, amountCol, descriptionCol) => {
-        const cols = Object.values(transactions[0]); // array of col names
-        const desc_idx = cols.indexOf(descriptionCol);
-        const amount_idx = cols.indexOf(amountCol);
-        const keepColsToIdx = {}
-        for (let i = 0; i < cols.length; i ++) {
-            const col = cols[i];
-            if (keepCols.find(el => el == col)) {
-                keepColsToIdx[cols[i]] = i;
-            };
-        };
-        
-        const formattedTransactions = transactions.slice(1); // remove cols
-        return formattedTransactions.map(tx => {
-            const amount = parseFloat(tx[amount_idx]) ? parseFloat(tx[amount_idx]) : 0;
-            tx[amount_idx] = amount;
-            tx[desc_idx] = formatDescription(tx[desc_idx]);
-            const obj = {};
-            for (let col of keepCols) {
-                obj[col] = tx[keepColsToIdx[col]];
-            };
-            obj["_id"] = tx["_id"]
-            return obj
-        })
-        .filter(tx => tx[descriptionCol] && tx[descriptionCol] !== "undefined" && !isNaN(tx[amountCol]));
-    };
-
     const getLowConfTransactions = (transactions, predictedCategories, confScores) => {
         const res = [];
         for (let i = 0; i < transactions.length; i++) {
             if (confScores[i] < MIN_CONF_SCORE) {
-                res.push({ ...transactions[i], 'Category': predictedCategories[i], 'Confidence': Math.round(confScores[i] * 100) });
+                res.push({ ...transactions[i], 'category': predictedCategories[i], 'confidence': Math.round(confScores[i] * 100) });
             };
         };
 
         return res;
     }
 
+    async function categoriseTransactions(formattedTransactions, batchSize = 32) {
+        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+        const predictions = [];
+        const confidenceScores = [];
+        if (transactions.length > 0) {
+            const model = await getClientModel(token);
+            // Create a feature-extraction pipeline
+            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+
+            const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
+            
+            for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
+                const batch = transactionsDescriptions.slice(i, i + batchSize);
+                // Compute sentence embeddings
+                // const embeddingsArray = await extractor(batch, { pooling: 'mean', normalize: true });
+                // Convert flat array to tensor
+                // const embeddings = tf.tensor2d(embeddingsArray.ort_tensor.cpuData, embeddingsArray.ort_tensor.dims, tf.float32);
+                const getConfScores = true;
+
+                const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
+                predictions.push(preds);
+                confidenceScores.push(confScores);
+
+                // Yield back to the browser
+                await new Promise(r => setTimeout(r, 0));
+            };
+            
+            return [predictions.flat(), confidenceScores.flat()];
+        };
+    };
+
     useEffect(() => {
         
-        const categoriseTransactions = async (formattedTransactions) => {
-            const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+        // async function categoriseTransactions(formattedTransactions, batchSize = 32) {
+        //     const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
             
-            if (transactions.length > 0) {
-                const model = await getClientModel(token);
-                const transactionsDescriptions = formattedTransactions.map(tx => tx['Memo'])
+        //     if (transactions.length > 0) {
+        //         const model = await getClientModel(token);
+        //         const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
 
-                const getConfScores = true;
-                const [ predictions, confidenceScores ] = await predict(model, transactionsDescriptions, getConfScores);
-                return [predictions, confidenceScores];
-            };
-        };
+        //         const getConfScores = true;
+        //         const [ predictions, confidenceScores ] = await predict(model, transactionsDescriptions, getConfScores);
+        //         return [predictions, confidenceScores];
+        //     };
+        // };
+
 
         const createCSVPreview = async () => {
             if (transactions.length > 0) {
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 
-                const formattedTransactions = formatTransactions(transactions, [ "_id", "Date", "Account", "Amount", "Subcategory", "Memo" ], "Amount", "Memo");
-                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(token, formattedTransactions);                
-                
+                // const formattedTransactions = formatBarclaysTransactions(transactions, ["date", "account", "amount", "subcategory", "memo" ], "amount", "memo");
+
+                const validatedTransactions = transactions.map((tx, i) => validateTransaction(tx, i));
+                const timer = new Date().getTime();
+                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(validatedTransactions);                
+                console.log((new Date().getTime() - timer) / 1000);
                 // TEMP
                 let numMatches = 0;
                 const targets = Object.values(targetCategories);
@@ -527,12 +549,10 @@ const Upload = () => {
 
                 console.log('Score:', (numMatches*100)/predictedCategories.length);
 
-                const lowConfTransactions = getLowConfTransactions(formattedTransactions, predictedCategories, confidenceScores);
+                const lowConfTransactions = getLowConfTransactions(validatedTransactions, predictedCategories, confidenceScores);
                 const headers = Object.keys(lowConfTransactions[0]);
-                const reordered = ["Confidence", "Category", ...headers.filter(col => col !== "Category" && col !== "Confidence")];
-                console.log(lowConfTransactions.length)
+                const reordered = ["confidence", "category", ...headers.filter(col => col !== "category" && col !== "confidence")];
                 setLowConfTx(lowConfTransactions);
-                
                 
                 setHeaders(() => {
                     const formatted = [];
@@ -542,7 +562,7 @@ const Upload = () => {
                         if (header === '_id') {
                             continue;
                         }
-                        if (header === 'Confidence') {
+                        if (header === 'confidence') {
                             obj['field'] = header;
                             obj['editable'] = true;
                             obj['width'] = 120
@@ -551,17 +571,17 @@ const Upload = () => {
                                 return `${params.value}%`;
                             };
                         };
-                        if (header === 'Date') {
+                        if (header === 'date') {
                             obj['field'] = header;
                             obj['editable'] = true;
                             obj['width'] = 120
                         }
-                        if (header === 'Amount') {
+                        if (header === 'amount') {
                             obj['field'] = header;
                             obj['editable'] = true;
                             obj['width'] = 120
                         }
-                        else if (header === 'Category') {
+                        else if (header === 'category') {
                             obj['field'] = header;
                             obj['editable'] = true;
                             obj['cellEditor'] = 'agSelectCellEditor';
@@ -579,14 +599,33 @@ const Upload = () => {
                     return formatted;
                 });
 
-                setPreviewCSV(true);
-                const saveData = formattedTransactions.map((tx, i) => ({
-                    ...tx,
-                    'Category': predictedCategories[i]
-                }));
-                console.log(saveData);
-                setSaveData(saveData);
+                for (let i = 0; i < validatedTransactions.length; i ++) {
+                    validatedTransactions[i]['category'] = predictedCategories[i];
+                };
+                console.log(validatedTransactions);
                 
+                const dates = validatedTransactions.map(tx => new Date(tx['date']));
+                dates.sort((a, b) => a.getTime() - b.getTime());
+                const start = dates[0];
+                const end = dates[dates.length - 1];
+
+                const transactionsInRange = await db.barclaysTransactions
+                    .where('date')
+                    .between(start, end, true, true) // true=true includes bounds
+                    .toArray();
+
+                if (transactionsInRange.length > 0) {
+                    console.warn('WARNING: Existing transactions found in uploaded CSV date range:', transactionsInRange);
+                    setDuplicateWarning(true);
+                    setDuplicateRows(transactionsInRange);
+                    // Reset to file upload step
+                    setPreviewCSV(false);        // hide editable grid
+                } else {
+                    await db.barclaysTransactions.bulkAdd(validatedTransactions);
+                    console.log('Transactions uploaded successfully');
+                    setSaveData(validatedTransactions);
+                    setPreviewCSV(true);
+                };
             };
         };
 
@@ -597,6 +636,7 @@ const Upload = () => {
     const sendData = async () => {
         // const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         // await uploadTransactions(token, saveData);
+
     };
 
 
@@ -606,7 +646,7 @@ const Upload = () => {
         );
 
         const column = params.column.colId;
-        if (column === 'Category') {
+        if (column === 'category') {
             console.log(correctionsCount);
             if (CATEGORIES_SET.has(updatedRow[column])) {
                 incrementCorrectionsCount();
@@ -625,19 +665,23 @@ const Upload = () => {
             
             <CSVReader 
                 onUploadAccepted={(results) => {
-                    const resultsWithId = results.data.map((row, idx) => ({
-                        _id: idx,
-                        ...row
-                    }));
-                    // const cols = Object.values(resultsWithId[0]);
-                    // const colsWithId = ["_id", ...cols];
-                    // const colsWithIdObj = {}
-                    // for (let i = 0; i < colsWithId.length; i ++) {
-                    //     colsWithIdObj[i] = colsWithId[i];
-                    // };
-                    // resultsWithId[0] = colsWithIdObj;
-                    setTransactions(resultsWithId)
+                    const formatted = results.data.map(tx => {
+                        const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
+                        return {
+                            'account': tx['Account'],
+                            'amount': amount,
+                            'date': formatDate(tx['Date']),
+                            'description': formatDescription(tx['Memo']),
+                            'type': tx['Subcategory']                        
+                        };
+                    })
+                    .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
+                    
+                    console.log(formatted);
+                    setTransactions(formatted);
+                    setFileParsed(true);
                 }}
+                config={{ header: true, skipEmptyLines: true }}
                 noDrag
             >
                 {({
@@ -648,8 +692,26 @@ const Upload = () => {
                     Remove,
                 }) => (
                     <>
-                    
-                        {acceptedFile ? // nested ternary operator on acceptedFile true, else display Upload CSV button
+                        {duplicateWarning ? (
+                            <div>
+                                <p>Duplicate transactions found in your CSV:</p>
+                                <ul>
+                                    {duplicateRows.map((tx, i) => (
+                                        <li key={i}>{tx.date.toLocaleDateString()} — {tx.description} — {tx.amount}</li>
+                                    ))}
+                                </ul>
+                                <button 
+                                    {...getRemoveFileProps()}
+                                    onClick={() => {
+                                        setDuplicateWarning(false);
+                                        setFileParsed(false);
+                                        setDuplicateRows([]);
+                                    }}
+                                >
+                                    Go back to Upload CSV
+                                </button>
+                            </div>
+                        ) : fileParsed ? (
                             previewCSV ? (
                                 <>
                                     <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
@@ -657,8 +719,8 @@ const Upload = () => {
                                 </>
                             ) : (
                                 <div>Loading...</div>
-                            ) 
-                        : (
+                            )
+                        ) : (
                             <div {...getRootProps()}>
                                 <button>Upload CSV file</button>
                             </div>
