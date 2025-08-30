@@ -90,7 +90,7 @@ function validateTransaction(tx, row) {
     };
 };
 
-export async function getTransactionsTest(rangeType, selectedMonth=null) {
+export async function getTransactions(rangeType, selectedMonth=null) {
     let transactions = [];
     switch (rangeType) {
         case 'd':
@@ -184,15 +184,15 @@ export async function getTransactionsTest(rangeType, selectedMonth=null) {
     return response;
 };
 
-export async function updateTransactionTest(transaction) {
+export async function updateTransaction(transaction) {
     if (CATEGORIES_SET.has(transaction["Category"])) {
-        await db.barclaysTransactions.update(transaction._id, { ...transaction, trained: false });
+        await db.barclaysTransactions.put(transaction._id, { ...transaction, trained: false });
     } else {
-        await db.barclaysTransactions.update(transaction._id, transaction);
+        await db.barclaysTransactions.put(transaction._id, transaction);
     };
 };
 
-export async function deleteTransactionTest(transaction) {
+export async function deleteTransaction(transaction) {
     await db.barclaysTransactions.delete(transaction._id);
 }
 

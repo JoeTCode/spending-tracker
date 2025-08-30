@@ -14,7 +14,7 @@ const CORRECTIONSTRIGGER = 10;
 const UNDO_REDO_DELAY = 500;
 
 // customise column format and functions for the EditableGrid cols argument
-const formatHeaders = (headers, token) => {
+const formatHeaders = (headers, token, setUndos) => {
     const deleteRowName = 'Delete';
     headers = headers.map(header => CATEGORY_TO_EMOJI[header] || header);
     const headersCopy = [...headers, deleteRowName];
@@ -54,6 +54,13 @@ const formatHeaders = (headers, token) => {
                 const deleteRow = async () => {
                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
                     await deleteTransaction(deletedRow.remove[0].data);
+                    // setUndos((prev) => {
+                    //     if (prev) {
+                    //         return [...prev, deletedRow.remove[0].data]
+                    //     } else {
+                    //         return [deletedRow.remove[0].data]
+                    //     };
+                    // });
                 };
 
                 return (
@@ -208,7 +215,7 @@ const Transactions = () => {
             setRowData(data); // new
 
             const hdrs = Object.keys(data[0])
-            setHeaders(formatHeaders(hdrs, token));
+            setHeaders(formatHeaders(hdrs, token, setUndos));
         };
 
         retrieveData();
