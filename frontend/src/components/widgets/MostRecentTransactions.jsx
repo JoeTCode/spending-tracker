@@ -56,7 +56,7 @@ const MostRecentTransactions = () => {
     }, [recentTransactions]);
 
     return (
-        <div className='max-h-45 max-w-120'>
+        <div className='h-[610px] shadow-lg sm:h-[700px]'>
             {recentTransactions.length > 0 ? (
                 <EditableGrid 
                     gridRef={gridRef} rowData={recentTransactions} colNames={headers} onCellChange={null}

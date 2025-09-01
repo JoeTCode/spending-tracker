@@ -43,7 +43,7 @@ export default function IncomeLineChart() {
 
     return (
         <div className="
-        w-full md:h-[300px] xl:h-[400px] 2xl:h-[400px] p-5 pt-10
+        w-full h-[350px] xl:h-[400px] 2xl:h-[400px] p-5 pt-10
         rounded-lg bg-[#1a1818] shadow-lg
         ">
             <ResponsiveContainer width="100%" height="100%">
@@ -56,7 +56,7 @@ export default function IncomeLineChart() {
                     bottom: 5,
                     }}
                 >
-                    <CartesianGrid strokeDasharray="2 5" />
+                    {/* <CartesianGrid strokeDasharray="2 5" /> */}
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => value.toFixed(2)} />
                     <Tooltip formatter={(value) => value.toFixed(2)} />

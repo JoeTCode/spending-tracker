@@ -58,16 +58,18 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     return (
         <div 
-            className={`
-                    custom-tooltip ${isVisible ? 'visible' : 'hidden'} z-[9999] pointer-events-auto
-                    bg-[#524e99e0] px-5 pt-2 pb-5 rounded-lg
-                `}
+            className={`custom-tooltip 
+              z-[9999] pointer-events-auto 
+              bg-[#524e99e0] 
+              p-5 pt-3 pr-10 rounded-lg
+              ${isVisible ? 'visible' : 'invisible'}`
+            }
             onClick={(e) => e.stopPropagation()}
         >
             {isVisible && (
                 <>
                     {/* Month title */}
-                    <p className='label mb-3 font-bold'>{`${label}`}</p>
+                    <p className="label font-bold mb-5">{`${label}`}</p>
 
                     {/* expenses */}
                     <div 
@@ -81,7 +83,7 @@ const CustomTooltip = ({ active, payload, label }) => {
                             setShowExpenseCategories(false);
                             setPinExpenseCategories(prev => !prev)
                         }}
-                        className='cursor-pointer mb-3'
+                        className='cursor-pointer'
                     >
                         <p>
                             <span className='mr-1'>
@@ -117,7 +119,7 @@ const CustomTooltip = ({ active, payload, label }) => {
                         }}
                         className='cursor-pointer'
                     >
-                        <p>
+                        <p className='mt-3'>
                             <span className='mr-1'>
                                 {showIncomeCategories || pinIncomeCategories ? '-' : '+'}
                             </span>
@@ -221,7 +223,7 @@ const StackedBarChart = () => {
     return ( 
         <>
             <div className="
-                w-full md:h-[300px] xl:h-[400px] 2xl:h-[400px] p-5
+                w-full h-full sm:h-[417px] p-5
                 rounded-lg bg-[#1a1818] shadow-lg
             ">
                 <ResponsiveContainer>
@@ -247,8 +249,8 @@ const StackedBarChart = () => {
                             cursor={{ fill: "#8884d880" }}
                         />
                         <Legend />
-                        <Bar dataKey="income" stackId="a" fill="#3fad44E6"/>
-                        <Bar dataKey="expense" stackId="a" fill="#b34f36E6" />
+                        <Bar dataKey="income" stackId="a" fill="rgba(8, 143, 62, 0.8)"/>
+                        <Bar dataKey="expense" stackId="a" fill="rgba(187, 31, 26, 0.5)" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

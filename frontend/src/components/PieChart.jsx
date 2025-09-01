@@ -130,7 +130,7 @@ export default function CategoryPieChart() {
     return (
 		// <div style={{ width: 1000, height: 800 }}>
 		<div className="
-				w-full md:h-[300px] xl:h-[400px] 2xl:h-[400px] p-2
+				w-full h-[350px] xl:h-[400px] 2xl:h-[400px] p-2
 				rounded-lg bg-[#1a1818] shadow-lg
 			">
 			<ResponsiveContainer width="100%" height="100%">
