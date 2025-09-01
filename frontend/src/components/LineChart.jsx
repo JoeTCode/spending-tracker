@@ -56,7 +56,7 @@ export default function IncomeLineChart() {
                     bottom: 5,
                     }}
                 >
-                    <CartesianGrid strokeDasharray="2 5" />
+                    {/* <CartesianGrid strokeDasharray="2 5" /> */}
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => value.toFixed(2)} />
                     <Tooltip formatter={(value) => value.toFixed(2)} />
