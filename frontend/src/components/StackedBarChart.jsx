@@ -58,17 +58,16 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     return (
         <div 
-            className="custom-tooltip" 
-            style={{ 
-                visibility: isVisible ? 'visible' : 'hidden', zIndex: 9999, pointerEvents: "auto", background: '#524e99e0',
-                paddingLeft: '10px', paddingRight: '10px', paddingBottom: '2px', paddingTop: '1px'
-            }}
+            className={`
+                    custom-tooltip ${isVisible ? 'visible' : 'hidden'} z-[9999] pointer-events-auto
+                    bg-[#524e99e0] px-5 pt-2 pb-5 rounded-lg
+                `}
             onClick={(e) => e.stopPropagation()}
         >
             {isVisible && (
                 <>
                     {/* Month title */}
-                    <p className="label">{`${label}`}</p>
+                    <p className='label mb-3 font-bold'>{`${label}`}</p>
 
                     {/* expenses */}
                     <div 
@@ -82,10 +81,10 @@ const CustomTooltip = ({ active, payload, label }) => {
                             setShowExpenseCategories(false);
                             setPinExpenseCategories(prev => !prev)
                         }}
-                        style={{ cursor: 'pointer'}}
+                        className='cursor-pointer mb-3'
                     >
                         <p>
-                            <span>
+                            <span className='mr-1'>
                                 {showExpenseCategories || pinExpenseCategories ? '-' : '+'}
                             </span>
                             {`${payload[1].name}: ${payload[1].value.toFixed(2)}`}
@@ -116,10 +115,10 @@ const CustomTooltip = ({ active, payload, label }) => {
                             setShowIncomeCategories(false);
                             setPinIncomeCategories(prev => !prev);
                         }}
-                        style={{ cursor: 'pointer' }}
+                        className='cursor-pointer'
                     >
                         <p>
-                            <span>
+                            <span className='mr-1'>
                                 {showIncomeCategories || pinIncomeCategories ? '-' : '+'}
                             </span>
                             {`${payload[0].name}: ${payload[0].value.toFixed(2)}`}
