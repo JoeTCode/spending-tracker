@@ -24,7 +24,7 @@ const UpcomingPayments = () => {
 
     return (
         // <div className='rounded-lg bg-[#1a1818] shadow-lg m-15 p-5  max-w-100'>
-        <div className='rounded-lg bg-[#1a1818] shadow-lg p-5 max-w-150'>
+        <div className='rounded-lg bg-[#1a1818] shadow-lg p-5 h-full sm:h-[200px]'>
             <div className='float-right'>+ Add payment</div>
             {upcomingPayments.length > 0 ? (
                 <div>Upcoming Payments:</div>

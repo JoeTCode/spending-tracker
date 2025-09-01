@@ -35,8 +35,8 @@ const TransactionsOverviewCard = () => {
 
     return (
         // <div className='m-20 rounded-lg bg-[#1a1818] max-w-100 max-h-50 shadow-lg'>
-        <div className='rounded-lg bg-[#1a1818] max-w-150 max-h-50 shadow-lg'>
-            <div className='grid grid-cols-1 gap-5 justify-self-center m-5'>
+        <div className='rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px]'>
+            <div className='grid grid-cols-1 gap-5 justify-self-center p-5'>
                 <div > Net: {(totalIncome - totalExpenses).toFixed(2)} </div>
                 <div> Total Expenses: {totalExpenses.toFixed(2)} </div>
                 <div> Total Income: {totalIncome.toFixed(2)} </div>
