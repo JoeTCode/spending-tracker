@@ -1,14 +1,14 @@
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'; 
+import { AllCommunityModule, ModuleRegistry, colorSchemeDark, themeQuartz } from 'ag-grid-community'; 
 import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
 import React, { useState } from 'react';
 
+const myTheme = themeQuartz.withPart(colorSchemeDark);
 // Register all Community features
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 
 const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
     // Column Definitions: Defines the columns to be displayed.
-    const [ colDefs, setColDefs ] = useState(colNames);
 
     // Save edited cells to state
     
@@ -22,15 +22,14 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
     return (
         <>
             {/* Data Grid will fill the size of the parent container */}
-            <div style={{ height: 500, width: 1100 }}>
-                <AgGridReact
-                    ref={gridRef}
-                    rowData={rowData}
-                    columnDefs={colDefs}
-                    onCellValueChanged={onCellValueChanged}
-                    getRowId={params => params.data._id}
-                />
-            </div>
+            <AgGridReact
+                theme={myTheme}
+                ref={gridRef}
+                rowData={rowData}
+                columnDefs={colNames}
+                onCellValueChanged={onCellValueChanged}
+                getRowId={params => params.data._id}
+            />
         </>
     )
 }

@@ -437,7 +437,9 @@ function formatDate(date) {
     // input format (String) DD/MM/YYYY
     // convert to ISO YYYY-MM-DD
     const [ day, month, year ] = date.split("/");
-    return `${year}-${month}-${day}`;
+    const dateString = `${year}-${month}-${day}`;
+    return new Date(dateString);
+
 }
 
 const Upload = () => {
@@ -621,6 +623,7 @@ const Upload = () => {
                     // Reset to file upload step
                     setPreviewCSV(false);        // hide editable grid
                 } else {
+                    console.log('validated transactions', validatedTransactions);
                     await db.barclaysTransactions.bulkAdd(validatedTransactions);
                     console.log('Transactions uploaded successfully');
                     setSaveData(validatedTransactions);
@@ -677,7 +680,7 @@ const Upload = () => {
                     })
                     .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
                     
-                    console.log(formatted);
+                    // console.log(formatted);
                     setTransactions(formatted);
                     setFileParsed(true);
                 }}

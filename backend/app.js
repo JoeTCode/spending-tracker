@@ -39,7 +39,7 @@ const checkJwt = auth({
 app.get('/api/transactions/get', checkJwt, async (req, res) => {
     // d, w, m, q, y, a, vm
     // d = default (last 7 days), w = calendar week, m = calendar month, q = last 3 calendar months, y = calendar year
-    // a = all, vm = variable month
+    // a = all, vm = variable month, cm = custom month
     // const rangeType = req.body.rangeType
 
     const uid = req.auth.payload.sub;

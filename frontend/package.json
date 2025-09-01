@@ -12,6 +12,7 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
     "@huggingface/transformers": "^3.7.2",
+    "@tailwindcss/vite": "^4.1.12",
     "@tensorflow/tfjs": "^4.22.0",
     "ag-grid-react": "^34.0.1",
     "axios": "^1.10.0",
@@ -24,6 +25,7 @@
     "react-papaparse": "^4.4.0",
     "react-router-dom": "^7.6.3",
     "recharts": "^3.0.2",
+    "tailwindcss": "^4.1.12",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -31,10 +33,12 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9.29.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
+    "postcss": "^8.5.6",
     "vite": "^7.0.0"
   }
 }

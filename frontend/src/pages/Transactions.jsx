@@ -334,8 +334,9 @@ const Transactions = () => {
             <NavBar />
             <h1>Transactions</h1>
             
-            {rowData && rowData.length > 0 ? (
-                <EditableGrid gridRef={gridRef} rowData={rowData} colNames={headers} onCellChange={handleCellChange} /> ) : null
+            {rowData && rowData.length > 0 ? ( <div className='h-150 w-270'>
+                <EditableGrid gridRef={gridRef} rowData={rowData} colNames={headers} onCellChange={handleCellChange} />
+                </div>) : null
             }
 
             {undos.length > 0 ? (

@@ -37,10 +37,6 @@ const AreaFillChart = () => {
     // Retrieve data
     useEffect(() => {
         const retrieveData = async () => {
-            const token = await getAccessTokenSilently({
-            audience: "http://localhost:5000",
-            scope: "read:current_user",
-            });
 
             const data = await getTransactions(dataRetrievalRange, selectedMonth);
 
@@ -96,7 +92,7 @@ const AreaFillChart = () => {
 
     return ( 
         <>
-            <div style={{ width: 900, height: 600, marginBottom: 200 }}>
+            <div className="w-full sm:h-[200px] md:h-[300px] xl:h-[400px] 2xl:h-[500px] p-2">
                 <ResponsiveContainer>
                     <AreaChart
                         data={summedTransactions}

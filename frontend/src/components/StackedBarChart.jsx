@@ -91,8 +91,18 @@ const CustomTooltip = ({ active, payload, label }) => {
                             {`${payload[1].name}: ${payload[1].value.toFixed(2)}`}
                         </p> 
                     </div>
-                    {showExpenseCategories && <p>{expenseCategories.join(', ')}</p>}
-                    {pinExpenseCategories && <p>{expenseCategories.join(', ')}</p>}
+
+                    {/* {showExpenseCategories && <p>{expenseCategories.join(', ')}</p>}
+                    {pinExpenseCategories && <p>{expenseCategories.join(', ')}</p>} */}
+
+                    {/* Scrollable section */}
+                    {(showExpenseCategories || pinExpenseCategories) && (
+                        <div className="max-h-24 overflow-y-auto border-t mt-1 pt-2 mb-2">
+                            {expenseCategories.map((cat, idx) => (
+                                <p key={idx}>{cat}</p>
+                            ))}
+                        </div>
+                    )}
                     
                     {/* income */}
                     <div 
@@ -115,8 +125,18 @@ const CustomTooltip = ({ active, payload, label }) => {
                             {`${payload[0].name}: ${payload[0].value.toFixed(2)}`}
                         </p> 
                     </div>
-                    {showIncomeCategories && <p>{incomeCategories.join(', ')}</p>}
-                    {pinIncomeCategories && <p>{incomeCategories.join(', ')}</p>}
+
+                    {/* {showIncomeCategories && <p>{incomeCategories.join(', ')}</p>}
+                    {pinIncomeCategories && <p>{incomeCategories.join(', ')}</p>} */}
+
+                    {/* Scrollable section */}
+                    {(showIncomeCategories || pinIncomeCategories) && (
+                        <div className="max-h-24 overflow-y-auto border-t mt-1 pt-2">
+                            {incomeCategories.map((cat, idx) => (
+                                <p key={idx}>{cat}</p>
+                            ))}
+                        </div>
+                    )}
                 </>
             )}
         </div>
@@ -128,8 +148,8 @@ const StackedBarChart = () => {
     const [ transactions, setTransactions ] = useState([]);
     const thisMonth = new Date();
     const [ selectedMonth, setSelectedMonth ] = useState(thisMonth.getMonth());
-    const [ totalExpenses, setTotalExpenses ] = useState(0);
-    const [ totalIncome, setTotalIncome ] = useState(0);
+    // const [ totalExpenses, setTotalExpenses ] = useState(0);
+    // const [ totalIncome, setTotalIncome ] = useState(0);
     const [ dc, setDc ] = useState(false);
 
     // Retrieve and format data
@@ -153,23 +173,10 @@ const StackedBarChart = () => {
                     'month': MONTHS[i].substring(0, 3),
                     'income': 0,
                     'expense': 0,
-                    // TEMP multi-transaction dummy categories object - will be empty arrays in future to be populated in next loop
-                    // expenseCategories: [
-                    //     // { name: 'rent', amount: 566.56 },
-                    //     // { name: 'recreational', amount: 320.43 },
-                    //     // { name: 'transport', amount: 168.24 }
-                    // ],
-                    // incomeCategories: [
-                    //     // { name: 'job', amount: 0 },
-                    //     // { name: 'friend', amount: 0 },
-                    //     // { name: 'commerce', amount: 0 }
-                    // ]
                     'expenseCategories': makeCategoryDict(),
                     'incomeCategories': makeCategoryDict()
                 });
             };
-
-            console.log(dataByMonth);
             
             // categorisation logic here
             for (let row of data) {
@@ -188,23 +195,23 @@ const StackedBarChart = () => {
                 };
             };
             
-            let tempIncome = 0;
-            let tempExpenses = 0;
+            // let tempIncome = 0;
+            // let tempExpenses = 0;
             for (let row of data) {
                 const date = new Date(row.date)
                 const monthObj = dataByMonth[date.getMonth()];
                
                 if (row.amount >= 0) {
                     monthObj.income += row.amount;
-                    tempIncome += row.amount;
+                    // tempIncome += row.amount;
                 } else {
                     monthObj.expense += Math.abs(row.amount)
-                    tempExpenses += Math.abs(row.amount);
+                    // tempExpenses += Math.abs(row.amount);
                 };
             };
             
-            setTotalIncome(tempIncome);
-            setTotalExpenses(tempExpenses);
+            // setTotalIncome(tempIncome);
+            // setTotalExpenses(tempExpenses);
             setTransactions(dataByMonth);
         };
 
@@ -214,7 +221,10 @@ const StackedBarChart = () => {
 
     return ( 
         <>
-            <div style={{ width: 900, height: 600 }}>
+            <div className="
+                w-full md:h-[300px] xl:h-[400px] 2xl:h-[400px] p-5
+                rounded-lg bg-[#1a1818] shadow-lg
+            ">
                 <ResponsiveContainer>
                     <BarChart
                         data={transactions}
@@ -229,23 +239,19 @@ const StackedBarChart = () => {
                         }}
                         onMouseLeave={() => setDc(false)}
                     >
-                        <CartesianGrid strokeDasharray="3 3" />
+                        {/* <CartesianGrid strokeDasharray="2 5" /> */}
                         <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip 
                             trigger= {dc ? 'click' : 'hover'}
                             content={CustomTooltip}
+                            cursor={{ fill: "#8884d880" }}
                         />
                         <Legend />
-                        <Bar dataKey="income" stackId="a" fill="#3fad44ff" />
-                        <Bar dataKey="expense" stackId="a" fill="#b34f36ff" />
+                        <Bar dataKey="income" stackId="a" fill="#3fad44E6"/>
+                        <Bar dataKey="expense" stackId="a" fill="#b34f36E6" />
                     </BarChart>
                 </ResponsiveContainer>
-                <div>
-                    Total Expenses: {totalExpenses.toFixed(2)} <br></br>
-                    Total Income: {totalIncome.toFixed(2)} <br></br>
-                    Net: {(totalIncome + totalExpenses).toFixed(2)}
-                </div>
             </div>
         </>
      );

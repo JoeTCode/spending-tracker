@@ -90,9 +90,16 @@ function validateTransaction(tx, row) {
     };
 };
 
-export async function getTransactions(rangeType, selectedMonth=null) {
+export async function getTransactions(rangeType, selectedMonth=null, numRetrieved=null) {
     let transactions = [];
     switch (rangeType) {
+        case 'latest-n':
+            transactions = await db.barclaysTransactions
+                .orderBy("date")   // order by the "date" index
+                .reverse()         // descending (latest first)
+                .limit(numRetrieved)
+                .toArray();        // convert to array
+            break;
         case 'd':
             const today = new Date();
             const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -109,12 +116,9 @@ export async function getTransactions(rangeType, selectedMonth=null) {
 
         case 'm':
             const thisMonth = new Date();
-            thisMonth.setDate(1);
             thisMonth.setHours(0, 0, 0, 0);
-            // transactions = await Transactions.find({
-            //     uid: uid,
-            //     date: { $gte: thisMonth }
-            // }).select('-__v');
+            thisMonth.setDate(1);
+
             transactions = await db.barclaysTransactions
                                     .where('date')
                                     .aboveOrEqual(thisMonth)
@@ -122,25 +126,18 @@ export async function getTransactions(rangeType, selectedMonth=null) {
             break;
 
         case 'a':
-            // transactions = await Transactions.find({
-            //     uid: uid,
-            // }).select('-__v');
             transactions = await db.barclaysTransactions.toArray();
             break;
 
         case 'vm':
             const monthStart = new Date();
-            monthStart.setMonth(selectedMonth);
-            monthStart.setDate(1);
             monthStart.setHours(0, 0, 0, 0);
-
+            monthStart.setDate(1);
+            monthStart.setMonth(selectedMonth);
+        
             const monthEnd = new Date(monthStart);
             monthEnd.setMonth(monthEnd.getMonth() + 1)
 
-            // transactions = await Transactions.find({
-            //     uid: uid,
-            //     date: { $gte: monthStart, $lt: monthEnd }
-            // }).select('-__v');
             transactions = await db.barclaysTransactions
                         .where('date')
                         .between(monthStart, monthEnd, true, false) // true=true includes bounds
@@ -149,17 +146,13 @@ export async function getTransactions(rangeType, selectedMonth=null) {
 
         case 'y':
             const yearStart = new Date();
-            yearStart.setMonth(0);
-            yearStart.setDate(1);
             yearStart.setHours(0, 0, 0, 0);
+            yearStart.setDate(1);
+            yearStart.setMonth(0);
 
             const yearEnd = new Date(yearStart);
             yearEnd.setFullYear(yearEnd.getFullYear() + 1);
 
-            // transactions = await Transactions.find({
-            //     uid: uid,
-            //     date: { $gte: yearStart, $lte: yearEnd }
-            // }).select('-__v');
             transactions = await db.barclaysTransactions
                 .where('date')
                 .between(yearStart, yearEnd, true, false) // true=true includes bounds

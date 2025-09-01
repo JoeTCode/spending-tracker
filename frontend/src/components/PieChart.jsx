@@ -1,90 +1,86 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Sector, Legend } from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Sector, Legend, Tooltip } from 'recharts';
 import React, { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
-// import { getTransactions } from '../api/transactions';
 import { getTransactions } from '../db/db.js';
 import { CATEGORIES } from '../utils/constants/constants';
 
 const toRemove = new Set(['Income', 'Transfer'])
 const FILTERED_CATEGORIES = CATEGORIES.filter(category => !toRemove.has(category));
 const CATEGORY_COLORS = {
-  "Groceries": "#4caf50",       // green
-  "Housing & Bills": "#ff9800", // orange
-  "Finance & Fees": "#9c27b0",  // purple
-  "Transport": "#2196f3",       // blue
-  "Income": "#009688",          // teal
-  "Shopping": "#e91e63",        // pink
-  "Eating Out": "#ff5722",      // deep orange
-  "Entertainment": "#673ab7",   // deep purple
-  "Health & Fitness": "#f44336",// red
-  "Transfer": "#607d8b",        // blue grey
-  "Other / Misc": "#9e9e9e"     // grey
+  "Groceries": "#4caf50CC",        // green
+  "Housing & Bills": "#ff9800CC",  // orange
+  "Finance & Fees": "#9c27b0CC",   // purple
+  "Transport": "#2196f3CC",        // blue
+  "Income": "#009688CC",           // teal
+  "Shopping": "#e91e63CC",         // pink
+  "Eating Out": "#ff5722CC",       // deep orange
+  "Entertainment": "#673ab7CC",    // deep purple
+  "Health & Fitness": "#f44336CC", // red
+  "Transfer": "#607d8bCC",         // blue grey
+  "Other / Misc": "#9e9e9eCC"      // grey
 };
-
 const renderActiveShape = ({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  startAngle,
-  endAngle,
-  fill,
-  payload,
-  percent,
-  value,
+	cx,
+	cy,
+	midAngle,
+	innerRadius,
+	outerRadius,
+	startAngle,
+	endAngle,
+	fill,
+	payload,
+	percent,
+	value,
 }) => {
-  const RADIAN = Math.PI / 180;
-  const sin = Math.sin(-RADIAN * (midAngle ?? 1));
-  const cos = Math.cos(-RADIAN * (midAngle ?? 1));
-  const sx = (cx ?? 0) + ((outerRadius ?? 0) + 10) * cos;
-  const sy = (cy ?? 0) + ((outerRadius ?? 0) + 10) * sin;
-  const mx = (cx ?? 0) + ((outerRadius ?? 0) + 30) * cos;
-  const my = (cy ?? 0) + ((outerRadius ?? 0) + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
+	const RADIAN = Math.PI / 180;
+	const sin = Math.sin(-RADIAN * (midAngle ?? 1));
+	const cos = Math.cos(-RADIAN * (midAngle ?? 1));
+	const sx = (cx ?? 0) + ((outerRadius ?? 0) + 10) * cos;
+	const sy = (cy ?? 0) + ((outerRadius ?? 0) + 10) * sin;
+	const mx = (cx ?? 0) + ((outerRadius ?? 0) + 30) * cos;
+	const my = (cy ?? 0) + ((outerRadius ?? 0) + 30) * sin;
+	const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+	const ey = my;
+	const textAnchor = cos >= 0 ? 'start' : 'end';
 
-  return (
-    <g>
-      <text x={cx} y={cy} dy={8} fontSize={24} fontWeight={"bold"} textAnchor="middle" fill={fill}>
-        {payload.category}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={(outerRadius ?? 0) + 6}
-        outerRadius={(outerRadius ?? 0) + 10}
-        fill={fill}
-      />
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} fontSize={18} textAnchor={textAnchor} fill={CATEGORY_COLORS[payload.category]}>{`Amount: ${value.toFixed(2)}`}</text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999">
-        {`(${((percent ?? 1) * 100).toFixed(2)}%)`}
-      </text>
-    </g>
-  );
+	return (
+		<g>
+		<text x={cx} y={cy} dy={8} fontSize={24} fontWeight={"bold"} textAnchor="middle" fill={fill}>
+			{payload.category}
+		</text>
+		<Sector
+			cx={cx}
+			cy={cy}
+			innerRadius={innerRadius}
+			outerRadius={outerRadius}
+			startAngle={startAngle}
+			endAngle={endAngle}
+			fill={fill}
+		/>
+		<Sector
+			cx={cx}
+			cy={cy}
+			startAngle={startAngle}
+			endAngle={endAngle}
+			innerRadius={(outerRadius ?? 0) + 6}
+			outerRadius={(outerRadius ?? 0) + 10}
+			fill={fill}
+		/>
+		<path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+		<circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+		<text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} fontSize={18} textAnchor={textAnchor} fill={CATEGORY_COLORS[payload.category]}>{`Amount: ${value.toFixed(2)}`}</text>
+		<text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999">
+			{`(${((percent ?? 1) * 100).toFixed(2)}%)`}
+		</text>
+		</g>
+	);
 };
 
 export default function CategoryPieChart() {
     const [ spendingPerCategory, setSpendingPerCategory ] = useState([]);
-    const { getAccessTokenSilently } = useAuth0();
+	const [ categoryToPercentage, setCategoryToPercentage ] = useState({});
 
     useEffect(() => {
       const saveData = async () => {
-			const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
 			const data = await getTransactions('a');
 			const categories = {};
 			
@@ -98,6 +94,13 @@ export default function CategoryPieChart() {
 				}
 			}
 
+			// Remove categories with total = 0
+			for (let category in categories) {
+				if (categories[category] === 0) {
+					delete categories[category];
+				}
+			}
+
 			const formatted = [];
 			for (let [key, value] of Object.entries(categories)) {
 				formatted.push({
@@ -107,6 +110,17 @@ export default function CategoryPieChart() {
 			};
 
 			setSpendingPerCategory(formatted);
+
+			let categoriesTotal = 0;
+			for (let obj of formatted) {
+				categoriesTotal += obj.amount;
+			};
+			const res = {};
+			for (let obj of formatted) {
+				res[obj.category] = (obj.amount * 100) / categoriesTotal;
+			}
+
+			setCategoryToPercentage(res);
         };
 
         saveData();
@@ -114,25 +128,37 @@ export default function CategoryPieChart() {
     }, []);
 
     return (
-		<div style={{ width: 1000, height: 800 }}>
-			<ResponsiveContainer>
+		// <div style={{ width: 1000, height: 800 }}>
+		<div className="
+				w-full md:h-[300px] xl:h-[400px] 2xl:h-[400px] p-2
+				rounded-lg bg-[#1a1818] shadow-lg
+			">
+			<ResponsiveContainer width="100%" height="100%">
 				<PieChart>
 					<Pie
-					activeShape={renderActiveShape}
-					data={spendingPerCategory}
-					cx="50%"
-					cy="50%"
-					innerRadius={200}
-					outerRadius={280}
-					fill="#999"
-					dataKey="amount"
-					nameKey="category"
+						// activeShape={renderActiveShape}
+						data={spendingPerCategory}
+						cx="50%"
+						cy="50%"
+						innerRadius="40%"
+						outerRadius="70%"
+						fill="#999"
+						dataKey="amount"
+						nameKey="category"
+						label={({ name }) => {
+							if (categoryToPercentage[name] > 0) {
+								return `${name} (${categoryToPercentage[name].toFixed(2)}%)`
+							}
+						}}
 					>
 						{spendingPerCategory.map((entry, index) => (
 							<Cell key={`cell-${entry.category}`} fill={CATEGORY_COLORS[entry.category]} />
 						))}
 					</Pie>
-					<Legend />
+					<Tooltip 
+						formatter={(value) => value.toFixed(2)} 
+					/>
+					{/* <Legend /> */}
 				</PieChart>
         	</ResponsiveContainer>
 		</div>
