@@ -2,13 +2,12 @@ import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
 // import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
-import { CATEGORY_TO_EMOJI } from '../utils/constants/constants';
+import { CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
 import { getTransactions, updateTransaction, deleteTransaction } from '../db/db';
 
-const CATEGORIES = ["Groceries", "Housing & Bills", "Finance & Fees", "Transport", "Income", "Shopping", "Eating Out", "Entertainment", "Health & Fitness", "Other / Misc"]
 const CATEGORIES_SET = new Set(CATEGORIES);
 const CORRECTIONSTRIGGER = 10;
 const UNDO_REDO_DELAY = 500;

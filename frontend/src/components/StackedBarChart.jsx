@@ -60,8 +60,8 @@ const CustomTooltip = ({ active, payload, label }) => {
         <div 
             className={`custom-tooltip 
               z-[9999] pointer-events-auto 
-              bg-[#524e99e0] 
-              p-5 pt-3 pr-10 rounded-lg
+              p-5 pt-3 pr-10
+              bg-white border rounded-lg shadow-lg text-sm
               ${isVisible ? 'visible' : 'invisible'}`
             }
             onClick={(e) => e.stopPropagation()}
@@ -69,7 +69,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             {isVisible && (
                 <>
                     {/* Month title */}
-                    <p className="label font-bold mb-5">{`${label}`}</p>
+                    <p className="label font-bold mb-5 text-gray-700">{`${label}`}</p>
 
                     {/* expenses */}
                     <div 
@@ -85,8 +85,8 @@ const CustomTooltip = ({ active, payload, label }) => {
                         }}
                         className='cursor-pointer'
                     >
-                        <p>
-                            <span className='mr-1'>
+                        <p className='text-gray-600 font-semibold'>
+                            <span className='mr-1 text-gray-600 font-semibold'>
                                 {showExpenseCategories || pinExpenseCategories ? '-' : '+'}
                             </span>
                             {`${payload[1].name}: ${payload[1].value.toFixed(2)}`}
@@ -98,9 +98,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 
                     {/* Scrollable section */}
                     {(showExpenseCategories || pinExpenseCategories) && (
-                        <div className="max-h-24 overflow-y-auto border-t mt-1 pt-2 mb-2">
+                        <div className="max-h-24 overflow-y-auto border-t border-gray-500 mt-2 pt-2 mb-2">
                             {expenseCategories.map((cat, idx) => (
-                                <p key={idx}>{cat}</p>
+                                <p key={idx} className='text-gray-500'> {cat} </p>
                             ))}
                         </div>
                     )}
@@ -119,8 +119,8 @@ const CustomTooltip = ({ active, payload, label }) => {
                         }}
                         className='cursor-pointer'
                     >
-                        <p className='mt-3'>
-                            <span className='mr-1'>
+                        <p className='mt-3 text-gray-600 font-semibold'>
+                            <span className='mr-1 text-gray-600 font-semibold'>
                                 {showIncomeCategories || pinIncomeCategories ? '-' : '+'}
                             </span>
                             {`${payload[0].name}: ${payload[0].value.toFixed(2)}`}
@@ -132,9 +132,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 
                     {/* Scrollable section */}
                     {(showIncomeCategories || pinIncomeCategories) && (
-                        <div className="max-h-24 overflow-y-auto border-t mt-1 pt-2">
+                        <div className="max-h-24 overflow-y-auto border-t border-gray-500 mt-2 pt-2 ">
                             {incomeCategories.map((cat, idx) => (
-                                <p key={idx}>{cat}</p>
+                                <p key={idx} className='text-gray-500'> {cat} </p>
                             ))}
                         </div>
                     )}

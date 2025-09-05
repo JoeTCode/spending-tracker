@@ -7,7 +7,14 @@ const TransactionsOverviewCard = () => {
     const [ transactions, setTransactions ] = useState([]);
     const [ totalIncome, setTotalIncome ] = useState(0);
     const [ totalExpenses, setTotalExpenses ] = useState(0);
-    
+    const [currentIndex, setCurrentIndex] = useState(0)
+    const options = ["Past Week", "Past Month", "Past 3 Months", "Past Year"];
+    const [selected, setSelected] = useState(options[0]);
+
+    const handleChange = (e) => {
+        setSelected(e.target.value)
+    };
+
     useEffect(() => {
         const getTx = async () => {
             const transactions = await getTransactions('y');
@@ -18,6 +25,8 @@ const TransactionsOverviewCard = () => {
     }, []);
 
     useEffect(() => {
+        if (!transactions) return;
+
         let income = 0;
         let expenses = 0;
 
@@ -33,18 +42,103 @@ const TransactionsOverviewCard = () => {
         setTotalExpenses(expenses);
     }, [transactions]);
 
+    useEffect(() => {
+        const updateTx = async () => {
+            let transactions;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            switch (selected) {
+                case "Past Week":
+                    const lastWeek = new Date(today);
+                    lastWeek.setDate(lastWeek.getDate() - 7);
+                    transactions = await getTransactions('custom', null, null, lastWeek, today);
+                    break;
+                case "Past Month":
+                    const lastMonth = new Date(today);
+                    lastMonth.setMonth(lastMonth.getMonth() - 1);
+                    transactions = await getTransactions('custom', null, null, lastMonth, today);
+                    break;
+                case "Past 3 Months":
+                    const last3Months = new Date(today);
+                    last3Months.setMonth(last3Months.getMonth() - 3);
+                    transactions = await getTransactions('custom', null, null, last3Months, today);
+                    break;
+                case "Past Year":
+                    transactions = await getTransactions('y');
+                    break;
+            };
+            
+            setTransactions(transactions);
+        };
+
+        updateTx();
+    }, [selected])
+
+    const summaryItems = [
+        {
+            label: "Net",
+            value: (totalIncome - totalExpenses).toFixed(2),
+        },
+        {
+            label: "Total Expenses",
+            value: totalExpenses.toFixed(2),
+        },
+        {
+            label: "Total Income",
+            value: totalIncome.toFixed(2),
+        },
+    ];
+
+    const prev = () =>
+        setCurrentIndex((i) => (i === 0 ? summaryItems.length - 1 : i - 1));
+    const next = () =>
+        setCurrentIndex((i) => (i === summaryItems.length - 1 ? 0 : i + 1));
+
     return (
-        // <div className='m-20 rounded-lg bg-[#1a1818] max-w-100 max-h-50 shadow-lg'>
-        <div className='rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px]'>
-            <div className='grid grid-cols-1 gap-5 justify-self-center p-5'>
-                <div > Net: {(totalIncome - totalExpenses).toFixed(2)} </div>
-                <div> Total Expenses: {totalExpenses.toFixed(2)} </div>
-                <div> Total Income: {totalIncome.toFixed(2)} </div>
+        <div className="rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px] p-5 ">
+            <div className='flex flex-col'>
+                <div className="flex items-center justify-between mb-5">
+                    <span className="text-gray-400 font-semibold text-md">
+                        {summaryItems[currentIndex].label}
+                    </span>
+
+                    <select
+                        value={selected}
+                        onChange={handleChange}
+                        className="w-36 p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                    >
+                        {options.map((opt, idx) => (
+                            <option key={idx} value={opt} className='text-sm'>
+                                {opt}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                <span className="text-gray-200 font-semibold text-2xl mb-15">
+                    {summaryItems[currentIndex].value}
+                </span>
+                <div className='flex justify-between'>
+                    <span className='text-sm cursor-pointer' onClick={prev}>&lt; Previous</span>
+                    
+                    {/* Pagination Dots */}
+                    <div className="flex mt-2 space-x-2">
+                        {summaryItems.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setCurrentIndex(idx)}
+                                className={`w-3 h-3 cursor-pointer rounded-full transition-colors focus:outline-none ${
+                                idx === currentIndex ? "bg-gray-200" : "bg-gray-600"
+                                }`}
+                            />
+                        ))}
+                    </div>
+
+                    <span className='text-sm cursor-pointer' onClick={next}>Next &gt;</span>
+                </div>
+                
             </div>
-            
-            
-            
-            
         </div>
     );
 };

@@ -5,11 +5,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { createModel, predict } from '../utils/model';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
-import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
+import { MIN_CONF_SCORE, CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { devGetModelWeights } from '../api/globalModel';
 import { db, validateTransaction } from '../db/db';
 import { pipeline } from '@huggingface/transformers';
 import * as tf from '@tensorflow/tfjs';
+import { useNavigate } from "react-router-dom";
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
@@ -450,11 +451,12 @@ const Upload = () => {
     const [ lowConfTx, setLowConfTx ] = useState([]);
     const [ headers, setHeaders ] = useState(null);
     const [ saveData, setSaveData ] = useState([]);
+    const [ allowCategorisation, setAllowCategorisation ] = useState(true);
     const gridRef = useRef(null);
     const [duplicateWarning, setDuplicateWarning] = useState(false);
     const [duplicateRows, setDuplicateRows] = useState([]);
     const [ fileParsed, setFileParsed ] = useState(false);
-
+    const navigate = useNavigate();
     const [correctionsCount, setCorrectionsCount] = useState(() => {
             const saved = localStorage.getItem("count");
             if (saved === null) {
@@ -488,6 +490,7 @@ const Upload = () => {
         const predictions = [];
         const confidenceScores = [];
         if (transactions.length > 0) {
+            const timer = new Date().getTime();
             const model = await getClientModel(token);
             // Create a feature-extraction pipeline
             const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
@@ -509,102 +512,96 @@ const Upload = () => {
                 // Yield back to the browser
                 await new Promise(r => setTimeout(r, 0));
             };
+
+            console.log((new Date().getTime() - timer) / 1000);
             
             return [predictions.flat(), confidenceScores.flat()];
         };
     };
 
-    useEffect(() => {
-        
-        // async function categoriseTransactions(formattedTransactions, batchSize = 32) {
-        //     const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            
-        //     if (transactions.length > 0) {
-        //         const model = await getClientModel(token);
-        //         const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
-
-        //         const getConfScores = true;
-        //         const [ predictions, confidenceScores ] = await predict(model, transactionsDescriptions, getConfScores);
-        //         return [predictions, confidenceScores];
-        //     };
-        // };
-
-
-        const createCSVPreview = async () => {
-            if (transactions.length > 0) {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                
-                // const formattedTransactions = formatBarclaysTransactions(transactions, ["date", "account", "amount", "subcategory", "memo" ], "amount", "memo");
-
-                const validatedTransactions = transactions.map((tx, i) => validateTransaction(tx, i));
-                const timer = new Date().getTime();
-                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(validatedTransactions);                
-                console.log((new Date().getTime() - timer) / 1000);
-                // TEMP
-                let numMatches = 0;
-                const targets = Object.values(targetCategories);
-                for (let i = 0; i < predictedCategories.length; i++) {
-                    if (predictedCategories[i] === targets[i]) {
-                        numMatches += 1;
-                    }
-                }
-
-                console.log('Score:', (numMatches*100)/predictedCategories.length);
-
-                const lowConfTransactions = getLowConfTransactions(validatedTransactions, predictedCategories, confidenceScores);
-                const headers = Object.keys(lowConfTransactions[0]);
-                const reordered = ["confidence", "category", ...headers.filter(col => col !== "category" && col !== "confidence")];
-                setLowConfTx(lowConfTransactions);
-                
-                setHeaders(() => {
-                    const formatted = [];
-                    
-                    for (let header of reordered) {
-                        const obj = {};
-                        if (header === '_id') {
-                            continue;
-                        }
-                        if (header === 'confidence') {
-                            obj['field'] = header;
-                            obj['editable'] = true;
-                            obj['width'] = 120
-                            obj['valueFormatter'] = params => {
-                                if (params.value == null) return '';
-                                return `${params.value}%`;
-                            };
-                        };
-                        if (header === 'date') {
-                            obj['field'] = header;
-                            obj['editable'] = true;
-                            obj['width'] = 120
-                        }
-                        if (header === 'amount') {
-                            obj['field'] = header;
-                            obj['editable'] = true;
-                            obj['width'] = 120
-                        }
-                        else if (header === 'category') {
-                            obj['field'] = header;
-                            obj['editable'] = true;
-                            obj['cellEditor'] = 'agSelectCellEditor';
-                            obj['cellEditorParams'] = {
-                                values: CATEGORIES
-                            };
-                        } else {
-                            obj['field'] = header;
-                            obj['editable'] = true;
-                        };
-
-                        formatted.push(obj);
-                    };
-
-                    return formatted;
-                });
-
-                for (let i = 0; i < validatedTransactions.length; i ++) {
-                    validatedTransactions[i]['category'] = predictedCategories[i];
+    function setHeadersHelper(reordered) {
+        const formatted = [];
+                        
+        for (let header of reordered) {
+            const obj = {};
+            if (header === '_id' || header === 'is_trainable' || header == 'trained') {
+                continue;
+            }
+            if (header === 'confidence') {
+                obj['field'] = header;
+                obj['editable'] = true;
+                obj['width'] = 120
+                obj['valueFormatter'] = params => {
+                    if (params.value == null) return '';
+                    return `${params.value}%`;
                 };
-                console.log(validatedTransactions);
+            };
+            if (header === 'date') {
+                obj['field'] = header;
+                obj['editable'] = true;
+                obj['width'] = 120
+            }
+            if (header === 'amount') {
+                obj['field'] = header;
+                obj['editable'] = true;
+                obj['width'] = 120
+            }
+            else if (header === 'category') {
+                obj['field'] = header;
+                obj['editable'] = true;
+                obj['cellEditor'] = 'agSelectCellEditor';
+                obj['cellEditorParams'] = {
+                    values: CATEGORIES
+                };
+                obj['singleClickEdit'] = true;
+                obj['valueFormatter'] = params => {
+                    return CATEGORY_TO_EMOJI[params.value] || params.value;
+                };
+            } else {
+                obj['field'] = header;
+                obj['editable'] = true;
+            };
+
+            formatted.push(obj);
+        };
+
+        return formatted;
+    };
+
+    useEffect(() => {
+        const handleTransactions = async () => {
+            if (transactions.length > 0) {
+                const validatedTransactions = transactions.map((tx, i) => validateTransaction(tx, i));
+                
+                if (allowCategorisation) {
+                    
+                    const [ predictedCategories, confidenceScores ] = await categoriseTransactions(validatedTransactions);                
+                    
+                    // TEMP
+                    let numMatches = 0;
+                    const targets = Object.values(targetCategories);
+                    for (let i = 0; i < predictedCategories.length; i++) {
+                        if (predictedCategories[i] === targets[i]) {
+                            numMatches += 1;
+                        }
+                    }
+
+                    console.log('Score:', (numMatches*100)/predictedCategories.length);
+
+                    const lowConfTransactions = getLowConfTransactions(validatedTransactions, predictedCategories, confidenceScores);
+                    const headers = Object.keys(lowConfTransactions[0]);
+                    const reordered = ["confidence", "category", ...headers.filter(col => col !== "category" && col !== "confidence")];
+                    setLowConfTx(lowConfTransactions);
+                    
+                    setHeaders(() => {
+                        return setHeadersHelper(reordered);
+                    });
+
+                    for (let i = 0; i < validatedTransactions.length; i ++) {
+                        validatedTransactions[i]['category'] = predictedCategories[i];
+                    };
+                };
+               
                 
                 const dates = validatedTransactions.map(tx => new Date(tx['date']));
                 dates.sort((a, b) => a.getTime() - b.getTime());
@@ -621,25 +618,46 @@ const Upload = () => {
                     setDuplicateWarning(true);
                     setDuplicateRows(transactionsInRange);
                     // Reset to file upload step
-                    setPreviewCSV(false);        // hide editable grid
+                    setPreviewCSV(false); // hide editable grid
                 } else {
                     console.log('validated transactions', validatedTransactions);
-                    await db.barclaysTransactions.bulkAdd(validatedTransactions);
-                    console.log('Transactions uploaded successfully');
-                    setSaveData(validatedTransactions);
-                    setPreviewCSV(true);
+                    
+                    if (allowCategorisation) {
+                        setSaveData(validatedTransactions);
+                        setPreviewCSV(true);
+                    } else {
+                        await db.barclaysTransactions.bulkAdd(validatedTransactions);
+                        navigate('/dashboard');
+                    }
+                    
                 };
             };
         };
 
-        createCSVPreview();
+        handleTransactions();
     }, [transactions]);
 
 
     const sendData = async () => {
-        // const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-        // await uploadTransactions(token, saveData);
 
+        if (allowCategorisation) {
+            const updatedTransactions = [];
+            // Update initial transactions with user-recategorised low confidence transaction
+            for (let tx of saveData) {
+                const match = lowConfTx.find(newTx => newTx._id === tx._id);
+                updatedTransactions.push(match || tx);
+            };
+
+            console.log('Data to be saved:', updatedTransactions)
+            await db.barclaysTransactions.bulkAdd(updatedTransactions);
+            console.log('Data saved successfully');
+        } else {
+            console.log('Data to be saved:', saveData)
+            await db.barclaysTransactions.bulkAdd(saveData);
+            console.log('Data saved successfully');
+        };
+
+        navigate("/dashboard");
     };
 
 
@@ -670,13 +688,25 @@ const Upload = () => {
                 onUploadAccepted={(results) => {
                     const formatted = results.data.map(tx => {
                         const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
-                        return {
-                            'account': tx['Account'],
-                            'amount': amount,
-                            'date': formatDate(tx['Date']),
-                            'description': formatDescription(tx['Memo']),
-                            'type': tx['Subcategory']                        
-                        };
+                        if (allowCategorisation) {
+                            return {
+                                'account': tx['Account'],
+                                'amount': amount,
+                                'date': formatDate(tx['Date']),
+                                'description': formatDescription(tx['Memo']),
+                                'type': tx['Subcategory']                        
+                            };
+                        } else {
+                            return {
+                                'account': tx['Account'],
+                                'amount': amount,
+                                'date': formatDate(tx['Date']),
+                                'category': tx['Category'],
+                                'description': formatDescription(tx['Memo']),
+                                'type': tx['Subcategory']                        
+                            };
+                        }
+                        
                     })
                     .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
                     
@@ -716,17 +746,29 @@ const Upload = () => {
                             </div>
                         ) : fileParsed ? (
                             previewCSV ? (
-                                <>
+                                <div className='h-[500px] w-[1180px]'>
                                     <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
                                     <button onClick={sendData}>Done</button>
-                                </>
+                                </div>
                             ) : (
                                 <div>Loading...</div>
                             )
                         ) : (
-                            <div {...getRootProps()}>
-                                <button>Upload CSV file</button>
+                            <div>
+                                 <div>
+                                    <input
+                                        type="checkbox"
+                                        id="allowCategorisation"
+                                        checked={allowCategorisation}
+                                        onChange={(e) => setAllowCategorisation(e.target.checked)}
+                                    />
+                                    <label htmlFor="allowCategorisation">Allow Categorisation</label>
+                                </div>
+                                <div {...getRootProps()}>
+                                    <button>Upload CSV file</button>
+                                </div>
                             </div>
+                            
                         )}
                     </>
                 )}

@@ -1,70 +1,91 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getTransactions } from '../../db/db.js';
-import EditableGrid from '../EditableGrid.jsx';
+import GroceriesIcon from "../../assets/icons/groceries.svg?react";
+import HousingAndBills from "../../assets/icons/housing-and-bills.svg?react";
+import FinanceAndFees from "../../assets/icons/finance-and-fees.svg?react";
+import Income from "../../assets/icons/income.svg?react";
+import Shopping from "../../assets/icons/shopping.svg?react";
+import EatingOut from "../../assets/icons/eating-out.svg?react";
+import Entertainment from "../../assets/icons/entertainment.svg?react";
+import HealthAndFitness from "../../assets/icons/health-and-fitness.svg?react";
+import Transfer from "../../assets/icons/transfer.svg?react";
+import OtherMisc from "../../assets/icons/other-misc.svg?react";
+import Transport from "../../assets/icons/transport.svg?react";
+import { useNavigate } from 'react-router-dom';
+
+const CATEGORY_TO_ICON = {
+    "Groceries": GroceriesIcon,
+    "Housing & Bills": HousingAndBills,
+    "Finance & Fees": FinanceAndFees,
+    "Transport": Transport,
+    "Income": Income,
+    "Shopping": Shopping,
+    "Eating Out": EatingOut,
+    "Entertainment": Entertainment,
+    "Health & Fitness": HealthAndFitness,
+    "Transfer": Transfer,
+    "Other / Misc": OtherMisc
+};
+const NUM_TRANSACTIONS = 7;
 
 const MostRecentTransactions = () => {
     const [ recentTransactions, setRecentTransactions ] = useState([]);
     const [ headers, setHeaders ] = useState([]);
     const gridRef = useRef();
+    const navigate = useNavigate();
 
     useEffect(() => {
         const getRecentTransactions = async () => {
-            const tx = await getTransactions('latest-n', null, 3);
+            const tx = await getTransactions('latest-n', null, NUM_TRANSACTIONS);
             setRecentTransactions(tx);
         };
 
         getRecentTransactions();
     }, []);
 
-    useEffect(() => {
-
-        if (!recentTransactions || recentTransactions.length === 0) return;
-
-        const hdrs = [];
-        const keys = Object.keys(recentTransactions[0]);
-
-        for (let hdr of keys) {
-            if (hdr === '_id' || hdr === 'type') continue;
-            const obj = {};
-
-            if (hdr === 'date') {
-                obj['field'] = hdr;
-                obj['width'] = 110;
-            }
-            else if (hdr === 'amount') {
-                obj['field'] = hdr;
-                obj['width'] = 90;
-            }
-            else if (hdr === 'category') {
-                obj['field'] = hdr;
-                obj['width'] = 120;
-            }
-            else if (hdr === 'description') {
-                obj['field'] = hdr;
-                obj['width'] = 150;
-            }
-            else {
-                obj['field'] = hdr;
-            }
-            
-            hdrs.push(obj);
-        };
-        
-        setHeaders(hdrs);
-        console.log(hdrs);
-        console.log(recentTransactions);
-    }, [recentTransactions]);
+    
 
     return (
-        <div className='h-[610px] shadow-lg sm:h-[700px]'>
+        <div className='
+                h-[610px] shadow-lg sm:h-[700px] rounded-lg bg-[#1a1818] 
+                transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl
+            '
+            onClick={() => navigate('/transactions')}
+        >
             {recentTransactions.length > 0 ? (
-                <EditableGrid 
-                    gridRef={gridRef} rowData={recentTransactions} colNames={headers} onCellChange={null}
-                />
-            ) : (
-                <div> No transactions found </div>
-            )}
-            
+                <div className="h-full p-3 overflow-y-auto">
+                    <div className="grid grid-cols-1 gap-y-8 p-3">
+                        {recentTransactions.map((tx, i) => {
+                            const Icon = CATEGORY_TO_ICON[tx.category] || OtherMisc;
+                            return (
+                                <div
+                                    key={i}
+                                    className="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center p-3 rounded-2xl shadow"
+                                >
+                                    {/* Icon spanning two rows */}
+                                    {/* <img
+                                        src="/placeholder-icon.png"
+                                        alt="icon"
+                                        className="row-span-2 w-10 h-10 object-contain"
+                                    /> */}
+                                    
+                                    <Icon className="row-span-2 w-11 h-11 p-1 bg-stone-300 rounded-xl" aria-label={'Icon'} />
+                                    {/* <GroceriesIcon /> */}
+
+                                    {/* First row: Description + Amount */}
+                                    <p className="font-medium">{tx.description}</p>
+                                    <p className="text-right font-semibold">{tx.amount}</p>
+
+                                    {/* Second row: Category + Date */}
+                                    <p className="text-sm text-gray-500">{tx.category}</p>
+                                    <p className="text-right text-sm text-gray-500">{tx.date}</p>
+                                </div>
+                            )
+                            
+                        })}
+                    </div>
+                </div>
+            ) : (<div> No transactions found </div>)}
         </div>
         
     );

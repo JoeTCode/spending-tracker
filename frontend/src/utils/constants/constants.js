@@ -20,5 +20,6 @@ export const CATEGORY_TO_EMOJI = {
     "Eating Out": "🍽️ Eating Out",
     "Entertainment": "🎬 Entertainment",
     "Health & Fitness": "🏋️ Health & Fitness",
+    "Transfer": "🔄 Transfer",
     "Other / Misc": "📦 Other / Misc"
 };

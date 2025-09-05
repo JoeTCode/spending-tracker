@@ -3,19 +3,41 @@ import { getTransactions } from '../db/db.js';
 import React, { useState, useEffect } from 'react';
 import { MONTHS } from '../utils/constants/constants';
 
-export default function IncomeLineChart() {
-    const [ profitPerMonth, setProfitPerMonth ] = useState([]);
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border rounded-lg shadow-lg p-3 text-sm">
+        <p className="font-semibold text-gray-700">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={`item-${index}`} className="text-gray-500">
+            {entry.name}: <span className="font-medium">{entry.value.toFixed(2)}</span>
+          </p>
+        ))}
+      </div>
+    );
+  }
 
+  return null;
+};
+
+export default function IncomeLineChart() {
+    const [ dataPerMonth, setDataPerMonth ] = useState([]);
+    
     useEffect(() => {
         const saveData = async () => {
             const data = await getTransactions('y');
             
-            const monthBuckets = [];
+            const incomeMonthBuckets = [];
+            const expenseMonthBuckets = [];
             // populate buckets with objects for each month of year
             for (let month of MONTHS) {
-                monthBuckets.push({
+                incomeMonthBuckets.push({
                     month: month.substring(0, 3),
                     income: 0
+                });
+                expenseMonthBuckets.push({
+                    month: month.substring(0, 3),
+                    expense: 0
                 });
             };
 
@@ -23,18 +45,25 @@ export default function IncomeLineChart() {
                 if (row.amount > 0) {
                     const d = new Date(row.date);
                     const monthIdx = d.getMonth();
-                    monthBuckets[monthIdx].income += row.amount;
-                };                
+                    incomeMonthBuckets[monthIdx].income += row.amount;
+                };
+                if (row.amount < 0) {
+                  const d = new Date(row.date);
+                  const monthIdx = d.getMonth();
+                  expenseMonthBuckets[monthIdx].expense += Math.abs(row.amount);
+                };              
             };
 
-            // const formatted = [];
-            // for (let [key, value] of Object.entries(categories)) {
-            //     formatted.push({
-            //         "category": key,
-            //         "amount": Math.abs(value)
-            //     });
-            // };
-            setProfitPerMonth(monthBuckets);
+            const dataPerMonth = [];
+            for (let i = 0; i < incomeMonthBuckets.length; i ++) {
+                dataPerMonth.push({ 
+                  month: incomeMonthBuckets[i].month,
+                  income: incomeMonthBuckets[i].income,
+                  expense: expenseMonthBuckets[i].expense
+                });
+            };
+
+            setDataPerMonth(dataPerMonth);
         };
 
         saveData();
@@ -48,7 +77,7 @@ export default function IncomeLineChart() {
         ">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart
-                    data={profitPerMonth}
+                    data={dataPerMonth}
                     margin={{
                     top: 5,
                     right: 30,
@@ -59,9 +88,10 @@ export default function IncomeLineChart() {
                     {/* <CartesianGrid strokeDasharray="2 5" /> */}
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => value.toFixed(2)} />
-                    <Tooltip formatter={(value) => value.toFixed(2)} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line type="monotone" dataKey="income" stroke="#8884d8" activeDot={{ r: 8 }} />
+                    <Line type="monotone" dataKey="expense" stroke="#DA5958" activeDot={{ r: 8 }} />
                     {/* <Line type="monotone" dataKey="uv" stroke="#82ca9d" /> */}
                 </LineChart>
             </ResponsiveContainer>

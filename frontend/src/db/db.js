@@ -90,9 +90,15 @@ function validateTransaction(tx, row) {
     };
 };
 
-export async function getTransactions(rangeType, selectedMonth=null, numRetrieved=null) {
+export async function getTransactions(rangeType, selectedMonth=null, numRetrieved=null, customStart=null, customEnd=null) {
     let transactions = [];
     switch (rangeType) {
+        case 'custom':
+            transactions = await db.barclaysTransactions
+                .where('date')
+                .between(customStart, customEnd, true, false) // true= includes bounds
+                .toArray();
+            break;
         case 'latest-n':
             transactions = await db.barclaysTransactions
                 .orderBy("date")   // order by the "date" index
@@ -110,7 +116,7 @@ export async function getTransactions(rangeType, selectedMonth=null, numRetrieve
 
             transactions = await db.barclaysTransactions
                                     .where('date')
-                                    .between(weekAgo, end, true, false) // true=true includes bounds
+                                    .between(weekAgo, end, true, false) // true= includes bounds
                                     .toArray();
             break;
 
