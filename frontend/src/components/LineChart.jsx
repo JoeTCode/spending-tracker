@@ -72,17 +72,17 @@ export default function IncomeLineChart() {
 
     return (
         <div className="
-        w-full h-[350px] xl:h-[400px] 2xl:h-[400px] p-5 pt-10
+        w-full h-[350px] xl:h-[400px] p-5 pt-10
         rounded-lg bg-[#1a1818] shadow-lg
         ">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                     data={dataPerMonth}
                     margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
+						top: 5,
+						right: 30,
+						left: 20,
+						bottom: 5,
                     }}
                 >
                     {/* <CartesianGrid strokeDasharray="2 5" /> */}
@@ -90,8 +90,8 @@ export default function IncomeLineChart() {
                     <YAxis tickFormatter={(value) => value.toFixed(2)} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Line type="monotone" dataKey="income" stroke="#8884d8" activeDot={{ r: 8 }} />
-                    <Line type="monotone" dataKey="expense" stroke="#DA5958" activeDot={{ r: 8 }} />
+                    <Line type="monotone" dataKey="income" stroke="#8884d8" dot={() => {}} />
+                    <Line type="monotone" dataKey="expense" stroke="#DA5958" dot={() => {}} />
                     {/* <Line type="monotone" dataKey="uv" stroke="#82ca9d" /> */}
                 </LineChart>
             </ResponsiveContainer>

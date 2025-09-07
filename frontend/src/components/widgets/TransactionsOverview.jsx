@@ -96,7 +96,7 @@ const TransactionsOverviewCard = () => {
         setCurrentIndex((i) => (i === summaryItems.length - 1 ? 0 : i + 1));
 
     return (
-        <div className="rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px] p-5 ">
+        <div className="rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px] p-5">
             <div className='flex flex-col'>
                 <div className="flex items-center justify-between mb-5">
                     <span className="text-gray-400 font-semibold text-md">
@@ -106,7 +106,7 @@ const TransactionsOverviewCard = () => {
                     <select
                         value={selected}
                         onChange={handleChange}
-                        className="w-36 p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        className="w-34 p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                     >
                         {options.map((opt, idx) => (
                             <option key={idx} value={opt} className='text-sm'>

@@ -94,12 +94,12 @@ const SpendingComparisonCard = () => {
     }, [currentMonthTransactions]);
 
     return (
-        <div className='grid grid-rows-2 grid-flow-col gap-4 gap-x-20 p-5 rounded-lg bg-[#1a1818] shadow-lg'>
+        <div className='grid grid-rows-3 grid-flow-col p-5 justify-center gap-x-20 sm:grid-rows-2 sm:gap-4 md:gap-x-40 lg:gap-x-60 xl:gap-x-100 rounded-lg bg-[#1a1818] shadow-lg'>
             {spendingComparison.map((item, i) => {
                 const Icon = CATEGORY_TO_ICON[item.category] || OtherMisc;
                 return (
                     <div key={i} className="grid sm:grid-cols-[auto_1fr] gap-x-3 items-center p-2 rounded-2xl shadow-lg mb-2">
-                        <Icon className="row-span-3 w-14 h-14 p-1 bg-stone-300 rounded-xl" aria-label={'Icon'} />
+                        <Icon className="row-span-3 w-14 h-14 p-1 bg-stone-300 rounded-xl text-gray-800" aria-label={'Icon'} />
                         <p className='text-xs text-gray-400'>{item.category}</p>
                         {item.currentAmount === null ?
                             <p className='text-lg font-bold text-gray-200'>--</p> :

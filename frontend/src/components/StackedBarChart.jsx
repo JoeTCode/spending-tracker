@@ -223,7 +223,7 @@ const StackedBarChart = () => {
     return ( 
         <>
             <div className="
-                w-full h-full sm:h-[417px] p-5
+                w-full h-full
                 rounded-lg bg-[#1a1818] shadow-lg
             ">
                 <ResponsiveContainer>

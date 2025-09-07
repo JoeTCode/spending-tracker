@@ -21,6 +21,7 @@
     "i": "^0.3.7",
     "npm": "^11.5.2",
     "react": "^19.1.0",
+    "react-datepicker": "^8.7.0",
     "react-dom": "^19.1.0",
     "react-papaparse": "^4.4.0",
     "react-router-dom": "^7.6.3",

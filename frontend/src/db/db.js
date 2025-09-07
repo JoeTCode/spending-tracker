@@ -5,11 +5,14 @@ import { CATEGORIES } from '../utils/constants/constants';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
-// '++id, date, amount, type, category, description, is_trainable, trained'
+
 const db = new Dexie('transactionsDB');
 
 db.version(1).stores({
-    barclaysTransactions: '_id, date, amount, category, is_trainable, trained' // Primary key and indexed props
+    // '_id, date, amount, type, category, description, is_trainable, trained'
+    barclaysTransactions: '_id, date, amount, category, is_trainable, trained', // Primary key and indexed props
+    // _id, last_reminder, title, amount, interval
+    recurringPayments: '_id, last_reminder, title, amount, interval'
 });
 
 function validateDate(date) {
@@ -94,6 +97,7 @@ export async function getTransactions(rangeType, selectedMonth=null, numRetrieve
     let transactions = [];
     switch (rangeType) {
         case 'custom':
+            console.log(rangeType, customStart, customEnd)
             transactions = await db.barclaysTransactions
                 .where('date')
                 .between(customStart, customEnd, true, false) // true= includes bounds
@@ -194,5 +198,57 @@ export async function updateTransaction(transaction) {
 export async function deleteTransaction(transaction) {
     await db.barclaysTransactions.delete(transaction._id);
 }
+
+export async function getPayments(rangeType) {
+    let payments;
+    switch (rangeType) {
+        case 'a':
+            payments = await db.recurringPayments.toArray();
+            break;
+        case 'd':
+            const allPayments = await db.recurringPayments.toArray();
+            const today = new Date();
+
+            payments = allPayments.filter(payment => {
+                const dateOfLastReminder = new Date(payment.last_reminder);
+                let dateOfNextReminder = new Date(dateOfLastReminder);
+
+                switch (payment.interval) {
+                    case "Weekly":
+                        dateOfNextReminder.setDate(dateOfLastReminder.getDate() + 7);
+                        break;
+                    case "Bi-weekly":
+                        dateOfNextReminder.setDate(dateOfLastReminder.getDate() + 14);
+                        break;
+                    case "Monthly":
+                        dateOfNextReminder.setMonth(dateOfLastReminder.getMonth() + 1);
+                        break;
+                    case "Bi-monthly":
+                        dateOfNextReminder.setMonth(dateOfLastReminder.getMonth() + 2);
+                        break;
+                    case "Quarterly":
+                        dateOfNextReminder.setMonth(dateOfLastReminder.getMonth() + 3);
+                        break;
+                    case "Yearly":
+                        dateOfNextReminder.setYear(dateOfLastReminder.getFullYear() + 1);
+                        break;
+                };
+
+                dateOfNextReminder.setDate(dateOfNextReminder.getDate() - 1); // send reminder 1 day before
+                return today.getTime() >= dateOfNextReminder.getTime()
+            });
+            break;
+    };
+
+    return payments;
+};
+
+export async function updatePayments(transaction) {
+    
+};
+
+export async function deletePayment(payment) {
+
+};
 
 export { db, validateTransaction };

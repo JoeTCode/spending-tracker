@@ -47,7 +47,7 @@ const MostRecentTransactions = () => {
 
     return (
         <div className='
-                h-[610px] shadow-lg sm:h-[700px] rounded-lg bg-[#1a1818] 
+                h-[610px] shadow-lg sm:h-[746px] rounded-lg bg-[#1a1818] 
                 transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl
             '
             onClick={() => navigate('/transactions')}
@@ -69,7 +69,7 @@ const MostRecentTransactions = () => {
                                         className="row-span-2 w-10 h-10 object-contain"
                                     /> */}
                                     
-                                    <Icon className="row-span-2 w-11 h-11 p-1 bg-stone-300 rounded-xl" aria-label={'Icon'} />
+                                    <Icon className="row-span-2 w-11 h-11 p-1 bg-stone-300 rounded-xl text-gray-800" aria-label={'Icon'} />
                                     {/* <GroceriesIcon /> */}
 
                                     {/* First row: Description + Amount */}
