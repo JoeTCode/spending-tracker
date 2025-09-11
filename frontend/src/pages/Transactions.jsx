@@ -6,16 +6,17 @@ import { CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
-import { getTransactions, updateTransaction, deleteTransaction } from '../db/db';
+import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const CORRECTIONSTRIGGER = 10;
 const UNDO_REDO_DELAY = 500;
 
 // customise column format and functions for the EditableGrid cols argument
-const headers = [
+const createHeaders = (setUndos) => ([
     {
         field: "date",
+        sort: "desc",
         editable: true,
         width: 110,
         headerClass: "font-bold"
@@ -59,13 +60,14 @@ const headers = [
             const deleteRow = async () => {
                 const deletedRow = props.api.applyTransaction({ remove: [props.data] })
                 await deleteTransaction(deletedRow.remove[0].data);
-                // setUndos((prev) => {
-                //     if (prev) {
-                //         return [...prev, deletedRow.remove[0].data]
-                //     } else {
-                //         return [deletedRow.remove[0].data]
-                //     };
-                // });
+                setUndos((prev) => {
+                    if (prev) {
+                        console.log(deletedRow)
+                        return [...prev, { type: 'delete', row: deletedRow.remove[0].data, index: deletedRow.remove[0].sourceRowIndex }] // { {row_x}, {row_y}, {type: 'delete', row: {row_z}} }
+                    } else {
+                        return [{ type: 'delete', row: deletedRow.remove[0].data }]
+                    };
+                });
             };
             
             return (
@@ -89,98 +91,7 @@ const headers = [
             );
         }
     }
-];
-
-// const formatHeaders = (headers) => {
-//     const deleteRowName = 'Delete';    
-//     const headersCopy = [...headers, deleteRowName];
-//     const formatted = [];
-    
-//     for (const header of headersCopy) {
-//         const obj = {}
-//         if (header === '_id') {
-//             continue;
-//         }
-//         else if (header === 'date') {
-//             obj['field'] = header;
-//             obj['editable'] = true;
-//             obj['width'] = 110
-//             obj['headerClass'] = "font-bold"
-//         }
-//         else if (header === 'amount') {
-//             obj['field'] = header;
-//             obj['editable'] = true;
-//             obj['valueParser'] = params => {
-//                 const value = parseFloat(params.newValue);
-//                 if (isNaN(value)) return params.oldValue; // reject invalid input
-//                 return value;
-//             };
-//             obj['width'] = 130
-//             obj['headerClass'] = "font-bold"
-//         }
-//         else if (header === 'category') {
-//             obj['field'] = header
-//             obj['editable'] = true;
-//             obj['cellEditor'] = 'agSelectCellEditor';
-//             obj['cellEditorParams'] = {
-//                 values: CATEGORIES
-//             };
-//             obj['singleClickEdit'] = true;
-//             obj['valueFormatter'] = params => {
-//                 return CATEGORY_TO_EMOJI[params.value] || params.value;
-//             };
-//             obj['headerClass'] = "font-bold";
-//             obj['width'] = 160;
-//         }
-//         else if (header === deleteRowName) {
-//             obj['field'] = header
-//             obj['width'] = 80
-//             obj['headerClass'] = "font-bold"
-//             obj['cellRenderer'] = (props) => {
-//                 const deleteRow = async () => {
-//                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
-//                     await deleteTransaction(deletedRow.remove[0].data);
-//                     // setUndos((prev) => {
-//                     //     if (prev) {
-//                     //         return [...prev, deletedRow.remove[0].data]
-//                     //     } else {
-//                     //         return [deletedRow.remove[0].data]
-//                     //     };
-//                     // });
-//                 };
-
-//                 return (
-//                     <img
-//                         src="/circle-xmark-solid.svg"
-//                         alt="X"
-//                         onClick={deleteRow}
-//                         className='cursor-pointer w-5 h-5 mt-3 ml-4'
-//                         onMouseDown={(e) => {
-//                             e.currentTarget.style.transform = 'translateY(1px)';
-//                         }}
-//                         onMouseUp={(e) => {
-//                             e.currentTarget.style.transform = 'translateY(0)';
-//                             e.currentTarget.style.filter = 'none';
-//                         }}
-//                         onMouseLeave={(e) => {
-//                             e.currentTarget.style.transform = 'translateY(0)';
-//                             e.currentTarget.style.filter = 'none';
-//                         }}
-//                     />
-//                 );
-//             };
-//         } 
-//         else {
-//             obj['field'] = header;
-//             obj['editable'] = true;
-//             obj['headerClass'] = "font-bold"
-//         };
-
-//         formatted.push(obj);
-//     };
-//     console.log(formatted);
-//     return formatted;
-// };
+]);
 
 const trainModel = async (transactions) => {
     const descriptions = [];
@@ -244,6 +155,15 @@ const Transactions = () => {
         return parseInt(saved);
     });
 
+    useEffect(() => {
+        const testLogger = () => {
+            console.log('undos', undos);
+            console.log('redos', redos);
+        };
+
+        testLogger();
+    }, [undos, redos]);
+
     // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
     // corrected/not-corrected transactions and perform federated averaging with the global model
     // useEffect(() => {
@@ -289,96 +209,66 @@ const Transactions = () => {
             setTransactions(data);
 
             setRowData(data); // new
-
-            // const hdrs = Object.keys(data[0])
-            // setHeaders(formatHeaders(hdrs));
         };
 
         retrieveData();
     
     }, []);
 
-
     async function undo() {
         const undosPopped = [...undos];
-        const mostRecentUndo = undosPopped.pop()
+        const action = undosPopped.pop();
+        if (!action) return;
 
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentUndo]
-        });
+        if (action.type === 'delete') {
+            gridRef.current.api.applyTransaction({ add: [action.row] });
+            setRedos(prev => [...prev, action]);
+        }
+        else {
+            gridRef.current.api.applyTransaction({ update: [action.before] });
+            setRedos(prev => [...prev, action]);
+        };
 
-        // cancel any existing timer
         if (timerId) clearTimeout(timerId);
-
-
-        // add row state before undo to redo
-        for (const row of rowData) {
-            if (row._id === mostRecentUndo._id) {
-                setRedos(prev => {
-                    if (prev.length > 0) {
-                        return [...prev, row];
-                    } else return [row];
-                });
-            };
-        }; 
-
         // start timer
         const id = setTimeout(async () => {
-            // await updateTransactions(token, mostRecentUndo);
-            await updateTransaction(mostRecentUndo);
+            if (action.type === 'delete') await db.barclaysTransactions.add(action.row);
+            else await updateTransaction(action.before);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
 
         setTimerId(id);
-
-        setRowData(prevRows => {
-            return prevRows.map(row => row._id === mostRecentUndo._id ? mostRecentUndo : row);
-        });
         setUndos(undosPopped);
-    };
+    }
 
     async function redo() {
-        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         const redosPopped = [...redos];
-        const mostRecentRedo = redosPopped.pop();
+        const action = redosPopped.pop();
+        if (!action) return;
 
-        gridRef.current.api.applyTransaction({
-            update: [mostRecentRedo]
-        });
+        if (action.type === 'delete') {
+            gridRef.current.api.applyTransaction({ remove: [action.row] });
+            setUndos(prev => [...prev, action]);
+        }
+        else {
+            gridRef.current.api.applyTransaction({ update: [action.after] });
+            setUndos(prev => [...prev, action]);
+        };
 
         if (timerId) clearTimeout(timerId);
-
-        // add row state before redo to undo
-        for (const row of rowData) {
-            if (row._id === mostRecentRedo._id) {
-                setUndos(prev => {
-                    if (prev.length > 0) {
-                        return [...prev, row];
-                    } else return [row];
-                });
-            };
-        };
-        
+        // start timer
         const id = setTimeout(async () => {
-            const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            // await updateTransactions(token, mostRecentRedo);
-            await updateTransaction(mostRecentRedo);
+            if (action.type === 'delete') await db.barclaysTransactions.delete(action.row._id);
+            else await updateTransaction(action.after);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
 
         setTimerId(id);
-
-        setRowData(prevRows => {
-            return prevRows.map(row => row._id === mostRecentRedo._id ? mostRecentRedo : row);
-        });
-        setRedos(redosPopped);
-    };
-
+        setRedos(redosPopped)
+    }
 
     const handleCellChange = async (updatedRow, params) => {
-        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         setRedos([]);
-
         const column = params.column.colId;
 
         if (column === 'Category') {
@@ -388,15 +278,14 @@ const Transactions = () => {
         };
 
         try {
-            // await updateTransactions(token, updatedRow); // undo redo wont trigger handleCellChange
             await updateTransaction(updatedRow);
-            const column = params.column.colId;
+            const column = params.column.colId; // name of column changed
             
             setUndos((prev) => {
                 if (prev) {
-                    return [...prev, {...updatedRow, [column]: params.oldValue}]
+                    return [...prev, { type: "edit", before: {...updatedRow, [column]: params.oldValue}, after: { ...updatedRow } }];
                 } else {
-                    return [{...updatedRow, [column]: params.oldValue}]
+                    return [{ type: "edit", before: {...updatedRow, [column]: params.oldValue}, after: { ...updatedRow } }];
                 };
             });
         } catch (err) {
@@ -409,7 +298,7 @@ const Transactions = () => {
             <NavBar />
             <div className='flex justify-center w-full mt-40'>
                 {rowData && rowData.length > 0 ? ( <div className='h-150 w-220'>
-                    <EditableGrid gridRef={gridRef} rowData={rowData} colNames={headers} onCellChange={handleCellChange} />
+                    <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
                     </div>) : null
                 }
             </div>

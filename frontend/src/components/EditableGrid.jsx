@@ -13,6 +13,7 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
     // Save edited cells to state
     
     const onCellValueChanged = async (params) => {
+        console.log('params', params)
         const edited_row_data = params.data;
         onCellChange(edited_row_data, params);
         
