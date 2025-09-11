@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 async function saveData ({ type, selectedMonth, retrievalRange, start, end }, setSpendingPerCategory, setCategoryToPercentage) {
 	
-	const data = await getTransactions(type, selectedMonth, retrievalRange, start, end)
+	const data = await getTransactions({ rangeType: type, selectedMonth: selectedMonth, numRetrieved: retrievalRange, customStart: start, customEnd: end })
 	// console.log(type, start, end, data);
 	const categories = {};
 	

@@ -93,7 +93,17 @@ function validateTransaction(tx, row) {
     };
 };
 
-export async function getTransactions(rangeType, selectedMonth=null, numRetrieved=null, customStart=null, customEnd=null) {
+export async function getTransactions(
+    {
+        rangeType,
+        selectedMonth = null,
+        numRetrieved = null,
+        customStart = null,
+        customEnd = null,
+        sorted = null,
+        selectedYear = null,
+    } = {})
+{
     let transactions = [];
     switch (rangeType) {
         case 'custom':
@@ -136,7 +146,17 @@ export async function getTransactions(rangeType, selectedMonth=null, numRetrieve
             break;
 
         case 'a':
-            transactions = await db.barclaysTransactions.toArray();
+            
+            if (sorted === 'desc') {
+                transactions = await db.barclaysTransactions
+                    .orderBy("date")
+                    .reverse()   // latest first
+                    .toArray();
+            } else if (sorted === 'asc') {
+                transactions = await db.barclaysTransactions
+                    .orderBy("date")
+                    .toArray();
+            } else transactions = await db.barclaysTransactions.toArray();
             break;
 
         case 'vm':
@@ -146,8 +166,13 @@ export async function getTransactions(rangeType, selectedMonth=null, numRetrieve
             monthStart.setMonth(selectedMonth);
         
             const monthEnd = new Date(monthStart);
+            if (selectedYear) {
+                monthStart.setFullYear(selectedYear);
+                monthEnd.setFullYear(selectedYear);
+            }
             monthEnd.setMonth(monthEnd.getMonth() + 1)
 
+            
             transactions = await db.barclaysTransactions
                         .where('date')
                         .between(monthStart, monthEnd, true, false) // true=true includes bounds

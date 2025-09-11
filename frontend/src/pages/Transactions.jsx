@@ -2,12 +2,17 @@ import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
 // import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
-import { CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
+import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS } from '../utils/constants/constants';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
 import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
 import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
+import UndoLeft from '../assets/icons/undo-left-round-svgrepo-com.svg?react'
+import UndoRight from '../assets/icons/undo-right-round-svgrepo-com.svg?react';
+import ChevronLeft from '../assets/icons/chevron-left-svgrepo-com.svg?react';
+import ChevronRight from '../assets/icons/chevron-right-svgrepo-com.svg?react';
+import DateRange from '../assets/icons/date-range-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const CORRECTIONSTRIGGER = 10;
@@ -19,7 +24,7 @@ const createHeaders = (setUndos) => ([
         field: "date",
         sort: "desc",
         editable: true,
-        width: 110,
+        width: 120,
         headerClass: "font-bold"
     },
     {
@@ -33,14 +38,18 @@ const createHeaders = (setUndos) => ([
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: CATEGORIES },
         singleClickEdit: true,
-        valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
+        // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
         headerClass: "font-bold",
-        width: 160
+        width: 170,
+        cellRenderer: params => {
+            return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+        }
     },
     {
         field: "type",
         editable: true,
         headerClass: "font-bold",
+        width: 120
     },
     {
         field: "amount",
@@ -51,7 +60,15 @@ const createHeaders = (setUndos) => ([
             return value;
         },
         width: 130,
-        headerClass: "font-bold"
+        headerClass: "font-bold",
+        cellRenderer: params => {
+            if (params.value < 0) {
+                return <span className=' text-red-500'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+            }
+            else {
+                return <span className=' text-green-500'>+{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+            }   
+        }
     },
     {
         field: "delete",
@@ -72,7 +89,7 @@ const createHeaders = (setUndos) => ([
             };
             
             return (
-                <Trash onClick={deleteRow} className='cursor-pointer w-6 h-6 mt-2 ml-3 hover:text-gray-300' />
+                <Trash onClick={deleteRow} className='cursor-pointer w-5 h-5 mt-2 ml-3 hover:text-gray-300' />
             );
         }
     }
@@ -119,6 +136,129 @@ const testWeightAvg = async (transactions, token) => {
     saveClientModel(newGlobalModelWeights);
 };
 
+const Undo = ({ undos, undo }) => (
+  <button 
+    onClick={undos.length > 0 ? undo : undefined} 
+    disabled={undos.length === 0} 
+    className={undos.length === 0 ? 
+        "w-20 flex items-center bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
+        'w-20 flex items-center bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+  >
+    <UndoLeft className='w-5 h-5 relative top-[1px]' />
+    <span>Undo</span>
+  </button>
+);
+
+const Redo = ({ redos, redo }) => (
+  <button 
+    onClick={redos.length > 0 ? redo : undefined} 
+    disabled={redos.length === 0} 
+    className={redos.length === 0 ? 
+        "w-20 flex items-center bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
+        'w-20 flex items-center bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+  >
+    <UndoRight className='w-5 h-5 relative top-[1px]' />
+    Redo
+  </button>
+);
+
+const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+    const prevMonth = new Date(selectedTimeframe);
+    prevMonth.setMonth(prevMonth.getMonth() - 1)
+
+    if (prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
+        return (
+            <button
+                className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                disabled={true}
+            >
+                <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
+                <span>Previous</span>
+            </button>
+        ) 
+    }
+    
+    else return (
+        <button 
+            onClick={async () => {
+                setUndos([]);
+                setRedos([]);
+
+                console.log('PREV', prevMonth);
+                const prevTransactions = await getTransactions({ rangeType: 'vm', selectedMonth: prevMonth.getMonth(), selectedYear: prevMonth.getFullYear() });
+                
+                setRowData(prevTransactions);
+                setSelectedTimeframe(prev => {
+                    const dateObj = new Date(prev);
+                    return dateObj.setMonth(dateObj.getMonth() - 1);
+                });
+                setIsFilteredByAll(false);
+            }}
+            className='flex items-center gap-1 bg-[#141212] rounded-lg m-1 p-1 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+        >
+            <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
+            <span>Previous</span>
+        </button>
+    )
+};
+
+const Next = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+    const nextMonth = new Date(selectedTimeframe);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    if (nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
+        return (
+            <button
+                className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                disabled={true}
+            >
+                <span>Next</span>
+                <ChevronRight className='h-5 w-5 relative top-[1px]'/>
+            </button>
+        ) 
+    }
+    else {
+        return (
+            <button 
+                onClick={async () => {
+                    setUndos([]);
+                    setRedos([]);
+                    
+                    console.log('NEXT', nextMonth);
+                    const nextTransactions = await getTransactions({ rangeType:'vm', selectedMonth: nextMonth.getMonth(), selectedYear: nextMonth.getFullYear() });
+                    setRowData(nextTransactions);
+                    setSelectedTimeframe(prev => {
+                        const dateObj = new Date(prev);
+                        return dateObj.setMonth(dateObj.getMonth() + 1);
+                    });
+                    setIsFilteredByAll(false);
+                }}
+                className='flex items-center gap-1 bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+            >
+                <span className=''>Next</span>
+                <ChevronRight className='h-5 w-5 relative top-[1px]'/>
+            </button>
+        );
+    }
+    
+};
+
+const All = ({ setUndos, setRedos, getTransactions, setRowData, setIsFilteredByAll }) => (
+    <button 
+        onClick={async () => {
+            setUndos([]);
+            setRedos([]);
+            const allTransactions = await getTransactions({ rangeType: 'a' });
+            console.log(allTransactions);
+            setRowData(allTransactions);
+            setIsFilteredByAll(true);
+        }}
+        className='bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+    >
+        All
+    </button>
+);
+
 const Transactions = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
@@ -129,8 +269,9 @@ const Transactions = () => {
     const [ redos, setRedos ] = useState([]);
     const gridRef = useRef(null);
     const [timerId, setTimerId] = useState(null);
-    const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
-    
+    const [ selectedTimeframe, setSelectedTimeframe ] = useState(new Date()); // gets reassigned upon initial tx retrieval
+    const [ isFilteredByAll, setIsFilteredByAll ] = useState(true);
+    const [ transactionsDateRange, setTransactionsDateRange ] = useState({ min: null, max:null });
     const [correctionsCount, setCorrectionsCount] = useState(() => {
         const saved = localStorage.getItem("count");
         if (saved === null) {
@@ -140,14 +281,14 @@ const Transactions = () => {
         return parseInt(saved);
     });
 
-    useEffect(() => {
-        const testLogger = () => {
-            console.log('undos', undos);
-            console.log('redos', redos);
-        };
+    // useEffect(() => {
+    //     const testLogger = () => {
+    //         console.log('undos', undos);
+    //         console.log('redos', redos);
+    //     };
 
-        testLogger();
-    }, [undos, redos]);
+    //     testLogger();
+    // }, [undos, redos]);
 
     // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
     // corrected/not-corrected transactions and perform federated averaging with the global model
@@ -190,8 +331,24 @@ const Transactions = () => {
     
     useEffect(() => {
         const retrieveData = async () => {
-            const data = await getTransactions('a');
+            const data = await getTransactions({ rangeType: 'a', sorted: 'desc' });
             setTransactions(data);
+
+            let latest = new Date(data[0].date);
+            let earliest = new Date(data[data.length - 1].date);
+            if (isNaN(latest.getTime())) latest = new Date();
+            if (isNaN(earliest.getTime())) earliest = new Date();
+            setSelectedTimeframe(latest);
+            
+            earliest.setHours(0, 0, 0, 0);
+            earliest.setDate(1);
+
+            latest.setHours(23, 59, 59, 999);
+            latest.setDate(1);
+            latest.setMonth(latest.getMonth() + 1)
+            latest.setDate(latest.getDate() - 1)
+            setTransactionsDateRange({min: earliest, max: latest});
+            console.log({min: earliest, max: latest})
 
             setRowData(data); // new
         };
@@ -280,56 +437,50 @@ const Transactions = () => {
 
     return (
         <>
-            <NavBar />
-            <div className='flex justify-center w-full mt-40'>
-                {rowData && rowData.length > 0 ? ( <div className='h-150 w-220'>
-                    <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
-                    </div>) : null
-                }
+            <NavBar /> 
+            <div className='flex justify-center w-full mt-40 mb-10'>
+                <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10'>
+                    {isFilteredByAll ?
+                        <div className='flex ml-2 items-center mb-5'>
+                            <DateRange className='h-5 w-5' />
+                            <h2 className='text-gray-300 ml-2'>
+                                All Transactions
+                            </h2>
+                        </div> : 
+                        <div className='flex ml-2 items-center mb-5'>
+                            <DateRange className='h-5 w-5' />
+                            <h2 className='text-gray-300 ml-2'>
+                                {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
+                            </h2>
+                        </div>
+                        
+                    }
+                    <div className='flex justify-between mb-3'>
+                        <div className='flex'>
+                            <Prev 
+                                setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
+                                setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                transactionsDateRange={transactionsDateRange} 
+                            />
+                            <Next 
+                                setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
+                                setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                transactionsDateRange={transactionsDateRange}
+                            />
+                            <All setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData} setIsFilteredByAll={setIsFilteredByAll} />
+                        </div>
+                        <div className='flex'>
+                            <Undo undos={undos} undo={undo} />
+                            <Redo redos={redos} redo={redo} />
+                        </div>
+                    </div>
+
+                    {rowData && rowData.length > 0 ? ( <div className='h-170 w-206'>
+                        <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
+                        </div>) : null
+                    }
+                </div>
             </div>
-            {undos.length > 0 ? (
-                <button onClick={async () => { await undo() }}> Undo </button> )  
-                : ( <button disabled className='disabled-button'> Undo </button> )
-            }
-
-            {redos.length > 0 ? (
-                <button onClick={async () => { await redo() }}> Redo </button>
-            ) : ( <button disabled className='disabled-button'> Redo </button> )}
-
-            <button onClick={async () => {
-                const prevMonth = new Date()
-                prevMonth.setMonth(selectedMonth - 1)
-
-                const prevTransactions = await getTransactions('vm', prevMonth.getMonth());
-
-                setRowData(prevTransactions);
-                setSelectedMonth(prev => {
-                    return prev - 1;
-                });
-            }}>
-                Prev
-            </button>
-
-            <button onClick={async () => {
-                const nextMonth = new Date()
-                nextMonth.setMonth(selectedMonth + 1)
-
-                const nextTransactions = await getTransactions('vm', nextMonth.getMonth());
-
-                setRowData(nextTransactions);
-                setSelectedMonth(prev => {
-                    return prev + 1;
-                });
-            }}>
-                Next
-            </button>
-
-            <button onClick={async () => {
-                const allTransactions = await getTransactions('a');
-                setRowData(allTransactions);
-            }}>
-                All
-            </button>
 
             {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
             row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}

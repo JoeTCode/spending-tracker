@@ -17,7 +17,7 @@ const TransactionsOverviewCard = () => {
 
     useEffect(() => {
         const getTx = async () => {
-            const transactions = await getTransactions('y');
+            const transactions = await getTransactions({rangeType: 'y'});
             setTransactions(transactions);
         };
 
@@ -52,20 +52,21 @@ const TransactionsOverviewCard = () => {
                 case "Past Week":
                     const lastWeek = new Date(today);
                     lastWeek.setDate(lastWeek.getDate() - 7);
-                    transactions = await getTransactions('custom', null, null, lastWeek, today);
+                    transactions = await getTransactions({ rangeType: 'custom', customStart: lastWeek, customEnd: today });
                     break;
                 case "Past Month":
                     const lastMonth = new Date(today);
                     lastMonth.setMonth(lastMonth.getMonth() - 1);
-                    transactions = await getTransactions('custom', null, null, lastMonth, today);
+                    transactions = await getTransactions({ rangeType: 'custom', customStart: lastMonth, customEnd: today });
                     break;
                 case "Past 3 Months":
                     const last3Months = new Date(today);
                     last3Months.setMonth(last3Months.getMonth() - 3);
-                    transactions = await getTransactions('custom', null, null, last3Months, today);
+                    transactions = await getTransactions({ rangeType: 'custom', customStart: last3Months, customEnd: today });
+                    console.log(transactions);
                     break;
                 case "Past Year":
-                    transactions = await getTransactions('y');
+                    transactions = await getTransactions({ rangeType: 'y' });
                     break;
             };
             

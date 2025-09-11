@@ -36,7 +36,7 @@ const MostRecentTransactions = () => {
 
     useEffect(() => {
         const getRecentTransactions = async () => {
-            const tx = await getTransactions('latest-n', null, NUM_TRANSACTIONS);
+            const tx = await getTransactions({ rangeType:'latest-n', numRetrieved:NUM_TRANSACTIONS });
             setRecentTransactions(tx);
         };
 

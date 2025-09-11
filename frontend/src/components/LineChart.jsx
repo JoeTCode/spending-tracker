@@ -25,7 +25,7 @@ export default function IncomeLineChart() {
     
     useEffect(() => {
         const saveData = async () => {
-            const data = await getTransactions('y');
+            const data = await getTransactions({ rangeType: 'y' });
             
             const incomeMonthBuckets = [];
             const expenseMonthBuckets = [];

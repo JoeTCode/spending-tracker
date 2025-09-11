@@ -38,8 +38,8 @@ const SpendingComparisonCard = () => {
         const getTx = async () => {
             const currentMonth = new Date().getMonth();
             const lastMonth = (currentMonth + 11) % 12;
-            const lastMonthtransactions = await getTransactions('vm', lastMonth);
-            const currentMonthTransactions = await getTransactions('vm', currentMonth);
+            const lastMonthtransactions = await getTransactions({ rangeType: 'vm', selectedMonth: lastMonth });
+            const currentMonthTransactions = await getTransactions({ rangeType: 'vm', selectedMonth: currentMonth });
             setLastMonthTransactions(lastMonthtransactions);
             setCurrentMonthTransactions(currentMonthTransactions);
         };

@@ -157,7 +157,7 @@ const StackedBarChart = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions('y');
+            const data = await getTransactions({ rangeType: 'y' });
             // console.log(data);
             const makeCategoryDict = () => {
                 const dict = {};

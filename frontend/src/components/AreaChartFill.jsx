@@ -38,7 +38,7 @@ const AreaFillChart = () => {
     useEffect(() => {
         const retrieveData = async () => {
 
-            const data = await getTransactions(dataRetrievalRange, selectedMonth);
+            const data = await getTransactions({ rangeType: dataRetrievalRange, selectedMonth:selectedMonth });
 
             // Aggregate transactions per day
             const dailyTotals = {};
