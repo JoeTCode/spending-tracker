@@ -7,6 +7,7 @@ import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { getModelWeights, weightAverage } from '../api/globalModel';
 import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
 import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
+import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const CORRECTIONSTRIGGER = 10;
@@ -71,23 +72,7 @@ const createHeaders = (setUndos) => ([
             };
             
             return (
-                <img
-                    src="/circle-xmark-solid.svg"
-                    alt="X"
-                    onClick={deleteRow}
-                    className='cursor-pointer w-5 h-5 mt-3 ml-4'
-                    onMouseDown={(e) => {
-                        e.currentTarget.style.transform = 'translateY(1px)';
-                    }}
-                    onMouseUp={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.filter = 'none';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.filter = 'none';
-                    }}
-                />
+                <Trash onClick={deleteRow} className='cursor-pointer w-6 h-6 mt-2 ml-3 hover:text-gray-300' />
             );
         }
     }
