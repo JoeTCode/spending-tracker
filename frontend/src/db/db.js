@@ -189,9 +189,9 @@ export async function getTransactions(rangeType, selectedMonth=null, numRetrieve
 
 export async function updateTransaction(transaction) {
     if (CATEGORIES_SET.has(transaction["Category"])) {
-        await db.barclaysTransactions.put(transaction._id, { ...transaction, trained: false });
+        await db.barclaysTransactions.put({ ...transaction, trained: false }, transaction._id);
     } else {
-        await db.barclaysTransactions.put(transaction._id, transaction);
+        await db.barclaysTransactions.put(transaction, transaction._id);
     };
 };
 
@@ -243,12 +243,13 @@ export async function getPayments(rangeType) {
     return payments;
 };
 
-export async function updatePayments(transaction) {
-    
+export async function updatePayment(payment) {
+    console.log(payment);
+    await db.recurringPayments.update(payment._id, payment);
 };
 
 export async function deletePayment(payment) {
-
+    await db.recurringPayments.delete(payment._id);
 };
 
 export { db, validateTransaction };

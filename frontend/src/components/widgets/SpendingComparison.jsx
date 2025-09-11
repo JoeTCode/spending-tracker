@@ -94,7 +94,7 @@ const SpendingComparisonCard = () => {
     }, [currentMonthTransactions]);
 
     return (
-        <div className='grid grid-rows-3 grid-flow-col p-5 justify-center gap-x-20 sm:grid-rows-2 sm:gap-4 md:gap-x-40 lg:gap-x-60 xl:gap-x-100 rounded-lg bg-[#1a1818] shadow-lg'>
+        <div className='grid grid-rows-3 grid-flow-col p-5 justify-center gap-x-20 md:gap-4 md:gap-x-40 lg:grid-rows-2  lg:gap-x-60 xl:gap-x-100 rounded-lg bg-[#1a1818] shadow-lg'>
             {spendingComparison.map((item, i) => {
                 const Icon = CATEGORY_TO_ICON[item.category] || OtherMisc;
                 return (

@@ -8,8 +8,9 @@ import { Link, useNavigate } from 'react-router-dom';
 const Dashboard = () => {
     const navigate = useNavigate();
     const options = ["Past Week", "Past Month", "Past 3 Months", "Past Year", "All Time"];
-    const [selected, setSelected] = useState(options[options.length - 1]);
-    
+    const [ selected, setSelected ] = useState(options[options.length - 1]);
+    const [ paymentCount, setPaymentCount ] = useState(0);
+    const [ showAllPayments, setShowAllPayments ] = useState(false);
     const handleChange = (e) => {
         setSelected(e.target.value)
     };
@@ -18,9 +19,8 @@ const Dashboard = () => {
 
         <>
             <NavBar />
-             <h1>Dashboard</h1>
-            <div className='flex flex-col items-center mx-10 sm:mx-5'>
-                <div className="mt-12 grid grid-cols-1 mb-10 gap-5 md:grid-cols-3 md:gap-4 lg:min-w-[1100px] xl:min-w-[1400px]">
+            <div className='flex flex-col items-center mx-10 sm:mx-5 md:mx-24'>
+                <div className="mt-12 grid grid-cols-1 mb-10 gap-5 lg:grid-cols-3 lg:gap-4 lg:min-w-[1000px] xl:min-w-[1300px]">
                     {/* B */}
                     <div>
                         <div>
@@ -43,19 +43,25 @@ const Dashboard = () => {
 
                     <div>
                         <div className="flex justify-between items-baseline">
-                            <p className='font-semibold text-xl mb-5'>Upcoming Payments</p>
-                            <p className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <p className='font-semibold text-xl mb-5 flex'>Upcoming Payments 
+                                {paymentCount > 0 && (
+                                    <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center ml-2 text-sm font-bold">
+                                        {paymentCount}
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => setShowAllPayments(true)} >
                                 View All <span className='ml-1.5'>&gt;</span>
                             </p>
                         </div>
 
                         <div>
-                            <UpcomingPayments />
+                            <UpcomingPayments setPaymentCount={setPaymentCount} showAllPayments={showAllPayments} setShowAllPayments={setShowAllPayments}/>
                         </div>
                     </div>
 
                     {/* A: spans 2 rows */}
-                    <div className="md:row-span-2">
+                    <div className="lg:row-span-2">
                         <div className="flex justify-between items-baseline">
                             <p className='font-semibold text-xl mb-5'>Recent transactions</p>
                             <p className="text-sm text-gray-400 cursor-pointer" >
@@ -73,7 +79,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* D: spans 2 columns */}
-                    <div className="h-[500px] sm:h-[420px] md:col-span-2 md:h-[530px] flex flex-col">
+                    <div className="h-[500px] sm:h-[420px] lg:col-span-2 lg:h-[530px] flex flex-col">
                         <div className="flex justify-between items-baseline">
                             <p className='font-semibold text-xl mb-5'>Income / Spending Breakdown</p>
                             <p className="text-sm text-gray-400">This calendar year</p>
@@ -84,7 +90,7 @@ const Dashboard = () => {
                         
                     </div>
 
-                    <div className="grid grid-cols-1 gap-5 md:gap-4 md:col-span-3 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-5 lg:gap-4 lg:col-span-3 lg:grid-cols-2">
                         <div className='mt-[3px]'>
                             <div className="flex justify-between items-baseline">
                                 <p className='font-semibold text-xl mb-5'>Income / Spending Trends</p>
@@ -115,7 +121,7 @@ const Dashboard = () => {
                     </div>
 
                     {/* G: spans all 3 columns */}
-                    <div className="md:col-span-3">
+                    <div className="lg:col-span-3">
                         <div className="flex justify-between items-baseline mb-5">
                             <p className='font-semibold text-xl'>Spending comparisons</p>
                             <p className="text-sm text-gray-400">Compared to last month</p>

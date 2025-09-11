@@ -13,94 +13,174 @@ const CORRECTIONSTRIGGER = 10;
 const UNDO_REDO_DELAY = 500;
 
 // customise column format and functions for the EditableGrid cols argument
-const formatHeaders = (headers, token, setUndos) => {
-    const deleteRowName = 'Delete';
-    headers = headers.map(header => CATEGORY_TO_EMOJI[header] || header);
-    const headersCopy = [...headers, deleteRowName];
-    const formatted = []
+const headers = [
+    {
+        field: "date",
+        editable: true,
+        width: 110,
+        headerClass: "font-bold"
+    },
+    {
+        field: "description",
+        editable: true,
+        headerClass: "font-bold"
+    },
+    {
+        field: "category",
+        editable: true,
+        cellEditor: "agSelectCellEditor",
+        cellEditorParams: { values: CATEGORIES },
+        singleClickEdit: true,
+        valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
+        headerClass: "font-bold",
+        width: 160
+    },
+    {
+        field: "type",
+        editable: true,
+        headerClass: "font-bold",
+    },
+    {
+        field: "amount",
+        editable: true,
+        valueParser: params => {
+            const value = parseFloat(params.newValue);
+            if (isNaN(value)) return params.oldValue; // reject invalid input
+            return value;
+        },
+        width: 130,
+        headerClass: "font-bold"
+    },
+    {
+        field: "delete",
+        width: 80,
+        headerClass: "font-bold",
+        cellRenderer: props => {
+            const deleteRow = async () => {
+                const deletedRow = props.api.applyTransaction({ remove: [props.data] })
+                await deleteTransaction(deletedRow.remove[0].data);
+                // setUndos((prev) => {
+                //     if (prev) {
+                //         return [...prev, deletedRow.remove[0].data]
+                //     } else {
+                //         return [deletedRow.remove[0].data]
+                //     };
+                // });
+            };
+            
+            return (
+                <img
+                    src="/circle-xmark-solid.svg"
+                    alt="X"
+                    onClick={deleteRow}
+                    className='cursor-pointer w-5 h-5 mt-3 ml-4'
+                    onMouseDown={(e) => {
+                        e.currentTarget.style.transform = 'translateY(1px)';
+                    }}
+                    onMouseUp={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.filter = 'none';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.filter = 'none';
+                    }}
+                />
+            );
+        }
+    }
+];
+
+// const formatHeaders = (headers) => {
+//     const deleteRowName = 'Delete';    
+//     const headersCopy = [...headers, deleteRowName];
+//     const formatted = [];
     
+//     for (const header of headersCopy) {
+//         const obj = {}
+//         if (header === '_id') {
+//             continue;
+//         }
+//         else if (header === 'date') {
+//             obj['field'] = header;
+//             obj['editable'] = true;
+//             obj['width'] = 110
+//             obj['headerClass'] = "font-bold"
+//         }
+//         else if (header === 'amount') {
+//             obj['field'] = header;
+//             obj['editable'] = true;
+//             obj['valueParser'] = params => {
+//                 const value = parseFloat(params.newValue);
+//                 if (isNaN(value)) return params.oldValue; // reject invalid input
+//                 return value;
+//             };
+//             obj['width'] = 130
+//             obj['headerClass'] = "font-bold"
+//         }
+//         else if (header === 'category') {
+//             obj['field'] = header
+//             obj['editable'] = true;
+//             obj['cellEditor'] = 'agSelectCellEditor';
+//             obj['cellEditorParams'] = {
+//                 values: CATEGORIES
+//             };
+//             obj['singleClickEdit'] = true;
+//             obj['valueFormatter'] = params => {
+//                 return CATEGORY_TO_EMOJI[params.value] || params.value;
+//             };
+//             obj['headerClass'] = "font-bold";
+//             obj['width'] = 160;
+//         }
+//         else if (header === deleteRowName) {
+//             obj['field'] = header
+//             obj['width'] = 80
+//             obj['headerClass'] = "font-bold"
+//             obj['cellRenderer'] = (props) => {
+//                 const deleteRow = async () => {
+//                     const deletedRow = props.api.applyTransaction({ remove: [props.data] })
+//                     await deleteTransaction(deletedRow.remove[0].data);
+//                     // setUndos((prev) => {
+//                     //     if (prev) {
+//                     //         return [...prev, deletedRow.remove[0].data]
+//                     //     } else {
+//                     //         return [deletedRow.remove[0].data]
+//                     //     };
+//                     // });
+//                 };
 
-    for (const header of headersCopy) {
-        const obj = {}
-        if (header === '_id') {
-            continue;
-        }
-        else if (header === 'amount') {
-            obj['field'] = header
-            obj['editable'] = true;
-            obj['valueParser'] = params => {
-                const value = parseFloat(params.newValue);
-                if (isNaN(value)) return params.oldValue; // reject invalid input
-                return value;
-            };
-        }
-        else if (header === 'category') {
-            obj['field'] = header
-            obj['editable'] = true;
-            obj['cellEditor'] = 'agSelectCellEditor';
-            obj['cellEditorParams'] = {
-                values: CATEGORIES
-            };
-            obj['singleClickEdit'] = true;
-            obj['valueFormatter'] = params => {
-                return CATEGORY_TO_EMOJI[params.value] || params.value;
-            };
-        }
-        else if (header === deleteRowName) {
-            obj['field'] = header
-            obj['width'] = 80
-            obj['cellRenderer'] = (props) => {
-                const deleteRow = async () => {
-                    const deletedRow = props.api.applyTransaction({ remove: [props.data] })
-                    await deleteTransaction(deletedRow.remove[0].data);
-                    // setUndos((prev) => {
-                    //     if (prev) {
-                    //         return [...prev, deletedRow.remove[0].data]
-                    //     } else {
-                    //         return [deletedRow.remove[0].data]
-                    //     };
-                    // });
-                };
+//                 return (
+//                     <img
+//                         src="/circle-xmark-solid.svg"
+//                         alt="X"
+//                         onClick={deleteRow}
+//                         className='cursor-pointer w-5 h-5 mt-3 ml-4'
+//                         onMouseDown={(e) => {
+//                             e.currentTarget.style.transform = 'translateY(1px)';
+//                         }}
+//                         onMouseUp={(e) => {
+//                             e.currentTarget.style.transform = 'translateY(0)';
+//                             e.currentTarget.style.filter = 'none';
+//                         }}
+//                         onMouseLeave={(e) => {
+//                             e.currentTarget.style.transform = 'translateY(0)';
+//                             e.currentTarget.style.filter = 'none';
+//                         }}
+//                     />
+//                 );
+//             };
+//         } 
+//         else {
+//             obj['field'] = header;
+//             obj['editable'] = true;
+//             obj['headerClass'] = "font-bold"
+//         };
 
-                return (
-                    <img
-                        src="/circle-xmark-solid.svg"
-                        alt="X"
-                        onClick={deleteRow}
-                        style={{
-                            cursor: 'pointer',
-                            width: '20px',
-                            height: '20px',
-                            filter: 'grayscale(100%)',
-                            opacity: 0.7,
-                            marginTop: '10px',
-                            marginLeft: '11px'
-                        }}
-                        onMouseDown={(e) => {
-                            e.currentTarget.style.transform = 'translateY(1px)';
-                        }}
-                        onMouseUp={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.filter = 'none';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.filter = 'none';
-                        }}
-                    />
-                );
-            };
-        } 
-        else {
-            obj['field'] = header;
-            obj['editable'] = true;
-        };
-
-        formatted.push(obj);
-    };
-
-    return formatted;
-};
+//         formatted.push(obj);
+//     };
+//     console.log(formatted);
+//     return formatted;
+// };
 
 const trainModel = async (transactions) => {
     const descriptions = [];
@@ -146,7 +226,7 @@ const testWeightAvg = async (transactions, token) => {
 const Transactions = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
-    const [ headers, setHeaders ] = useState([]);
+    // const [ headers, setHeaders ] = useState(headers);
 
     const [ rowData, setRowData ] = useState(null);
     const [ undos, setUndos ] = useState([]);
@@ -154,6 +234,7 @@ const Transactions = () => {
     const gridRef = useRef(null);
     const [timerId, setTimerId] = useState(null);
     const [ selectedMonth, setSelectedMonth ] = useState(new Date().getMonth());
+    
     const [correctionsCount, setCorrectionsCount] = useState(() => {
         const saved = localStorage.getItem("count");
         if (saved === null) {
@@ -204,17 +285,13 @@ const Transactions = () => {
     
     useEffect(() => {
         const retrieveData = async () => {
-            const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            // const data = await getTransactions(token, 'a');
             const data = await getTransactions('a');
-            // console.log('test', test);
-            console.log('actual', data);
             setTransactions(data);
 
             setRowData(data); // new
 
-            const hdrs = Object.keys(data[0])
-            setHeaders(formatHeaders(hdrs, token, setUndos));
+            // const hdrs = Object.keys(data[0])
+            // setHeaders(formatHeaders(hdrs));
         };
 
         retrieveData();
@@ -223,7 +300,6 @@ const Transactions = () => {
 
 
     async function undo() {
-        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
         const undosPopped = [...undos];
         const mostRecentUndo = undosPopped.pop()
 
@@ -331,13 +407,12 @@ const Transactions = () => {
     return (
         <>
             <NavBar />
-            <h1>Transactions</h1>
-            
-            {rowData && rowData.length > 0 ? ( <div className='h-150 w-270'>
-                <EditableGrid gridRef={gridRef} rowData={rowData} colNames={headers} onCellChange={handleCellChange} />
-                </div>) : null
-            }
-
+            <div className='flex justify-center w-full mt-40'>
+                {rowData && rowData.length > 0 ? ( <div className='h-150 w-220'>
+                    <EditableGrid gridRef={gridRef} rowData={rowData} colNames={headers} onCellChange={handleCellChange} />
+                    </div>) : null
+                }
+            </div>
             {undos.length > 0 ? (
                 <button onClick={async () => { await undo() }}> Undo </button> )  
                 : ( <button disabled className='disabled-button'> Undo </button> )
@@ -348,14 +423,10 @@ const Transactions = () => {
             ) : ( <button disabled className='disabled-button'> Redo </button> )}
 
             <button onClick={async () => {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 const prevMonth = new Date()
                 prevMonth.setMonth(selectedMonth - 1)
-                // const prevTransactions = await getTransactions(token, 'vm', prevMonth.getMonth());
 
                 const prevTransactions = await getTransactions('vm', prevMonth.getMonth());
-                // console.log('test prev', prev)
-                // console.log('actual prev', prevTransactions);
 
                 setRowData(prevTransactions);
                 setSelectedMonth(prev => {
@@ -364,15 +435,12 @@ const Transactions = () => {
             }}>
                 Prev
             </button>
+
             <button onClick={async () => {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 const nextMonth = new Date()
                 nextMonth.setMonth(selectedMonth + 1)
-                // const nextTransactions = await getTransactions(token, 'vm', nextMonth.getMonth());
 
                 const nextTransactions = await getTransactions('vm', nextMonth.getMonth());
-                // console.log('test prev', next)
-                // console.log('actual prev', nextTransactions);
 
                 setRowData(nextTransactions);
                 setSelectedMonth(prev => {
@@ -381,9 +449,8 @@ const Transactions = () => {
             }}>
                 Next
             </button>
+
             <button onClick={async () => {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                // const allTransactions = await getTransactions(token, 'a');
                 const allTransactions = await getTransactions('a');
                 setRowData(allTransactions);
             }}>
@@ -393,6 +460,7 @@ const Transactions = () => {
             {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
             row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
             <button onClick={() => trainModel(rowData)}>Train</button>
+
             <button onClick={async () => {
                 const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
                 testWeightAvg(rowData, token);
