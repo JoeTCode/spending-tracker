@@ -54,19 +54,19 @@ const createHeaders = (setUndos) => ([
     {
         field: "amount",
         editable: true,
-        valueParser: params => {
-            const value = parseFloat(params.newValue);
-            if (isNaN(value)) return params.oldValue; // reject invalid input
-            return value;
-        },
+        // valueParser: params => {
+        //     const value = parseFloat(params.newValue);
+        //     if (isNaN(value)) return params.oldValue; // reject invalid input
+        //     return value;
+        // },
         width: 130,
         headerClass: "font-bold",
         cellRenderer: params => {
             if (params.value < 0) {
-                return <span className=' text-red-500'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                return <span className=' text-red-500'>{params.value.toFixed(2)}</span>
             }
             else {
-                return <span className=' text-green-500'>+{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                return <span className=' text-green-500'>+{params.value.toFixed(2)}</span>
             }   
         }
     },
@@ -243,22 +243,29 @@ const Next = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowDa
     
 };
 
-const All = ({ setUndos, setRedos, getTransactions, setRowData, setIsFilteredByAll }) => (
+const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll, setIsFilteredByAll, setSelectedTimeframe, latestTransaction }) => (
     <button 
-        onClick={async () => {
-            setUndos([]);
-            setRedos([]);
-            const allTransactions = await getTransactions({ rangeType: 'a' });
-            console.log(allTransactions);
-            setRowData(allTransactions);
-            setIsFilteredByAll(true);
-        }}
-        className='bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+        onClick={
+            isFilteredByAll ? 
+            (undefined) : (
+            async () => {
+                setUndos([]);
+                setRedos([]);
+                setSelectedTimeframe(new Date(latestTransaction));
+                const allTransactions = await getTransactions({ rangeType: 'a' });
+                console.log(latestTransaction);
+                setRowData(allTransactions);
+                setIsFilteredByAll(true);
+            })
+        }
+        disabled={isFilteredByAll}
+        className={isFilteredByAll ? 'bg-gray-600 rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
+            'bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'}
     >
         All
     </button>
 );
-
+// flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50
 const Transactions = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
@@ -272,6 +279,7 @@ const Transactions = () => {
     const [ selectedTimeframe, setSelectedTimeframe ] = useState(new Date()); // gets reassigned upon initial tx retrieval
     const [ isFilteredByAll, setIsFilteredByAll ] = useState(true);
     const [ transactionsDateRange, setTransactionsDateRange ] = useState({ min: null, max:null });
+    const [ latestTransaction, setLatestTransaction ] = useState(null);
     const [correctionsCount, setCorrectionsCount] = useState(() => {
         const saved = localStorage.getItem("count");
         if (saved === null) {
@@ -339,7 +347,7 @@ const Transactions = () => {
             if (isNaN(latest.getTime())) latest = new Date();
             if (isNaN(earliest.getTime())) earliest = new Date();
             setSelectedTimeframe(latest);
-            
+            setLatestTransaction(latest);
             earliest.setHours(0, 0, 0, 0);
             earliest.setDate(1);
 
@@ -467,7 +475,11 @@ const Transactions = () => {
                                 setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
                                 transactionsDateRange={transactionsDateRange}
                             />
-                            <All setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData} setIsFilteredByAll={setIsFilteredByAll} />
+                            <All 
+                                setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData}
+                                isFilteredByAll={isFilteredByAll} setIsFilteredByAll={setIsFilteredByAll} setSelectedTimeframe={setSelectedTimeframe}
+                                latestTransaction={latestTransaction}
+                            />
                         </div>
                         <div className='flex'>
                             <Undo undos={undos} undo={undo} />

@@ -11,6 +11,11 @@ import { db, validateTransaction } from '../db/db';
 import { pipeline } from '@huggingface/transformers';
 import * as tf from '@tensorflow/tfjs';
 import { useNavigate } from "react-router-dom";
+import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
+import Switch from '../components/Switch';
+import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
+import Tick from '../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
+import CustomProgressBar from '../components/ProgressBar';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
@@ -457,7 +462,7 @@ const Upload = () => {
     const [duplicateRows, setDuplicateRows] = useState([]);
     const [ fileParsed, setFileParsed ] = useState(false);
     const navigate = useNavigate();
-    const [correctionsCount, setCorrectionsCount] = useState(() => {
+    const [ correctionsCount, setCorrectionsCount ] = useState(() => {
             const saved = localStorage.getItem("count");
             if (saved === null) {
                 localStorage.setItem("count", "0");
@@ -465,7 +470,7 @@ const Upload = () => {
             }
             return parseInt(saved);
     });
-
+    const [ numReviewed, setNumReviewed ] = useState(0);
     const incrementCorrectionsCount = () => {
         setCorrectionsCount(prevCount => {
             const newCount = prevCount + 1;
@@ -519,55 +524,78 @@ const Upload = () => {
         };
     };
 
-    function setHeadersHelper(reordered) {
-        const formatted = [];
-                        
-        for (let header of reordered) {
-            const obj = {};
-            if (header === '_id' || header === 'is_trainable' || header == 'trained') {
-                continue;
-            }
-            if (header === 'confidence') {
-                obj['field'] = header;
-                obj['editable'] = true;
-                obj['width'] = 120
-                obj['valueFormatter'] = params => {
+    const setHeadersHelper = () => ([
+            {
+                field: "date",
+                editable: true,
+                width: 120,
+                headerClass: "font-bold"
+            },
+            {
+                field: "description",
+                editable: true,
+                headerClass: "font-bold"
+            },
+            {
+                field: "category",
+                editable: true,
+                cellEditor: "agSelectCellEditor",
+                cellEditorParams: { values: CATEGORIES },
+                singleClickEdit: true,
+                // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
+                headerClass: "font-bold",
+                width: 170,
+                cellRenderer: params => {
+                    return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                }
+            },
+            {
+                field: "confidence",
+                sort: "asc",
+                editable: true,
+                width: 110,
+                headerClass: "font-bold",
+                valueFormatter: params => {
                     if (params.value == null) return '';
                     return `${params.value}%`;
-                };
-            };
-            if (header === 'date') {
-                obj['field'] = header;
-                obj['editable'] = true;
-                obj['width'] = 120
+                }
+            },
+            {
+                field: "type",
+                editable: true,
+                headerClass: "font-bold",
+                width: 120
+            },
+            {
+                field: "amount",
+                editable: true,
+                // valueParser: params => {
+                //     const value = parseFloat(params.newValue);
+                //     if (isNaN(value)) return params.oldValue; // reject invalid input
+                //     return value;
+                // },
+                width: 110,
+                headerClass: "font-bold",
+                cellRenderer: params => {
+                    if (params.value < 0) {
+                        return <span className=' text-red-500'>{params.value.toFixed(2)}</span>
+                    }
+                    else {
+                        return <span className=' text-green-500'>+{params.value.toFixed(2)}</span>
+                    }   
+                }
+            },
+            {
+                field: "status",
+                width: 80,
+                headerClass: "font-bold",
+                cellRenderer: params => {
+                    if (params.data.status === 'unreviewed') return <Warning className='w-5 h-5 mt-2 ml-3 text-yellow-400' />
+                    else return <Tick className='w-5 h-5 mt-2 ml-3 text-green-600' />
+                }
             }
-            if (header === 'amount') {
-                obj['field'] = header;
-                obj['editable'] = true;
-                obj['width'] = 120
-            }
-            else if (header === 'category') {
-                obj['field'] = header;
-                obj['editable'] = true;
-                obj['cellEditor'] = 'agSelectCellEditor';
-                obj['cellEditorParams'] = {
-                    values: CATEGORIES
-                };
-                obj['singleClickEdit'] = true;
-                obj['valueFormatter'] = params => {
-                    return CATEGORY_TO_EMOJI[params.value] || params.value;
-                };
-            } else {
-                obj['field'] = header;
-                obj['editable'] = true;
-            };
-
-            formatted.push(obj);
-        };
-
-        return formatted;
-    };
-
+    ]);
+    
     useEffect(() => {
         const handleTransactions = async () => {
             if (transactions.length > 0) {
@@ -589,12 +617,12 @@ const Upload = () => {
                     console.log('Score:', (numMatches*100)/predictedCategories.length);
 
                     const lowConfTransactions = getLowConfTransactions(validatedTransactions, predictedCategories, confidenceScores);
-                    const headers = Object.keys(lowConfTransactions[0]);
-                    const reordered = ["confidence", "category", ...headers.filter(col => col !== "category" && col !== "confidence")];
-                    setLowConfTx(lowConfTransactions);
+
+                    const lowConfTransactionsWithStatusCol = lowConfTransactions.map(tx => ({ ...tx, status: 'unreviewed' }));
+                    setLowConfTx(lowConfTransactionsWithStatusCol);
                     
                     setHeaders(() => {
-                        return setHeadersHelper(reordered);
+                        return setHeadersHelper();
                     });
 
                     for (let i = 0; i < validatedTransactions.length; i ++) {
@@ -625,6 +653,7 @@ const Upload = () => {
                     if (allowCategorisation) {
                         setSaveData(validatedTransactions);
                         setPreviewCSV(true);
+                        setFileParsed(true);
                     } else {
                         await db.barclaysTransactions.bulkAdd(validatedTransactions);
                         navigate('/dashboard');
@@ -637,14 +666,17 @@ const Upload = () => {
         handleTransactions();
     }, [transactions]);
 
-
     const sendData = async () => {
 
         if (allowCategorisation) {
             const updatedTransactions = [];
+
+            // remove status column from data
+            const cleanedLowConfTx = lowConfTx.map(({status, ...rest}) => rest);
+
             // Update initial transactions with user-recategorised low confidence transaction
             for (let tx of saveData) {
-                const match = lowConfTx.find(newTx => newTx._id === tx._id);
+                const match = cleanedLowConfTx.find(newTx => newTx._id === tx._id);
                 updatedTransactions.push(match || tx);
             };
 
@@ -662,117 +694,156 @@ const Upload = () => {
 
 
     const handleCellChange = (updatedRow, params) => {
-        setLowConfTx(prev =>
-            prev.map(row => row._id === updatedRow._id ? updatedRow : row)
-        );
-
         const column = params.column.colId;
+
         if (column === 'category') {
             console.log(correctionsCount);
             if (CATEGORIES_SET.has(updatedRow[column])) {
                 incrementCorrectionsCount();
             };
+
+            // update status column
+            updatedRow.status = 'reviewed';
+            setLowConfTx(prev =>
+                prev.map(row =>
+                    row._id === updatedRow._id
+                        ? { ...row, status: "reviewed" }
+                        : row
+                )
+            );
+            setNumReviewed(prev => prev + 1);
+        } 
+        
+        else {
+            setLowConfTx(prev =>
+                prev.map(row => row._id === updatedRow._id ? updatedRow : row)
+            );
         };
     };
 
     return (
         <>
             <NavBar />
-            {previewCSV ? (
-                <h2>Review low-confidence predictions</h2>
-            ) : (
-                <h1>Upload</h1>
-            )}
             
-            <CSVReader 
-                onUploadAccepted={(results) => {
-                    const formatted = results.data.map(tx => {
-                        const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
-                        if (allowCategorisation) {
-                            return {
-                                'account': tx['Account'],
-                                'amount': amount,
-                                'date': formatDate(tx['Date']),
-                                'description': formatDescription(tx['Memo']),
-                                'type': tx['Subcategory']                        
-                            };
-                        } else {
-                            return {
-                                'account': tx['Account'],
-                                'amount': amount,
-                                'date': formatDate(tx['Date']),
-                                'category': tx['Category'],
-                                'description': formatDescription(tx['Memo']),
-                                'type': tx['Subcategory']                        
-                            };
-                        }
-                        
-                    })
-                    .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
-                    
-                    // console.log(formatted);
-                    setTransactions(formatted);
-                    setFileParsed(true);
-                }}
-                config={{ header: true, skipEmptyLines: true }}
-                noDrag
-            >
-                {({
-                    getRootProps,
-                    acceptedFile,
-                    ProgressBar,
-                    getRemoveFileProps,
-                    Remove,
-                }) => (
-                    <>
-                        {duplicateWarning ? (
-                            <div>
-                                <p>Duplicate transactions found in your CSV:</p>
-                                <ul>
-                                    {duplicateRows.map((tx, i) => (
-                                        <li key={i}>{tx.date.toLocaleDateString()} — {tx.description} — {tx.amount}</li>
-                                    ))}
-                                </ul>
-                                <button 
-                                    {...getRemoveFileProps()}
-                                    onClick={() => {
-                                        setDuplicateWarning(false);
-                                        setFileParsed(false);
-                                        setDuplicateRows([]);
-                                    }}
-                                >
-                                    Go back to Upload CSV
-                                </button>
-                            </div>
-                        ) : fileParsed ? (
-                            previewCSV ? (
-                                <div className='h-[500px] w-[1180px]'>
-                                    <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
-                                    <button onClick={sendData}>Done</button>
-                                </div>
-                            ) : (
-                                <div>Loading...</div>
-                            )
-                        ) : (
-                            <div>
-                                 <div>
-                                    <input
-                                        type="checkbox"
-                                        id="allowCategorisation"
-                                        checked={allowCategorisation}
-                                        onChange={(e) => setAllowCategorisation(e.target.checked)}
-                                    />
-                                    <label htmlFor="allowCategorisation">Allow Categorisation</label>
-                                </div>
-                                <div {...getRootProps()}>
-                                    <button>Upload CSV file</button>
-                                </div>
-                            </div>
+            <div className='flex justify-center mt-[20%] '>
+                <CSVReader 
+                    onUploadAccepted={(results) => {
+                        const formatted = results.data.map(tx => {
+                            const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
+                            if (allowCategorisation) {
+                                return {
+                                    'account': tx['Account'],
+                                    'amount': amount,
+                                    'date': formatDate(tx['Date']),
+                                    'description': formatDescription(tx['Memo']),
+                                    'type': tx['Subcategory']                        
+                                };
+                            } else {
+                                return {
+                                    'account': tx['Account'],
+                                    'amount': amount,
+                                    'date': formatDate(tx['Date']),
+                                    'category': tx['Category'],
+                                    'description': formatDescription(tx['Memo']),
+                                    'type': tx['Subcategory']                        
+                                };
+                            }
                             
-                        )}
-                    </>
-                )}
-            </CSVReader>
+                        })
+                        .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
+                        
+                        // console.log(formatted);
+                        setTransactions(formatted);
+                        setFileParsed(true);
+                    }}
+                    config={{ header: true, skipEmptyLines: true }}
+                    noDrag
+                >
+                    {({
+                        getRootProps,
+                        acceptedFile,
+                        ProgressBar,
+                        getRemoveFileProps,
+                        Remove,
+                    }) => (
+                        <>
+                            {duplicateWarning ? (
+                                <div>
+                                    <p>Duplicate transactions found in your CSV:</p>
+                                    <ul>
+                                        {duplicateRows.map((tx, i) => (
+                                            <li key={i}>{tx.date.toLocaleDateString()} — {tx.description} — {tx.amount}</li>
+                                        ))}
+                                    </ul>
+                                    <button 
+                                        {...getRemoveFileProps()}
+                                        onClick={() => {
+                                            setDuplicateWarning(false);
+                                            setFileParsed(false);
+                                            setDuplicateRows([]);
+                                        }}
+                                    >
+                                        Go back to Upload CSV
+                                    </button>
+                                </div>
+                            ) : fileParsed ? (
+                                previewCSV ? (
+                                    <div className='w-full max-w-[1000px] xl:mx-[10%]'>
+                                        <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+                                            <div className='flex-1'>
+                                                <p>Low confidence transactions</p>
+                                                <p className='mb-6 text-sm text-neutral-400'>Please review and recategorise the auto-categorised records.</p>
+                                                <div className='flex flex-col w-full items-center'>
+                                                    <span className='text-lg font-bold'>{lowConfTx.length}</span>
+                                                    <p className='text-sm text-neutral-400'>Total transactions</p>
+                                                </div>
+                                                {/* <span>{numReviewed}/{lowConfTx.length}</span> */}
+                                                <div className="mt-4 mb-4 w-full">
+                                                    <CustomProgressBar current={numReviewed} total={lowConfTx.length} />
+                                                </div>
+                                                
+                                                <div className='h-[420px]'>
+                                                    <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex justify-end">
+                                            <button onClick={sendData} className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
+                                                Done - Upload transactions
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>Loading...</div>
+                                )
+                            ) : (
+                                <div>
+                                    <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
+                                        <div>
+                                            <p className='text-white'>Auto-Categorisation</p>
+                                            <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
+                                        </div>
+                                        <Switch enabled={allowCategorisation} setEnabled={setAllowCategorisation} />
+                                    </div>
+                                    <div className='bg-[#1a1818] p-8 rounded-lg'>
+                                        <div className='flex flex-col px-90 py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
+                                            <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
+                                            <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
+                                            <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
+                                            <div {...getRootProps()}>
+                                                <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
+                                            </div>
+                                        </div>  
+                                    </div>
+                                </div>
+                                
+                                
+                            )}
+                        </>
+                    )}
+                </CSVReader>
+            </div>
+            
         </>
     )
 }

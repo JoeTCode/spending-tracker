@@ -157,6 +157,7 @@ export async function getTransactions(
                     .orderBy("date")
                     .toArray();
             } else transactions = await db.barclaysTransactions.toArray();
+            console.log(transactions);
             break;
 
         case 'vm':
@@ -164,7 +165,7 @@ export async function getTransactions(
             monthStart.setHours(0, 0, 0, 0);
             monthStart.setDate(1);
             monthStart.setMonth(selectedMonth);
-        
+            
             const monthEnd = new Date(monthStart);
             if (selectedYear) {
                 monthStart.setFullYear(selectedYear);
@@ -172,7 +173,6 @@ export async function getTransactions(
             }
             monthEnd.setMonth(monthEnd.getMonth() + 1)
 
-            
             transactions = await db.barclaysTransactions
                         .where('date')
                         .between(monthStart, monthEnd, true, false) // true=true includes bounds
