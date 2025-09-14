@@ -55,14 +55,23 @@ function validateDescription(description) {
     return validatedDescription;
 };
 
-function makeTransactionId(tx) {
+function makeTransactionId({ row=null, account=null, date=null, amount=null, description=null, type=null } = {}) {
     // checks for uniqueness in account, date, amount, description, and type fields. As the date field does not include time,
     // a CSV row check is implemented. This means two uploads of the same CSV file will generate the same _id per row, causing
     // duplicate error.
     // Adversely, transactions with identical fields in a different CSV will be be allowed. This can be bypassed with
     // a date overlap check before CSV upload.
-    const raw = `${tx.row}|${tx.account}|${tx.date.toISOString()}|${tx.amount}|${tx.description}|${tx.type}`;
-    // Hash it so it's consistent
+    // normalize date to UTC day
+    let dateTimestamp = '';
+    if (date) {
+        const d = new Date(date);
+        dateTimestamp = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    
+    const raw = [row, account, dateTimestamp, amount, description, type]
+                .filter(v => v != null)  // removes null and undefined
+                .join('|');
+    // hash
     return uuidv5(raw, uuidv5.URL); // namespace-based UUID
 };
 
@@ -78,7 +87,7 @@ function validateTransaction(tx, row) {
     const type = validateType(tx.type);
     const category = validateCategory(tx.category);
     const description = validateDescription(tx.description);
-    const _id = tx._id ?? makeTransactionId({ row, account, date, amount, type, description })
+    const _id = tx._id ?? makeTransactionId({ row:row, account:account, date:date, amount:amount, description:description, type:type })
 
     return {
         _id,
@@ -277,4 +286,4 @@ export async function deletePayment(payment) {
     await db.recurringPayments.delete(payment._id);
 };
 
-export { db, validateTransaction };
+export { db, validateTransaction, makeTransactionId };

@@ -7,7 +7,7 @@ const myTheme = themeQuartz.withPart(colorSchemeDark);
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 
-const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
+const EditableGrid = ({ gridRef, rowData, colNames, onCellChange, rowSelection=undefined, onSelectionChanged=undefined }) => {
     // Column Definitions: Defines the columns to be displayed.
 
     // Save edited cells to state
@@ -30,6 +30,8 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange }) => {
                 columnDefs={colNames}
                 onCellValueChanged={onCellValueChanged}
                 getRowId={params => params.data._id}
+                rowSelection={rowSelection}
+                onSelectionChanged={onSelectionChanged}
             />
         </>
     )

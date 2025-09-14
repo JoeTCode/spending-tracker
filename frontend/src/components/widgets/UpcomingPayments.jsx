@@ -275,7 +275,7 @@ const CreatePayment = ({ setShowForm }) => {
 const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments }) => {
     const [ upcomingPayments, setUpcomingPayments ] = useState([]);
     const [ showForm, setShowForm ] = useState(false);
-    const [ allPayments, setAllPayments ] = useState([]);
+    // const [ allPayments, setAllPayments ] = useState([]);
 
     useEffect(() => {
         const getUpcomingPayments = async () => {
@@ -291,20 +291,14 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
     }, [upcomingPayments]);
 
     useEffect(() => {
+        console.log(showAllPayments);
         const retrievePayments = async () => {
-            const payments = await getPayments('a');
-            setAllPayments(payments);
+            const payments = await getPayments('d');
+            setUpcomingPayments(payments);
         };
-
-        if (showAllPayments) {
-            retrievePayments();
-        };
+        
+        retrievePayments();
     }, [showAllPayments]);
- 
-    const handleDeletePayment = async (payment) => {
-        await deletePayment(payment);
-        setAllPayments(prev => prev.filter(payment => payment._id !== payment._id));
-    };
 
     return (
         // <div className='rounded-lg bg-[#1a1818] shadow-lg m-15 p-5  max-w-100'>

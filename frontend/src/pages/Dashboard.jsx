@@ -24,7 +24,7 @@ const Dashboard = () => {
                     {/* B */}
                     <div>
                         <div>
-                            <p className="font-semibold text-xl mb-5">Overview</p>
+                            <p className="font-medium text-xl mb-5">Overview</p>
                         </div>
 
                         <div>
@@ -43,9 +43,10 @@ const Dashboard = () => {
 
                     <div>
                         <div className="flex justify-between items-baseline">
-                            <p className='font-semibold text-xl mb-5 flex'>Upcoming Payments 
+                            <p className='font-medium text-xl mb-5 flex items-center'>
+                                Upcoming Payments 
                                 {paymentCount > 0 && (
-                                    <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center ml-2 text-sm font-bold">
+                                    <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center ml-3 text-sm font-bold relative top-[2px]">
                                         {paymentCount}
                                     </span>
                                 )}
@@ -63,7 +64,7 @@ const Dashboard = () => {
                     {/* A: spans 2 rows */}
                     <div className="lg:row-span-2">
                         <div className="flex justify-between items-baseline">
-                            <p className='font-semibold text-xl mb-5'>Recent transactions</p>
+                            <p className='font-medium text-xl mb-5'>Recent transactions</p>
                             <p className="text-sm text-gray-400 cursor-pointer" >
                                 <Link 
                                     to="/transactions" 
@@ -81,7 +82,7 @@ const Dashboard = () => {
                     {/* D: spans 2 columns */}
                     <div className="h-[500px] sm:h-[420px] lg:col-span-2 lg:h-[530px] flex flex-col">
                         <div className="flex justify-between items-baseline">
-                            <p className='font-semibold text-xl mb-5'>Income / Spending Breakdown</p>
+                            <p className='font-medium text-xl mb-5'>Income / Spending Breakdown</p>
                             <p className="text-sm text-gray-400">This calendar year</p>
                         </div>
                         <div className='flex-1 min-h-0'>
@@ -93,7 +94,7 @@ const Dashboard = () => {
                     <div className="grid grid-cols-1 gap-5 lg:gap-4 lg:col-span-3 lg:grid-cols-2">
                         <div className='mt-[3px]'>
                             <div className="flex justify-between items-baseline">
-                                <p className='font-semibold text-xl mb-5'>Income / Spending Trends</p>
+                                <p className='font-medium text-xl mb-5'>Income / Spending Trends</p>
                                 <p className="text-sm text-gray-400">This calendar year</p>
                             </div>
                             
@@ -101,7 +102,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                             <div className="flex justify-between items-baseline">
-                                <p className='font-semibold text-xl mb-5'>Spending per category</p>
+                                <p className='font-medium text-xl mb-5'>Spending per category</p>
                                 {/* <p className="text-sm text-gray-400">All time</p> */}
                                 <select
                                     value={selected}
@@ -123,7 +124,7 @@ const Dashboard = () => {
                     {/* G: spans all 3 columns */}
                     <div className="lg:col-span-3">
                         <div className="flex justify-between items-baseline mb-5">
-                            <p className='font-semibold text-xl'>Spending comparisons</p>
+                            <p className='font-medium text-xl'>Spending comparisons</p>
                             <p className="text-sm text-gray-400">Compared to last month</p>
                         </div>
                         <SpendingComparison />

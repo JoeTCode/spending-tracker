@@ -7,7 +7,7 @@ import { createModel, predict } from '../utils/model';
 import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { MIN_CONF_SCORE, CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
 import { devGetModelWeights } from '../api/globalModel';
-import { db, validateTransaction } from '../db/db';
+import { db, validateTransaction, makeTransactionId } from '../db/db';
 import { pipeline } from '@huggingface/transformers';
 import * as tf from '@tensorflow/tfjs';
 import { useNavigate } from "react-router-dom";
@@ -448,83 +448,75 @@ function formatDate(date) {
 
 }
 
-const Upload = () => {
-    const { CSVReader } = useCSVReader();
-    const [ transactions, setTransactions ] = useState([]); // list of dicts
-    const { getAccessTokenSilently } = useAuth0();
-    const [ previewCSV, setPreviewCSV ] = useState(false);
-    const [ lowConfTx, setLowConfTx ] = useState([]);
-    const [ headers, setHeaders ] = useState(null);
-    const [ saveData, setSaveData ] = useState([]);
-    const [ allowCategorisation, setAllowCategorisation ] = useState(true);
+const formatBarclaysCSV = (parsedCSV, allowCategorisation) => {
+    return parsedCSV.data.map(tx => {
+        const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
+        if (allowCategorisation) {
+            return {
+                'account': tx['Account'],
+                'amount': amount,
+                'date': formatDate(tx['Date']),
+                'description': formatDescription(tx['Memo']),
+                'type': tx['Subcategory']                        
+            };
+        } else {
+            return {
+                'account': tx['Account'],
+                'amount': amount,
+                'date': formatDate(tx['Date']),
+                'category': tx['Category'],
+                'description': formatDescription(tx['Memo']),
+                'type': tx['Subcategory']                        
+            };
+        };
+    })
+    .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
+};
+
+const logModelAccuracy = (targetCategories, predictedCategories) => {
+    let numMatches = 0;
+    const targets = Object.values(targetCategories);
+    for (let i = 0; i < predictedCategories.length; i++) {
+        if (predictedCategories[i] === targets[i]) {
+            numMatches += 1;
+        };
+    };
+
+    console.log('Score:', (numMatches*100)/predictedCategories.length);
+};
+
+const UploadCSV = ({ allowCategorisation, setAllowCategorisation, getRootProps }) => (
+    <div>
+        <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
+            <div>
+                <p className='text-white'>Auto-Categorisation</p>
+                <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
+            </div>
+            <Switch enabled={allowCategorisation} setEnabled={setAllowCategorisation} />
+        </div>
+        <div className='bg-[#1a1818] p-8 rounded-lg'>
+            <div className='flex flex-col px-90 py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
+                <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
+                <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
+                <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
+                <div {...getRootProps()}>
+                    <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
+                </div>
+            </div>  
+        </div>
+    </div>
+);
+
+const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
+    console.log('saveData', saveData);
+    console.log('lowConfTx', lowConfTx);
     const gridRef = useRef(null);
-    const [duplicateWarning, setDuplicateWarning] = useState(false);
-    const [duplicateRows, setDuplicateRows] = useState([]);
-    const [ fileParsed, setFileParsed ] = useState(false);
-    const navigate = useNavigate();
-    const [ correctionsCount, setCorrectionsCount ] = useState(() => {
-            const saved = localStorage.getItem("count");
-            if (saved === null) {
-                localStorage.setItem("count", "0");
-                return 0;
-            }
-            return parseInt(saved);
-    });
+    // copy, with added status field (shallow copy - but tx object values are all primitive)
+    const [ transactions, setTransactions ] = useState(lowConfTx.map(tx => ({ ...tx, status: "unreviewed" })));
     const [ numReviewed, setNumReviewed ] = useState(0);
-    const incrementCorrectionsCount = () => {
-        setCorrectionsCount(prevCount => {
-            const newCount = prevCount + 1;
-            localStorage.setItem("count", newCount.toString());
-            return newCount;
-        });
-    };
+    const navigate = useNavigate();
 
-    const getLowConfTransactions = (transactions, predictedCategories, confScores) => {
-        const res = [];
-        for (let i = 0; i < transactions.length; i++) {
-            if (confScores[i] < MIN_CONF_SCORE) {
-                res.push({ ...transactions[i], 'category': predictedCategories[i], 'confidence': Math.round(confScores[i] * 100) });
-            };
-        };
-
-        return res;
-    }
-
-    async function categoriseTransactions(formattedTransactions, batchSize = 32) {
-        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-        const predictions = [];
-        const confidenceScores = [];
-        if (transactions.length > 0) {
-            const timer = new Date().getTime();
-            const model = await getClientModel(token);
-            // Create a feature-extraction pipeline
-            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-
-            const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
-            
-            for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
-                const batch = transactionsDescriptions.slice(i, i + batchSize);
-                // Compute sentence embeddings
-                // const embeddingsArray = await extractor(batch, { pooling: 'mean', normalize: true });
-                // Convert flat array to tensor
-                // const embeddings = tf.tensor2d(embeddingsArray.ort_tensor.cpuData, embeddingsArray.ort_tensor.dims, tf.float32);
-                const getConfScores = true;
-
-                const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
-                predictions.push(preds);
-                confidenceScores.push(confScores);
-
-                // Yield back to the browser
-                await new Promise(r => setTimeout(r, 0));
-            };
-
-            console.log((new Date().getTime() - timer) / 1000);
-            
-            return [predictions.flat(), confidenceScores.flat()];
-        };
-    };
-
-    const setHeadersHelper = () => ([
+    const headers = [
             {
                 field: "date",
                 editable: true,
@@ -569,11 +561,6 @@ const Upload = () => {
             {
                 field: "amount",
                 editable: true,
-                // valueParser: params => {
-                //     const value = parseFloat(params.newValue);
-                //     if (isNaN(value)) return params.oldValue; // reject invalid input
-                //     return value;
-                // },
                 width: 110,
                 headerClass: "font-bold",
                 cellRenderer: params => {
@@ -594,7 +581,380 @@ const Upload = () => {
                     else return <Tick className='w-5 h-5 mt-2 ml-3 text-green-600' />
                 }
             }
-    ]);
+    ];
+
+    const sendData = async () => {
+        const updatedTransactions = [];
+        // remove status column from data
+        const cleanedTransactions = transactions.map(({status, ...rest}) => rest);
+
+        // Update initial transactions with user-recategorised low confidence transaction
+        for (let tx of saveData) {
+            const match = cleanedTransactions.find(newTx => newTx._id === tx._id);
+            updatedTransactions.push(match || tx);
+        };
+
+        console.log('Data to be saved:', updatedTransactions)
+        await db.barclaysTransactions.bulkAdd(updatedTransactions);
+        console.log('Data saved successfully');
+
+        navigate("/dashboard");
+    };
+
+    const handleCellChange = (updatedRow, params) => {
+        const column = params.column.colId;
+
+        if (column === 'category') {
+            // console.log(correctionsCount);
+            // if (CATEGORIES_SET.has(updatedRow[column])) {
+            //     incrementCorrectionsCount();
+            // };
+            // update status column
+
+            if (updatedRow.status === 'unreviewed') {
+                updatedRow.status = 'reviewed';
+                setTransactions(prev =>
+                    prev.map(row => row._id === updatedRow._idn ? { ...row, status: "reviewed" } : row)
+                );
+                setNumReviewed(prev => prev + 1);
+            };
+        }
+
+        else {
+            setTransactions(prev =>
+                prev.map(row => row._id === updatedRow._id ? updatedRow : row)
+            );
+        };
+    };
+
+    return (
+        <div className='w-full max-w-[1000px] xl:mx-[10%]'>
+            <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+                <div className='flex-1'>
+                    <p>Low confidence transactions</p>
+                    <p className='mb-6 text-sm text-neutral-400'>Please review and recategorise the auto-categorised records.</p>
+                    <div className='flex flex-col w-full items-center'>
+                        <span className='text-lg font-bold'>{transactions.length}</span>
+                        <p className='text-sm text-neutral-400'>Total transactions</p>
+                    </div>
+                    {/* <span>{numReviewed}/{lowConfTx.length}</span> */}
+                    <div className="mt-4 mb-4 w-full">
+                        <CustomProgressBar current={numReviewed} total={transactions.length} label={"Progress"} />
+                    </div>
+                    
+                    <div className='h-[420px]'>
+                        <EditableGrid gridRef={gridRef} rowData={transactions} colNames={headers} onCellChange={handleCellChange} />
+                    </div>
+                </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+                <button 
+                    onClick={() => {
+                        setFileParsed(false);
+                        setPreviewCSV(false);
+                    }}
+                    className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                >
+                    Cancel
+                </button>
+                <button onClick={sendData} className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
+                    Done - Upload transactions
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRows, setDuplicateRows, setDuplicateWarning, setFileParsed, setPreviewCSV, getRemoveFileProps, setSaveData, setLowConfTx }) => {
+    const gridRef = useRef(null);
+    const [ duplicates, setDuplicates ] = useState(duplicateRows.map(tx => ({ ...tx })));
+    const [ numSelected, setNumSelected ] = useState(0);
+    const [ selectedRows, setSelectedRows ] = useState([]);
+
+    const headers = [
+            {
+                field: "date",
+                editable: true,
+                width: 120,
+                headerClass: "font-bold"
+            },
+            {
+                field: "description",
+                editable: true,
+                headerClass: "font-bold"
+            },
+            {
+                field: "category",
+                editable: true,
+                cellEditor: "agSelectCellEditor",
+                cellEditorParams: { values: CATEGORIES },
+                singleClickEdit: true,
+                // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
+                headerClass: "font-bold",
+                width: 170,
+                cellRenderer: params => {
+                    return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                }
+            },
+            {
+                field: "account",
+                editable: true,
+                headerClass: "font-bold",
+                width: 120
+            },
+            {
+                field: "type",
+                editable: true,
+                headerClass: "font-bold",
+                width: 120
+            },
+            {
+                field: "amount",
+                editable: true,
+                width: 110,
+                headerClass: "font-bold",
+                cellRenderer: params => {
+                    if (params.value < 0) {
+                        return <span className=' text-red-500'>{params.value.toFixed(2)}</span>
+                    }
+                    else {
+                        return <span className=' text-green-500'>+{params.value.toFixed(2)}</span>
+                    }   
+                }
+            },
+    ];
+
+    const handleCellChange = (updatedRow, params) => {
+        const column = params.column.colId;
+        // if (column === 'category') {
+        //     // console.log(correctionsCount);
+        //     // if (CATEGORIES_SET.has(updatedRow[column])) {
+        //     //     incrementCorrectionsCount();
+        //     // };
+        // }
+
+        setDuplicates(prev =>
+            prev.map(row => row._id === updatedRow._id ? updatedRow : row)
+        );
+    };
+
+    const handleContinue = () => {
+        setDuplicateWarning(false);
+        setDuplicateRows([]);
+        // store the non duplicates and transactions marked as non-duplicate by user
+        setSaveData([ ...nonDuplicateRows, ...selectedRows ]);
+
+        // remove duplicate transactions that were not marked as non-duplicate from lowConfTx
+        const selectedIdSet = new Set(selectedRows.map(tx => tx._id));
+        const nonSelectedIdSet = new Set();
+        for (const tx of duplicates) {
+            if (!selectedIdSet.has(tx._id)) {
+                nonSelectedIdSet.add(tx._id);
+            }
+        };
+        setLowConfTx(prev => {
+            return prev.filter(tx => !nonSelectedIdSet.has(tx._id))
+        });
+
+        setPreviewCSV(true);
+        setFileParsed(true);
+    };
+
+    const handleSelectionChanged = (event) => {
+        const selected = event.api.getSelectedRows();
+        setNumSelected(selected.length);
+        setSelectedRows(selected);
+    }
+
+    return (
+        <div className='w-full max-w-[1000px] xl:mx-[10%]'>
+            {absoluteDuplicateRows.length > 0 && (
+                <div className='w-full bg-red-400 py-10 opacity-80 border-2 border-[#ca32328f] shadow-md rounded-lg text-center mb-5'>
+                    <span className='font-bold'>{absoluteDuplicateRows.length}</span> <p>Absolute duplicates skipped</p>
+                </div>)}
+            
+            <div>
+                <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+                    <div className='flex-1'>
+                        <p>Possible duplicate transactions identified</p>
+                        <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
+                        <div className='w-full grid grid-cols-3'>
+                            <div className='flex flex-col items-center'>
+                                <span className='text-lg font-bold'>{nonDuplicateRows.length + duplicates.length}</span>
+                                <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
+                            </div>
+                            <div className='flex flex-col items-center'>
+                                <span className='text-lg font-bold'>{duplicates.length}</span>
+                                <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
+                            </div>
+                            <div className='flex flex-col items-center'>
+                                <span className='text-lg font-bold'>{nonDuplicateRows.length - absoluteDuplicateRows.length}</span>
+                                <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
+                            </div>
+                        </div>
+                        { duplicates.length > 0 && (<div className="mt-4 w-full">
+                            <CustomProgressBar current={numSelected} total={duplicates.length} label={"Transactions selected to save"} />
+                        </div>)}
+                        
+                        <div className='h-[420px] mt-4'>
+                            <EditableGrid
+                                gridRef={gridRef} rowData={duplicates} colNames={headers} onCellChange={handleCellChange}
+                                rowSelection={{ mode: 'multiRow' }} onSelectionChanged={handleSelectionChanged}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                    <button 
+                        {...getRemoveFileProps()}
+                        onClick={() => {
+                            setDuplicateWarning(false);
+                            setFileParsed(false);
+                            setDuplicateRows([]);
+                        }}
+                        className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => {duplicateRows.length > 0 ? handleContinue : undefined }}
+                        disabled={duplicateRows.length === 0}
+                        className={
+                                duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                                "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
+                        }
+                    >
+                        Continue
+                    </button>
+                </div>
+            </div>
+            {/* <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+                <div className='flex-1'>
+                    <p>Possible duplicate transactions identified</p>
+                    <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
+                    <div className='w-full grid grid-cols-3'>
+                        <div className='flex flex-col items-center'>
+                            <span className='text-lg font-bold'>{nonDuplicateRows.length + duplicates.length}</span>
+                            <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
+                        </div>
+                        <div className='flex flex-col items-center'>
+                            <span className='text-lg font-bold'>{duplicates.length}</span>
+                            <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
+                        </div>
+                        <div className='flex flex-col items-center'>
+                            <span className='text-lg font-bold'>{nonDuplicateRows.length}</span>
+                            <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
+                        </div>
+                    </div>
+                    <div className="mt-4 mb-4 w-full">
+                        <CustomProgressBar current={numSelected} total={duplicates.length} label={"Transactions selected to save"} />
+                    </div>
+                    
+                    <div className='h-[420px]'>
+                        <EditableGrid
+                            gridRef={gridRef} rowData={duplicates} colNames={headers} onCellChange={handleCellChange}
+                            rowSelection={{ mode: 'multiRow' }} onSelectionChanged={handleSelectionChanged}
+                        />
+                    </div>
+                </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+                <button 
+                    {...getRemoveFileProps()}
+                    onClick={() => {
+                        setDuplicateWarning(false);
+                        setFileParsed(false);
+                        setDuplicateRows([]);
+                    }}
+                    className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={() => {duplicateRows.length > 0 ? handleContinue : undefined }}
+                    disabled={duplicateRows.length === 0}
+                    className={
+                            duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                            "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
+                    }
+                >
+                    Continue
+                </button>
+            </div> */}
+        </div>
+    )
+};
+
+const Upload = () => {
+    const { CSVReader } = useCSVReader();
+    const [ transactions, setTransactions ] = useState([]); // list of dicts
+    const { getAccessTokenSilently } = useAuth0();
+    const [ previewCSV, setPreviewCSV ] = useState(false);
+    const [ lowConfTx, setLowConfTx ] = useState([]);
+    const [ saveData, setSaveData ] = useState([]);
+    const [ allowCategorisation, setAllowCategorisation ] = useState(true);
+    const [ duplicateWarning, setDuplicateWarning ] = useState(false);
+    const [ duplicateRows, setDuplicateRows ] = useState([]);
+    const [ fileParsed, setFileParsed ] = useState(false);
+    const [ absoluteDuplicateRows, setAbsoluteDuplicateRows ] = useState([]); 
+    const navigate = useNavigate();
+    const [ correctionsCount, setCorrectionsCount ] = useState(() => {
+            const saved = localStorage.getItem("count");
+            if (saved === null) {
+                localStorage.setItem("count", "0");
+                return 0;
+            }
+            return parseInt(saved);
+    });
+    const incrementCorrectionsCount = () => {
+        setCorrectionsCount(prevCount => {
+            const newCount = prevCount + 1;
+            localStorage.setItem("count", newCount.toString());
+            return newCount;
+        });
+    };
+
+    const getLowConfTransactions = (transactions, predictedCategories, confScores) => {
+        const res = [];
+        for (let i = 0; i < transactions.length; i++) {
+            if (confScores[i] < MIN_CONF_SCORE) {
+                res.push({ ...transactions[i], 'category': predictedCategories[i], 'confidence': Math.round(confScores[i] * 100) });
+            };
+        };
+
+        return res;
+    };
+
+    async function categoriseTransactions(formattedTransactions, batchSize = 32) {
+        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+        const predictions = [];
+        const confidenceScores = [];
+        
+        if (transactions.length > 0) {
+            const timer = new Date().getTime();
+            const model = await getClientModel(token);
+            // Create a feature-extraction pipeline
+            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+
+            const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
+            
+            for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
+                const batch = transactionsDescriptions.slice(i, i + batchSize);
+                const getConfScores = true;
+                const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
+                predictions.push(preds);
+                confidenceScores.push(confScores);
+
+                // Yield back to the browser
+                await new Promise(r => setTimeout(r, 0));
+            };
+
+            console.log((new Date().getTime() - timer) / 1000);
+            
+            return [predictions.flat(), confidenceScores.flat()];
+        };
+    };
+
     
     useEffect(() => {
         const handleTransactions = async () => {
@@ -602,54 +962,75 @@ const Upload = () => {
                 const validatedTransactions = transactions.map((tx, i) => validateTransaction(tx, i));
                 
                 if (allowCategorisation) {
-                    
                     const [ predictedCategories, confidenceScores ] = await categoriseTransactions(validatedTransactions);                
                     
                     // TEMP
-                    let numMatches = 0;
-                    const targets = Object.values(targetCategories);
-                    for (let i = 0; i < predictedCategories.length; i++) {
-                        if (predictedCategories[i] === targets[i]) {
-                            numMatches += 1;
-                        }
-                    }
-
-                    console.log('Score:', (numMatches*100)/predictedCategories.length);
+                    logModelAccuracy(targetCategories, predictedCategories);
 
                     const lowConfTransactions = getLowConfTransactions(validatedTransactions, predictedCategories, confidenceScores);
-
-                    const lowConfTransactionsWithStatusCol = lowConfTransactions.map(tx => ({ ...tx, status: 'unreviewed' }));
-                    setLowConfTx(lowConfTransactionsWithStatusCol);
-                    
-                    setHeaders(() => {
-                        return setHeadersHelper();
-                    });
+                    // const lowConfTransactionsWithStatusCol = lowConfTransactions.map(tx => ({ ...tx, status: 'unreviewed' }));
+                    setLowConfTx(lowConfTransactions);
 
                     for (let i = 0; i < validatedTransactions.length; i ++) {
                         validatedTransactions[i]['category'] = predictedCategories[i];
                     };
                 };
-               
                 
-                const dates = validatedTransactions.map(tx => new Date(tx['date']));
-                dates.sort((a, b) => a.getTime() - b.getTime());
-                const start = dates[0];
-                const end = dates[dates.length - 1];
+                const timestamps = validatedTransactions.map(tx => new Date(tx.date).getTime());
+                const minTime = Math.min(...timestamps);
+                const maxTime = Math.max(...timestamps);
+                const start = new Date(minTime);
+                const end = new Date(maxTime);
 
                 const transactionsInRange = await db.barclaysTransactions
                     .where('date')
                     .between(start, end, true, true) // true=true includes bounds
                     .toArray();
-
+                
+                console.log(validatedTransactions);
                 if (transactionsInRange.length > 0) {
-                    console.warn('WARNING: Existing transactions found in uploaded CSV date range:', transactionsInRange);
+                    const getAbsoluteDuplicates = (transactionsInRange, validatedTransactions) => {
+                        // create a Set of db _id's
+                        const dbIdSet = new Set(transactionsInRange.map(tx => tx._id));
+                        // const duplicates = validatedTransactions.filter(
+                        //     tx => dbIdSet.has(makeTransactionId({ account: tx.account, date: tx.date, amount: tx.amount, description: tx.description, type: tx.type }))
+                        // );
+                        const duplicates = [];
+                        for (let i = 0; i < validatedTransactions.length; i++) {
+                            const tx = validatedTransactions[i];
+                            if (dbIdSet.has(makeTransactionId({ row: i, account: tx.account, date: tx.date, amount: tx.amount, description: tx.description, type: tx.type }))) {
+                                duplicates.push(tx);
+                            };
+                        };
+                        return duplicates;
+                    };
+                    const findDuplicates = (transactionsInRange, validatedTransactions) => {
+                        // create a Set of DB field hashes from the users new transactions, without row number
+                        const dbFieldHashes = new Set(transactionsInRange.map(tx => makeTransactionId({ account: tx.account, date: tx.date, amount: tx.amount, description: tx.description, type: tx.type })));
+
+                        // filter uploaded transactions in one pass
+                        const duplicates = validatedTransactions.filter(
+                            tx => dbFieldHashes.has(makeTransactionId({ account: tx.account, date: tx.date, amount: tx.amount, description: tx.description, type: tx.type }))
+                        );
+
+                        return duplicates;
+                    };
+                    
+                    const absDuplicates = getAbsoluteDuplicates(transactionsInRange, validatedTransactions);
+                    setAbsoluteDuplicateRows(absDuplicates)
+                    const absoluteDuplicatesIdSet = new Set(absDuplicates.map(tx => tx._id));
+                    const filteredTransactions = transactionsInRange.filter(tx => !absoluteDuplicatesIdSet.has(tx._id)); 
+                    const duplicates = findDuplicates(filteredTransactions, validatedTransactions);
+                    const duplicatesIdSet= new Set(duplicates.map(tx => tx._id));
+                    const transactionsWithoutDuplicates = validatedTransactions.filter(tx => !duplicatesIdSet.has(tx._id));
+                    console.log(absDuplicates);
+                    console.log(duplicates);
                     setDuplicateWarning(true);
-                    setDuplicateRows(transactionsInRange);
-                    // Reset to file upload step
+                    setDuplicateRows(duplicates); // set duplicates 
+                    setSaveData(transactionsWithoutDuplicates) // set all transactions (without duplicates)
                     setPreviewCSV(false); // hide editable grid
                 } else {
                     console.log('validated transactions', validatedTransactions);
-                    
                     if (allowCategorisation) {
                         setSaveData(validatedTransactions);
                         setPreviewCSV(true);
@@ -658,68 +1039,12 @@ const Upload = () => {
                         await db.barclaysTransactions.bulkAdd(validatedTransactions);
                         navigate('/dashboard');
                     }
-                    
                 };
             };
         };
 
         handleTransactions();
     }, [transactions]);
-
-    const sendData = async () => {
-
-        if (allowCategorisation) {
-            const updatedTransactions = [];
-
-            // remove status column from data
-            const cleanedLowConfTx = lowConfTx.map(({status, ...rest}) => rest);
-
-            // Update initial transactions with user-recategorised low confidence transaction
-            for (let tx of saveData) {
-                const match = cleanedLowConfTx.find(newTx => newTx._id === tx._id);
-                updatedTransactions.push(match || tx);
-            };
-
-            console.log('Data to be saved:', updatedTransactions)
-            await db.barclaysTransactions.bulkAdd(updatedTransactions);
-            console.log('Data saved successfully');
-        } else {
-            console.log('Data to be saved:', saveData)
-            await db.barclaysTransactions.bulkAdd(saveData);
-            console.log('Data saved successfully');
-        };
-
-        navigate("/dashboard");
-    };
-
-
-    const handleCellChange = (updatedRow, params) => {
-        const column = params.column.colId;
-
-        if (column === 'category') {
-            console.log(correctionsCount);
-            if (CATEGORIES_SET.has(updatedRow[column])) {
-                incrementCorrectionsCount();
-            };
-
-            // update status column
-            updatedRow.status = 'reviewed';
-            setLowConfTx(prev =>
-                prev.map(row =>
-                    row._id === updatedRow._id
-                        ? { ...row, status: "reviewed" }
-                        : row
-                )
-            );
-            setNumReviewed(prev => prev + 1);
-        } 
-        
-        else {
-            setLowConfTx(prev =>
-                prev.map(row => row._id === updatedRow._id ? updatedRow : row)
-            );
-        };
-    };
 
     return (
         <>
@@ -728,31 +1053,7 @@ const Upload = () => {
             <div className='flex justify-center mt-[20%] '>
                 <CSVReader 
                     onUploadAccepted={(results) => {
-                        const formatted = results.data.map(tx => {
-                            const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
-                            if (allowCategorisation) {
-                                return {
-                                    'account': tx['Account'],
-                                    'amount': amount,
-                                    'date': formatDate(tx['Date']),
-                                    'description': formatDescription(tx['Memo']),
-                                    'type': tx['Subcategory']                        
-                                };
-                            } else {
-                                return {
-                                    'account': tx['Account'],
-                                    'amount': amount,
-                                    'date': formatDate(tx['Date']),
-                                    'category': tx['Category'],
-                                    'description': formatDescription(tx['Memo']),
-                                    'type': tx['Subcategory']                        
-                                };
-                            }
-                            
-                        })
-                        .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
-                        
-                        // console.log(formatted);
+                        const formatted = formatBarclaysCSV(results, allowCategorisation);
                         setTransactions(formatted);
                         setFileParsed(true);
                     }}
@@ -768,76 +1069,22 @@ const Upload = () => {
                     }) => (
                         <>
                             {duplicateWarning ? (
-                                <div>
-                                    <p>Duplicate transactions found in your CSV:</p>
-                                    <ul>
-                                        {duplicateRows.map((tx, i) => (
-                                            <li key={i}>{tx.date.toLocaleDateString()} — {tx.description} — {tx.amount}</li>
-                                        ))}
-                                    </ul>
-                                    <button 
-                                        {...getRemoveFileProps()}
-                                        onClick={() => {
-                                            setDuplicateWarning(false);
-                                            setFileParsed(false);
-                                            setDuplicateRows([]);
-                                        }}
-                                    >
-                                        Go back to Upload CSV
-                                    </button>
-                                </div>
+                                <ReviewDuplicates 
+                                    nonDuplicateRows={saveData} absoluteDuplicateRows={absoluteDuplicateRows} duplicateRows={duplicateRows}
+                                    setDuplicateRows={setDuplicateRows} setDuplicateWarning={setDuplicateWarning} setFileParsed={setFileParsed}
+                                    setPreviewCSV={setPreviewCSV} getRemoveFileProps={getRemoveFileProps} setSaveData={setSaveData}
+                                    setLowConfTx={setLowConfTx}
+                                />
                             ) : fileParsed ? (
                                 previewCSV ? (
-                                    <div className='w-full max-w-[1000px] xl:mx-[10%]'>
-                                        <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
-                                            <div className='flex-1'>
-                                                <p>Low confidence transactions</p>
-                                                <p className='mb-6 text-sm text-neutral-400'>Please review and recategorise the auto-categorised records.</p>
-                                                <div className='flex flex-col w-full items-center'>
-                                                    <span className='text-lg font-bold'>{lowConfTx.length}</span>
-                                                    <p className='text-sm text-neutral-400'>Total transactions</p>
-                                                </div>
-                                                {/* <span>{numReviewed}/{lowConfTx.length}</span> */}
-                                                <div className="mt-4 mb-4 w-full">
-                                                    <CustomProgressBar current={numReviewed} total={lowConfTx.length} />
-                                                </div>
-                                                
-                                                <div className='h-[420px]'>
-                                                    <EditableGrid gridRef={gridRef} rowData={lowConfTx} colNames={headers} onCellChange={handleCellChange} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 flex justify-end">
-                                            <button onClick={sendData} className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
-                                                Done - Upload transactions
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <PreviewCSV saveData={saveData} lowConfTx={lowConfTx} setFileParsed={setFileParsed} setPreviewCSV={setPreviewCSV} />
                                 ) : (
                                     <div>Loading...</div>
                                 )
                             ) : (
-                                <div>
-                                    <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
-                                        <div>
-                                            <p className='text-white'>Auto-Categorisation</p>
-                                            <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
-                                        </div>
-                                        <Switch enabled={allowCategorisation} setEnabled={setAllowCategorisation} />
-                                    </div>
-                                    <div className='bg-[#1a1818] p-8 rounded-lg'>
-                                        <div className='flex flex-col px-90 py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
-                                            <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
-                                            <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
-                                            <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
-                                            <div {...getRootProps()}>
-                                                <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
-                                            </div>
-                                        </div>  
-                                    </div>
-                                </div>
-                                
-                                
+                                < UploadCSV
+                                    allowCategorisation={allowCategorisation} setAllowCategorisation={setAllowCategorisation} getRootProps={getRootProps}
+                                />
                             )}
                         </>
                     )}

@@ -1,10 +1,10 @@
-const ProgressBar = ({ current, total }) => {
+const ProgressBar = ({ current, total, label }) => {
   const percentage = total > 0 ? (current / total) * 100 : 0;
 
   return (
     <div className="w-full">
         <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium text-gray-200">Progress</span>
+            <span className="text-sm font-medium text-gray-200">{label}</span>
             <span className="text-sm font-medium text-gray-400">
                 {current}/{total}
             </span>
