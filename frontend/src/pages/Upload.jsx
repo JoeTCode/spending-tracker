@@ -448,8 +448,28 @@ function formatDate(date) {
 
 }
 
+const removeErrorRows = (parsedCSV) => {
+    let invalidRows = new Set([]);
+    const errorRows = parsedCSV.errors.flat();
+    if (errorRows > 0) {
+        for (let tx of errorRows) {
+            invalidRows.add(tx.row);
+        };
+    };
+    return parsedCSV.data.filter((_, idx) => !invalidRows.has(idx));
+};
+
 const formatBarclaysCSV = (parsedCSV, allowCategorisation) => {
-    return parsedCSV.data.map(tx => {
+    console.log(parsedCSV);
+    let invalidRows = new Set([]);
+    if (parsedCSV.errors.length > 0) {
+        for (let tx of parsedCSV.errors[0]) {
+            invalidRows.add(tx.row);
+        };
+    };
+    const validData = parsedCSV.data.filter((_, idx) => !invalidRows.has(idx));
+    console.log(invalidRows, validData);
+    return validData.map(tx => {
         const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
         if (allowCategorisation) {
             return {
@@ -577,8 +597,36 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
                 width: 80,
                 headerClass: "font-bold",
                 cellRenderer: params => {
-                    if (params.data.status === 'unreviewed') return <Warning className='w-5 h-5 mt-2 ml-3 text-yellow-400' />
-                    else return <Tick className='w-5 h-5 mt-2 ml-3 text-green-600' />
+                    if (params.data.status === 'unreviewed') {
+                        return <Warning
+                            className='w-5 h-5 mt-2 ml-3 text-yellow-400 hover:text-yellow-600 cursor-pointer'
+                            onClick={() => {
+                                setTransactions((prev) =>
+                                    prev.map((row) =>
+                                    row._id === params.data._id
+                                        ? { ...row, status: "reviewed" }
+                                        : row
+                                    )
+                                );
+                                setNumReviewed(prev => prev + 1);
+                            }}
+                        />
+                    }
+                    else {
+                        return <Tick 
+                                className='w-5 h-5 mt-2 ml-3 text-green-600 hover:text-green-800 cursor-pointer'
+                                onClick={() => {
+                                    setTransactions((prev) =>
+                                        prev.map((row) =>
+                                        row._id === params.data._id
+                                            ? { ...row, status: "unreviewed" }
+                                            : row
+                                        )
+                                    );
+                                    setNumReviewed(prev => prev - 1);
+                                }}
+                            />
+                    }
                 }
             }
     ];
@@ -614,7 +662,7 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
             if (updatedRow.status === 'unreviewed') {
                 updatedRow.status = 'reviewed';
                 setTransactions(prev =>
-                    prev.map(row => row._id === updatedRow._idn ? { ...row, status: "reviewed" } : row)
+                    prev.map(row => row._id === updatedRow._id ? { ...row, status: "reviewed" } : row)
                 );
                 setNumReviewed(prev => prev + 1);
             };
@@ -828,62 +876,305 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                     </button>
                 </div>
             </div>
-            {/* <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
-                <div className='flex-1'>
-                    <p>Possible duplicate transactions identified</p>
-                    <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
-                    <div className='w-full grid grid-cols-3'>
-                        <div className='flex flex-col items-center'>
-                            <span className='text-lg font-bold'>{nonDuplicateRows.length + duplicates.length}</span>
-                            <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
-                        </div>
-                        <div className='flex flex-col items-center'>
-                            <span className='text-lg font-bold'>{duplicates.length}</span>
-                            <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
-                        </div>
-                        <div className='flex flex-col items-center'>
-                            <span className='text-lg font-bold'>{nonDuplicateRows.length}</span>
-                            <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
+        </div>
+    )
+};
+
+const MapColumns = ({ parsedCSV, setParsedCSV, setFileParsed, setMapColumns, setColumnNames, allowCategorisation }) => {
+    const [ dateColName, setDateColName ] = useState('');
+    const [ descriptionColName, setDescriptionColName ] = useState('');
+    const [ amountColNames, setAmountColNames ] = useState({col1: "", col2: ""});
+    const [ categoryColName, setCategoryColName ] = useState('');
+    const [amountMode, setAmountMode] = useState("single");
+    const parsedColumnNames = Object.keys(parsedCSV[0]);
+    const [ checkAmountCol, setCheckAmountCol ] = useState(false);
+    const [ errorObject, setErrorObject ] = useState({ field: "", message: "" });
+    const [ renderFindAmountDescriptor, setRenderFindAmountDescriptor ] = useState(false);
+    const [ amountDescriptorMappings, setAmountDescriptorMappings ] = useState([]);
+    // useEffect(() => {
+    //     if (dateColName) {
+    //         console.log(dateColName);
+    //         const dateCol = parsedCSV.map(tx => tx[dateColName]);
+    //         console.log(dateCol)
+    //     };
+    // }, [dateColName]);
+
+    useEffect(() => {
+        const isAllPositive = (amountCol) => {
+            return true
+            for (let val of amountCol) {
+                const number = Number(val);
+                if (isNaN(number)) {
+                    const message =  `Value '${number}' cannot be converted to a number. Is the column '${amountColNames.col1}' the correct mapping for the amount column?`
+                    setErrorObject({field: 'amount', message: message});
+                    return false;
+                };
+                if (number < 0) return false;
+            };
+            return true;
+        };
+        // if there is only 1 amount column
+        if (amountColNames.col1 && !amountColNames.col2) {
+            const amountColName = amountColNames.col1;
+            const amountCol = parsedCSV.map(tx => tx[amountColName]);
+            
+            if (isAllPositive(amountCol)) {
+                setCheckAmountCol(true);
+            };
+        };
+    }, [amountColNames]);
+
+    const Rows = ({ uniqueDescriptorValues, setAmountDescriptorMappings}) => {
+        const unqiueDescriptorValuesArray = [...uniqueDescriptorValues].filter(val => val);
+        const [values, setValues] = useState(() =>
+            unqiueDescriptorValuesArray.map(val => ({ value: val, type: "ignore" }))
+        );
+
+        const handleInputOnClick = (e, val) => {
+            const type = e.target.value;
+            console.log(type, val);
+            setValues(prev => prev.map(obj => (
+                obj.value === val ? { ...obj, type: type } : obj
+            )));
+        };
+
+        useEffect(() => {
+            console.log(values)
+        }, [values]);
+
+        return (
+            <div className='bg-black rounded-lg overflow-y-auto max-h-30'>
+                {unqiueDescriptorValuesArray.map(val => (
+                    <div key={val} className='flex justify-between gap-y-4 mx-10 p-2'>
+                        <div>{val}</div>
+                        <div className='flex gap-x-2'>
+                            <input type='radio' id='income' value='income' name={val}
+                                onChange={(e) => handleInputOnClick(e, val)}
+                            />
+                            <label htmlFor='income'>Income</label>
+                            <input type='radio' id='expense' value='expense' name={val}
+                                onChange={(e) => handleInputOnClick(e, val)}
+                            />
+                            <label htmlFor='expense'>Expense</label>
+                            <input type='radio' id='ignore' value='ignore' name={val} checked={values.find(v => v.value === val)?.type === 'ignore'}
+                                onChange={(e) => handleInputOnClick(e, val)}
+                            />
+                            <label htmlFor='ignore'>Ignore</label>
                         </div>
                     </div>
-                    <div className="mt-4 mb-4 w-full">
-                        <CustomProgressBar current={numSelected} total={duplicates.length} label={"Transactions selected to save"} />
+                ))}
+                <button
+                    onClick={() => setAmountDescriptorMappings(values)}
+                >
+                    Save
+                </button>
+            </div>
+        );
+    };
+    
+    const FindAmountDescriptor = ({ parsedCSV, parsedColumnNames, setAmountDescriptorMappings }) => {
+        const [ uniqueDescriptorValues, setUniqueDescriptorValues ] = useState(new Set([]));
+        return (
+            <div>
+                <div>
+                    <label htmlFor='descriptor-col-select' className='mb-2'>Descriptor column</label>
+                    <select
+                        id="descriptor-col-select"
+                        className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                        onChange={(e) => {
+                            const descriptorColName = e.target.value;
+                            const uniqueDescriptorColValues = new Set(parsedCSV.map(tx => tx[descriptorColName]));
+                            setUniqueDescriptorValues(uniqueDescriptorColValues);
+                        }}
+                    >
+                        <option value={""}>Select amount descriptor column</option>
+                        {parsedColumnNames.map(col => (
+                            <option key={col} value={col}>{col}</option>
+                        ))}
+                    </select>
+                </div>
+                {uniqueDescriptorValues.size > 0 && (
+                    <Rows 
+                        uniqueDescriptorValues={uniqueDescriptorValues}
+                        setAmountDescriptorMappings={setAmountDescriptorMappings}
+
+                    />
+                )}
+            </div>
+        );
+    };
+    
+    return (
+        <div className='w-full mx-[20%]'>
+            <div className='bg-[#1a1818] w-full p-10'>
+                <div className=''>
+                    <p>Map CSV columns</p>
+                    <p className='mb-6 text-sm text-neutral-400'>Map your CSV columns to the required transaction fields</p>
+                </div>
+                {errorObject.field && (
+                    <div className='bg-red-400 py-10 px-5 text-center'>
+                        {errorObject.message}
                     </div>
-                    
-                    <div className='h-[420px]'>
-                        <EditableGrid
-                            gridRef={gridRef} rowData={duplicates} colNames={headers} onCellChange={handleCellChange}
-                            rowSelection={{ mode: 'multiRow' }} onSelectionChanged={handleSelectionChanged}
-                        />
+                )}
+                <div className='flex flex-col gap-y-4 mt-5'>
+                    <div className='flex flex-col'>
+                        <label htmlFor="date-col-select" className='mb-2'>Transaction date</label>
+                        <select 
+                            id="date-col-select"
+                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                            onChange={(e) => {
+                                setDateColName(e.target.value);
+                                if (errorObject.type === 'date') setErrorObject({ field: '', message: '' });
+                            }}
+                        >
+                            <option value={""}>Select date column</option>
+                            {parsedColumnNames.map(col => (
+                                <option key={col} value={col}>{col}</option>
+                            ))}
+                        </select>   
                     </div>
+                    <div className='flex flex-col'>
+                        <label htmlFor="amount-col-select" className='mb-2'>Transaction amount</label>
+                        <div className='flex gap-x-2 mb-2'>
+                            <input type='radio' checked={amountMode === 'single'} id='single' value='single' name="amountColNum" onChange={(e) => setAmountMode(e.target.value)}/>
+                            <label htmlFor='single'>Single column</label>
+                            <input type='radio' id='double' value='double' name="amountColNum" onChange={(e) => setAmountMode(e.target.value)}/>
+                            <label htmlFor='double'>Income + Expense columns</label>
+                        </div>
+                        {amountMode === 'single' && (
+                            <div>
+                                <select
+                                    id="amount-col-select"
+                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    onChange={(e) => {
+                                        setAmountColNames(prev => ({...prev, col1: e.target.value}));
+                                        if (errorObject.type === 'amount') setErrorObject({ field: '', message: '' });
+                                    }}
+                                >
+                                    <option value={""}>Select amount column</option>
+                                    {parsedColumnNames.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                    ))}
+                                </select>
+                                {checkAmountCol && (
+                                    <div className='flex flex-col'>
+                                        <div className='flex flex-1'>
+                                            <p>
+                                                The amount column has been flagged for having all positive values.
+                                                Is there another column describing the transaction type as income or expense?
+                                            </p>
+                                            <div className='flex gap-x-2'>
+                                                <span className='font-bold cursor-pointer' onClick={() => {
+                                                    setCheckAmountCol(false);
+                                                    setRenderFindAmountDescriptor(true);
+                                                }}>Yes</span>
+                                                <span className='font-bold cursor-pointer' onClick={() => setCheckAmountCol(false)}>No</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {renderFindAmountDescriptor && (
+                                    <FindAmountDescriptor 
+                                        parsedCSV={parsedCSV}
+                                        parsedColumnNames={parsedColumnNames}
+                                        setAmountDescriptorMappings={setAmountDescriptorMappings}
+                                    />
+                                )}
+                            </div>
+                            
+                        )}
+                        {amountMode === 'double' && (
+                            <div className='flex flex-col gap-y-3'>
+                                <select
+                                    id="amount-col-select"
+                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    onChange={(e) => setAmountColNames(prev => ({...prev, col1: e.target.value}))}
+                                >
+                                    <option value={""}>Select income column</option>
+                                    {parsedColumnNames.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    id="amount-col-select"
+                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    onChange={(e) => setAmountColNames(prev => ({...prev, col2: e.target.value}))}
+                                >
+                                    <option value={""}>Select expense column</option>
+                                    {parsedColumnNames.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                    <div className='flex flex-col'>
+                        <label htmlFor="description-col-select" className='mb-2'>Transaction description</label>
+                        <select
+                            id="description-col-select"
+                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                            onChange={(e) => {
+                                setDescriptionColName(e.target.value);
+                                if (errorObject.type === 'description') setErrorObject({ field: '', message: '' });
+                            }}
+                        >
+                            <option value={""}>Select description column</option>
+                            {parsedColumnNames.map(col => (
+                                <option key={col} value={col}>{col}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {!allowCategorisation && (
+                        <div className='flex flex-col'>
+                            <label htmlFor="category-col-select">Transaction category</label>
+                            <select
+                                id="category-col-select"
+                                className='p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                onChange={(e) => {
+                                    setCategoryColName(e.target.value);
+                                    if (errorObject.type === 'category') setErrorObject({ field: '', message: '' });
+                                }}
+                            >
+                                <option value={null}>Select category column</option>
+                                {parsedColumnNames.map(col => (
+                                    <option key={col} value={col}>{col}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className='mt-2 flex justify-end gap-2'>
                 <button 
-                    {...getRemoveFileProps()}
                     onClick={() => {
-                        setDuplicateWarning(false);
+                        setParsedCSV([]);
                         setFileParsed(false);
-                        setDuplicateRows([]);
+                        setMapColumns(false);
                     }}
                     className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >
                     Cancel
                 </button>
-                <button
-                    onClick={() => {duplicateRows.length > 0 ? handleContinue : undefined }}
-                    disabled={duplicateRows.length === 0}
+                <button 
+                    onClick={
+                        errorObject.field ? undefined : 
+                        (() => {
+                            console.log(`date column: ${dateColName} - amount col: ${JSON.stringify(amountColNames)} - description col: ${descriptionColName}`)
+                        })
+                    }
+                    disabled={errorObject.field.length > 0}
                     className={
-                            duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
-                            "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
+                        errorObject.field ? 
+                        "bg-[#1a1818] opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
+                        "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                     }
                 >
-                    Continue
+                    Print
                 </button>
-            </div> */}
+            </div>
         </div>
     )
-};
+}
 
 const Upload = () => {
     const { CSVReader } = useCSVReader();
@@ -895,9 +1186,13 @@ const Upload = () => {
     const [ allowCategorisation, setAllowCategorisation ] = useState(true);
     const [ duplicateWarning, setDuplicateWarning ] = useState(false);
     const [ duplicateRows, setDuplicateRows ] = useState([]);
-    const [ fileParsed, setFileParsed ] = useState(false);
     const [ absoluteDuplicateRows, setAbsoluteDuplicateRows ] = useState([]); 
-    const navigate = useNavigate();
+
+    const [ fileParsed, setFileParsed ] = useState(false);
+    const [ mapColumns, setMapColumns ] = useState(false);
+    const [ parsedCSV, setParsedCSV ] = useState([]);
+    const [ columnNames, setColumnNames ] = useState([]);
+
     const [ correctionsCount, setCorrectionsCount ] = useState(() => {
             const saved = localStorage.getItem("count");
             if (saved === null) {
@@ -913,6 +1208,9 @@ const Upload = () => {
             return newCount;
         });
     };
+
+    const navigate = useNavigate();
+
 
     const getLowConfTransactions = (transactions, predictedCategories, confScores) => {
         const res = [];
@@ -958,7 +1256,7 @@ const Upload = () => {
     
     useEffect(() => {
         const handleTransactions = async () => {
-            if (transactions.length > 0) {
+            if (mapColumns && transactions.length > 0) {
                 const validatedTransactions = transactions.map((tx, i) => validateTransaction(tx, i));
                 
                 if (allowCategorisation) {
@@ -1017,34 +1315,87 @@ const Upload = () => {
                     };
                     
                     const absDuplicates = getAbsoluteDuplicates(transactionsInRange, validatedTransactions);
-                    setAbsoluteDuplicateRows(absDuplicates)
                     const absoluteDuplicatesIdSet = new Set(absDuplicates.map(tx => tx._id));
                     const filteredTransactions = transactionsInRange.filter(tx => !absoluteDuplicatesIdSet.has(tx._id)); 
                     const duplicates = findDuplicates(filteredTransactions, validatedTransactions);
-                    const duplicatesIdSet= new Set(duplicates.map(tx => tx._id));
-                    const transactionsWithoutDuplicates = validatedTransactions.filter(tx => !duplicatesIdSet.has(tx._id));
-                    console.log(absDuplicates);
-                    console.log(duplicates);
-                    setDuplicateWarning(true);
-                    setDuplicateRows(duplicates); // set duplicates 
-                    setSaveData(transactionsWithoutDuplicates) // set all transactions (without duplicates)
-                    setPreviewCSV(false); // hide editable grid
-                } else {
-                    console.log('validated transactions', validatedTransactions);
-                    if (allowCategorisation) {
-                        setSaveData(validatedTransactions);
-                        setPreviewCSV(true);
-                        setFileParsed(true);
-                    } else {
-                        await db.barclaysTransactions.bulkAdd(validatedTransactions);
-                        navigate('/dashboard');
-                    }
-                };
+
+                    if (absDuplicates.length > 0 || duplicates.length > 0) {
+                        const duplicatesIdSet= new Set(duplicates.map(tx => tx._id));
+                        const transactionsWithoutDuplicates = validatedTransactions.filter(tx => !duplicatesIdSet.has(tx._id));
+                        console.log('absolute Duplicates', absDuplicates);
+                        console.log('Duplicates', duplicates);
+                        setDuplicateWarning(true);
+                        setAbsoluteDuplicateRows(absDuplicates)
+                        setDuplicateRows(duplicates); // set duplicates 
+                        setSaveData(transactionsWithoutDuplicates) // set all transactions (without duplicates)
+                        setPreviewCSV(false); // hide editable grid
+                    } 
+                    
+                    else {
+                        console.log('validated transactions', validatedTransactions);
+                        if (allowCategorisation) {
+                            setSaveData(validatedTransactions);
+                            setPreviewCSV(true);
+                            setFileParsed(true);
+                        } else {
+                            await db.barclaysTransactions.bulkAdd(validatedTransactions);
+                            navigate('/dashboard');
+                        }
+                    };
+
+                } 
             };
         };
 
         handleTransactions();
-    }, [transactions]);
+    }, [mapColumns]);
+
+    const renderContent = (getRootProps, getRemoveFileProps) => {
+        if (mapColumns) {
+            return (
+                <MapColumns
+                    parsedCSV={parsedCSV}
+                    setParsedCSV={setParsedCSV}
+                    setFileParsed={setFileParsed}
+                    setMapColumns={setMapColumns}
+                    setColumnNames={setColumnNames}
+                    allowCategorisation={allowCategorisation}
+                />
+            );
+        };
+        if (duplicateWarning) {
+            return (
+                <ReviewDuplicates 
+                    nonDuplicateRows={saveData}
+                    absoluteDuplicateRows={absoluteDuplicateRows}
+                    duplicateRows={duplicateRows}
+                    setDuplicateRows={setDuplicateRows}
+                    setDuplicateWarning={setDuplicateWarning}
+                    setFileParsed={setFileParsed}
+                    setPreviewCSV={setPreviewCSV}
+                    getRemoveFileProps={getRemoveFileProps}
+                    setSaveData={setSaveData}
+                    setLowConfTx={setLowConfTx}
+                />
+            );
+        };
+
+        if (fileParsed) {
+            return previewCSV 
+                ? <PreviewCSV saveData={saveData} lowConfTx={lowConfTx} setFileParsed={setFileParsed} setPreviewCSV={setPreviewCSV} />
+                : <div>Loading...</div>;
+        };
+
+        return (
+            <UploadCSV
+                allowCategorisation={allowCategorisation}
+                setAllowCategorisation={setAllowCategorisation}
+                getRootProps={getRootProps}
+            />
+        );
+    };
+
+        
 
     return (
         <>
@@ -1053,9 +1404,12 @@ const Upload = () => {
             <div className='flex justify-center mt-[20%] '>
                 <CSVReader 
                     onUploadAccepted={(results) => {
-                        const formatted = formatBarclaysCSV(results, allowCategorisation);
-                        setTransactions(formatted);
+                        const cleaned = removeErrorRows(results);
+                        // const formatted = formatBarclaysCSV(results, allowCategorisation);
+                        // setTransactions(formatted);
+                        setParsedCSV(cleaned);
                         setFileParsed(true);
+                        setMapColumns(true);
                     }}
                     config={{ header: true, skipEmptyLines: true }}
                     noDrag
@@ -1068,24 +1422,7 @@ const Upload = () => {
                         Remove,
                     }) => (
                         <>
-                            {duplicateWarning ? (
-                                <ReviewDuplicates 
-                                    nonDuplicateRows={saveData} absoluteDuplicateRows={absoluteDuplicateRows} duplicateRows={duplicateRows}
-                                    setDuplicateRows={setDuplicateRows} setDuplicateWarning={setDuplicateWarning} setFileParsed={setFileParsed}
-                                    setPreviewCSV={setPreviewCSV} getRemoveFileProps={getRemoveFileProps} setSaveData={setSaveData}
-                                    setLowConfTx={setLowConfTx}
-                                />
-                            ) : fileParsed ? (
-                                previewCSV ? (
-                                    <PreviewCSV saveData={saveData} lowConfTx={lowConfTx} setFileParsed={setFileParsed} setPreviewCSV={setPreviewCSV} />
-                                ) : (
-                                    <div>Loading...</div>
-                                )
-                            ) : (
-                                < UploadCSV
-                                    allowCategorisation={allowCategorisation} setAllowCategorisation={setAllowCategorisation} getRootProps={getRootProps}
-                                />
-                            )}
+                            {renderContent(getRootProps, getRemoveFileProps)}
                         </>
                     )}
                 </CSVReader>

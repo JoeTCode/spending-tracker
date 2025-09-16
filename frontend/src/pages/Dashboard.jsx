@@ -46,7 +46,7 @@ const Dashboard = () => {
                             <p className='font-medium text-xl mb-5 flex items-center'>
                                 Upcoming Payments 
                                 {paymentCount > 0 && (
-                                    <span className="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center ml-3 text-sm font-bold relative top-[2px]">
+                                    <span className="bg-red-600 text-white rounded-full w-6 h-6 flex text-center items-center justify-center ml-3 text-sm font-bold relative top-[2px]">
                                         {paymentCount}
                                     </span>
                                 )}

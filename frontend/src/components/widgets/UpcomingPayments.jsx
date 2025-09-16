@@ -325,7 +325,7 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
                                 <div key={i} className='relative group'>
                                     <div className="
                                         flex flex-1 gap-x-10 lg:gap-x-5 xl:gap-x-10 items-center mx-1 p-1
-                                        cursor-pointer hover:bg-[#2a2730] hover:rounded-lg transition-colors duration-200"
+                                        cursor-pointer hover:bg-[#2a2730] hover:rounded-lg hover:select-none transition-colors duration-200"
                                         onClick={async () => { 
                                             payment.last_reminder = new Date();
                                             await updatePayment(payment);
