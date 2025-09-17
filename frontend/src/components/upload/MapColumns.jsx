@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useUpload } from './UploadContext';
+import ShowMore from '../../assets/icons/expand-more-alt-svgrepo-com.svg?react';
+import ShowLess from '../../assets/icons/expand-less-alt-svgrepo-com.svg?react';
+import { db } from '../../db/db';
+import { v4 as uuidv4 } from 'uuid';
+import Trash from '../../assets/icons/trash-svgrepo-com.svg?react';
 
 const MapColumns = () => {
     // const {
@@ -25,7 +30,13 @@ const MapColumns = () => {
     const [ amountDescriptorMappings, setAmountDescriptorMappings ] = useState({"income": null, "expense": null});
     const [ descriptorColName, setDescriptorColName ] = useState("");
     const [ dateFormat, setDateFormat ] = useState("");
-    
+    const [ showMoreMappings, setShowMoreMappings ] = useState(false);
+    const [ showLessMappings, setShowLessMappings ] = useState(true);
+    const [ showMoreSavedMappings, setShowMoreSavedMappings ] = useState(true);
+    const [ showLessSavedMappings, setShowLessSavedMappings ] = useState(false);
+    const [ savedMappings, setSavedMappings ] = useState([]);
+    const [ mappingTitle, setMappingTitle ] = useState("");
+
     const saveButtonDisabled = 
         errorObject.field ||
         !dateColName ||
@@ -34,6 +45,94 @@ const MapColumns = () => {
         !descriptionColName ||
         (!state.allowCategorisation && !categoryColName) ||
         (!descriptorColName && renderFindAmountDescriptor);
+    
+    const saveMappingDisabled =
+        errorObject.field ||
+        !dateColName ||
+        !dateFormat ||
+        !amountColNames.col1 ||
+        !descriptionColName ||
+        (!state.allowCategorisation && !categoryColName) ||
+        (!descriptorColName && renderFindAmountDescriptor) ||
+        !mappingTitle;
+
+    useEffect(() => {
+        const getMappings = async () => {
+            const allSavedMappings = await db.savedMappings.toArray();
+            setSavedMappings(allSavedMappings);
+        };
+        
+        getMappings();
+    }, [])
+
+    const getCSVDataFromMappings = (accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName ) => {
+        const parsedCSV = [...state.parsedCSV];
+
+        const isDescriptorValid = amountDescriptorMappings?.income != null || amountDescriptorMappings?.expense != null;
+        const data = [];
+
+        for (let tx of parsedCSV) {
+            const obj = {};
+            const firstAmountColValue = Number(tx[amountColNames?.col1]);
+            const secondAmountColValue = Number(tx[amountColNames?.col2]);
+            const desc = tx[descriptionColName];
+            const type = tx[descriptorColName];
+            const date = tx[dateColName];
+            const category = tx[categoryColName];
+            const account = tx[accountColName];
+
+            if (amountColNames.col1 && !amountColNames.col2 && !isDescriptorValid ) { // single amount col
+                // data.push({ date: date, amount: firstAmountColValue, description: desc });
+                obj.date = date;
+                obj.amount = firstAmountColValue;
+                obj.description = desc;
+                obj.account = account;
+            }
+            
+            else if (amountColNames.col1 && !amountColNames.col2 && isDescriptorValid) { // 1 amount col with mappings
+                if (amountDescriptorMappings.income.has(type)) {
+                    // data.push({ date: date, amount: firstAmountColValue, description: desc })
+                    obj.date = date;
+                    obj.amount = firstAmountColValue;
+                    obj.description = desc;
+                    obj.account = account;
+                }
+                else if (amountDescriptorMappings.expense.has(type)) {
+                    // data.push({ date: date, amount: firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue, description: desc })
+                    obj.date = date;
+                    obj.amount = firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue;
+                    obj.description = desc;
+                    obj.account = account;
+                };
+            } 
+            
+            else if (amountColNames.col1 && amountColNames.col2) { // 2 amount columns (e.g. credit/debit for income and expense)
+                if (tx[amountColNames.col1]) {
+                    // data.push({ date: date, amount: firstAmountColValue, description: desc });
+                    obj.date = date;
+                    obj.amount = firstAmountColValue;
+                    obj.description = desc;
+                    obj.account = account;
+                    
+                } else {
+                    // data.push({ date: date, amount: secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue, description: desc });
+                    obj.date = date;
+                    obj.amount = secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue;
+                    obj.description = desc;
+                    obj.account = account;
+                };
+            };
+
+            if (Object.entries(obj).length > 0) {
+                if (categoryColName) {
+                    obj.category = category;
+                };
+                data.push(obj);
+            } else continue;
+        };
+        
+        return data;
+    };
 
     useEffect(() => {
         const isAllPositive = (amountCol) => {
@@ -177,194 +276,329 @@ const MapColumns = () => {
                     <p>Map CSV columns</p>
                     <p className='mb-6 text-sm text-neutral-400'>Map your CSV columns to the required transaction fields</p>
                 </div>
-                {errorObject.field && (
-                    <div className='bg-red-400 py-10 px-5 text-center'>
-                        {errorObject.message}
-                    </div>
-                )}
-                {/* selection grid */}
-                <div className='flex flex-col gap-y-4 mt-5'>
-                    {/* account selector */}
-                    <div className='flex flex-col'>
-                        <label htmlFor="account-col-select" className='mb-2'>Transaction account</label>
-                        <select 
-                            id="account-col-select"
-                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                            onChange={(e) => {
-                                setAccountColName(e.target.value);
-                                if (errorObject.type === 'account') setErrorObject({ field: '', message: '' });
+                <div className='w-full rounded-lg'>
+
+                    {/* Saved mappings expandable div */}
+                    {showMoreSavedMappings && (
+                        <div 
+                            className='flex w-full h-full justify-between items-center cursor-pointer mb-4'
+                            onClick={() => {
+                                setShowMoreSavedMappings(false);
+                                setShowLessSavedMappings(true);
                             }}
                         >
-                            <option value={""}>Select account column</option>
-                            {parsedColumnNames.map(col => (
-                                <option key={col} value={col}>{col}</option>
-                            ))}
-                        </select>   
-                    </div>
-                    {/* date selector */}
-                    <div className='flex flex-col'>
-                        <div className='w-full flex gap-x-4'>
-                            <div className='flex flex-col flex-3'>
-                                <label htmlFor="date-col-select" className='mb-2'>Transaction date</label>
-                                <select 
-                                    id="date-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                    onChange={(e) => {
-                                        setDateColName(e.target.value);
-                                        if (errorObject.type === 'date') setErrorObject({ field: '', message: '' });
-                                    }}
-                                >
-                                    <option value={""}>Select date column</option>
-                                    {parsedColumnNames.map(col => (
-                                        <option key={col} value={col}>{col}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className='flex flex-col flex-1'>
-                                <label htmlFor="date-format-select" className='mb-2'>Date format</label>
-                                <select
-                                    id="date-format-select"
-                                    className='flex-1 w-full p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                    onChange={(e) => {
-                                        setDateFormat(e.target.value);
-                                    }}
-                                >
-                                    <option>Select date format</option>
-                                    <option value="EU">EU</option>
-                                    <option value="US">US</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                    </div>
-
-                    {/* amount selector */}
-                    <div className='flex flex-col'>
-                        <label htmlFor="amount-col-select" className='mb-2'>Transaction amount</label>
-                        <div className='flex gap-x-2 mb-2'>
-                            <input type='radio' checked={amountMode === 'single'} id='single' value='single' name="amountColNum" onChange={(e) => {
-                                setAmountMode(e.target.value);
-                                setAmountColNames({ col1: "", col2: "" });
-                                setErrorObject({ field: '', message: '' });
-                                setRenderFindAmountDescriptor(false);
-                            }}/>
-                            <label htmlFor='single'>Single column</label>
-                            <input type='radio' id='double' value='double' name="amountColNum" onChange={(e) => {
-                                setAmountMode(e.target.value);
-                                setAmountColNames({ col1: "", col2: "" });
-                                setErrorObject({ field: '', message: '' });
-                                setRenderFindAmountDescriptor(false);
-                            }}/>
-                            <label htmlFor='double'>Income + Expense columns</label>
-                        </div>
-                        {amountMode === 'single' && (
-                            <div>
-                                <select
-                                    id="amount-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                    onChange={(e) => {
-                                        setAmountColNames(prev => ({...prev, col1: e.target.value}));
-                                        if (errorObject.field === 'amount') setErrorObject({ field: '', message: '' });
-                                        setRenderFindAmountDescriptor(false);
-                                    }}
-                                >
-                                    <option value={""}>Select amount column</option>
-                                    {parsedColumnNames.map(col => (
-                                        <option key={col} value={col}>{col}</option>
-                                    ))}
-                                </select>
-                                {checkAmountCol && (
-                                    <div className='flex flex-col'>
-                                        <div className='flex flex-1'>
-                                            <p>
-                                                The amount column has been flagged for having all positive values.
-                                                Is there another column describing the transaction type as income or expense?
-                                            </p>
-                                            <div className='flex gap-x-2'>
-                                                <span className='font-bold cursor-pointer' onClick={() => {
-                                                    setCheckAmountCol(false);
-                                                    setRenderFindAmountDescriptor(true);
-                                                }}>Yes</span>
-                                                <span className='font-bold cursor-pointer' onClick={() => setCheckAmountCol(false)}>No</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                {renderFindAmountDescriptor && (
-                                    <FindAmountDescriptor 
-                                        parsedCSV={state.parsedCSV}
-                                        parsedColumnNames={parsedColumnNames}
-                                        setAmountDescriptorMappings={setAmountDescriptorMappings}
-                                        setRenderFindAmountDescriptor={setRenderFindAmountDescriptor}
-                                        setDescriptorColName={setDescriptorColName}
-                                    />
-                                )}
-                            </div>
-                            
-                        )}
-                        {amountMode === 'double' && (
-                            <div className='flex flex-col gap-y-3'>
-                                <select
-                                    id="amount-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                    onChange={(e) => setAmountColNames(prev => ({...prev, col1: e.target.value}))}
-                                >
-                                    <option value={""}>Select income column</option>
-                                    {parsedColumnNames.map(col => (
-                                        <option key={col} value={col}>{col}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    id="amount-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                    onChange={(e) => setAmountColNames(prev => ({...prev, col2: e.target.value}))}
-                                >
-                                    <option value={""}>Select expense column</option>
-                                    {parsedColumnNames.map(col => (
-                                        <option key={col} value={col}>{col}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* description selector */}
-                    <div className='flex flex-col'>
-                        <label htmlFor="description-col-select" className='mb-2'>Transaction description</label>
-                        <select
-                            id="description-col-select"
-                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                            onChange={(e) => {
-                                setDescriptionColName(e.target.value);
-                                if (errorObject.type === 'description') setErrorObject({ field: '', message: '' });
-                            }}
-                        >
-                            <option value={""}>Select description column</option>
-                            {parsedColumnNames.map(col => (
-                                <option key={col} value={col}>{col}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* category selector */}
-                    {!state.allowCategorisation && (
-                        <div className='flex flex-col'>
-                            <label htmlFor="category-col-select">Transaction category</label>
-                            <select
-                                id="category-col-select"
-                                className='p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
-                                onChange={(e) => {
-                                    setCategoryColName(e.target.value);
-                                    if (errorObject.type === 'category') setErrorObject({ field: '', message: '' });
-                                }}
-                            >
-                                <option value={null}>Select category column</option>
-                                {parsedColumnNames.map(col => (
-                                    <option key={col} value={col}>{col}</option>
-                                ))}
-                            </select>
+                            <p>Saved mappings</p>
+                            <ShowMore className='w-5 h-5 text-white' />
                         </div>
                     )}
+                    
+                    {showLessSavedMappings && (
+                        <div 
+                            className='flex w-full h-full justify-between items-center cursor-pointer mb-4'
+                            onClick={() => {
+                                setShowMoreSavedMappings(true);
+                                setShowLessSavedMappings(false);
+                            }}
+                        >
+                            <p>Saved mappings</p>
+                            <ShowLess className='w-5 h-5 text-white' />
+                        </div>
+                    )}
+
+
+                    <div className={showLessSavedMappings ? 'mb-6': 'hidden'}>
+                        <div>
+                            {savedMappings.map(mapping => {
+                                return (
+                                    <div 
+                                        key={mapping._id}
+                                        className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-black rounded-lg'
+                                        onClick={() => {
+                                            // accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName
+                                            console.log(mapping.amount);
+                                            const data = getCSVDataFromMappings(mapping.account, mapping.amount, mapping.amountDescriptor, mapping.amountMappings, mapping.description, mapping.date, mapping.category);
+                                            console.log(data);
+                                        }}
+                                    >
+                                        <span>{mapping.mappingTitle}</span>
+                                        <Trash className='w-5 h-5 cursor-pointer hover:text-neutral-400'/>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+
+                    {/* Mappings expandable div */}
+                    {showMoreMappings && (
+                        <div 
+                            className='flex w-full h-full justify-between items-center cursor-pointer'
+                            onClick={() => {
+                                setShowMoreMappings(false);
+                                setShowLessMappings(true);
+                            }}
+                        >
+                            <p>Set mappings</p>
+                            <ShowMore className='w-5 h-5 text-white' />
+                        </div>
+                    )}
+                    
+                    {showLessMappings && (
+                        <div 
+                            className='flex w-full h-full justify-between items-center cursor-pointer'
+                            onClick={() => {
+                                setShowMoreMappings(true);
+                                setShowLessMappings(false);
+                            }}
+                        >
+                            <p>Set mappings</p>
+                            <ShowLess className='w-5 h-5 text-white' />
+                        </div>
+                    )}
+                    
+                    <div
+                        className={showLessMappings ? '': 'hidden'}
+                    >
+                        {errorObject.field && (
+                            <div className='bg-red-400 py-10 px-5 text-center'>
+                                {errorObject.message}
+                            </div>
+                        )}
+                        {/* selection grid */}
+                        <div className='flex flex-col gap-y-4 mt-5'>
+                            <div className='flex flex-col'>
+                                <label htmlFor='mappingTitle'>Mapping Title</label>
+                                <input 
+                                    type="text" 
+                                    id="mappingTitle" 
+                                    name="mappingTitle" 
+                                    onChange={(e) => setMappingTitle(e.target.value)}
+                                    className='p-1 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                />
+                            </div>
+                            {/* account selector */}
+                            <div className='flex flex-col'>
+                                <label htmlFor="account-col-select" className='mb-2'>Transaction account</label>
+                                <select 
+                                    id="account-col-select"
+                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    onChange={(e) => {
+                                        setAccountColName(e.target.value);
+                                        if (errorObject.type === 'account') setErrorObject({ field: '', message: '' });
+                                    }}
+                                >
+                                    <option value={""}>Select account column</option>
+                                    {parsedColumnNames.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                    ))}
+                                </select>   
+                            </div>
+                            {/* date selector */}
+                            <div className='flex flex-col'>
+                                <div className='w-full flex gap-x-4'>
+                                    <div className='flex flex-col flex-3'>
+                                        <label htmlFor="date-col-select" className='mb-2'>Transaction date</label>
+                                        <select 
+                                            id="date-col-select"
+                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            onChange={(e) => {
+                                                setDateColName(e.target.value);
+                                                if (errorObject.type === 'date') setErrorObject({ field: '', message: '' });
+                                            }}
+                                        >
+                                            <option value={""}>Select date column</option>
+                                            {parsedColumnNames.map(col => (
+                                                <option key={col} value={col}>{col}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className='flex flex-col flex-1'>
+                                        <label htmlFor="date-format-select" className='mb-2'>Date format</label>
+                                        <select
+                                            id="date-format-select"
+                                            className='flex-1 w-full p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            onChange={(e) => {
+                                                setDateFormat(e.target.value);
+                                            }}
+                                        >
+                                            <option>Select date format</option>
+                                            <option value="EU">EU</option>
+                                            <option value="US">US</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                            </div>
+
+                            {/* amount selector */}
+                            <div className='flex flex-col'>
+                                <label htmlFor="amount-col-select" className='mb-2'>Transaction amount</label>
+                                <div className='flex gap-x-2 mb-2'>
+                                    <input type='radio' checked={amountMode === 'single'} id='single' value='single' name="amountColNum" onChange={(e) => {
+                                        setAmountMode(e.target.value);
+                                        setAmountColNames({ col1: "", col2: "" });
+                                        setErrorObject({ field: '', message: '' });
+                                        setRenderFindAmountDescriptor(false);
+                                    }}/>
+                                    <label htmlFor='single'>Single column</label>
+                                    <input type='radio' id='double' value='double' name="amountColNum" onChange={(e) => {
+                                        setAmountMode(e.target.value);
+                                        setAmountColNames({ col1: "", col2: "" });
+                                        setErrorObject({ field: '', message: '' });
+                                        setRenderFindAmountDescriptor(false);
+                                    }}/>
+                                    <label htmlFor='double'>Income + Expense columns</label>
+                                </div>
+                                {amountMode === 'single' && (
+                                    <div>
+                                        <select
+                                            id="amount-col-select"
+                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            onChange={(e) => {
+                                                setAmountColNames(prev => ({...prev, col1: e.target.value}));
+                                                if (errorObject.field === 'amount') setErrorObject({ field: '', message: '' });
+                                                setRenderFindAmountDescriptor(false);
+                                            }}
+                                        >
+                                            <option value={""}>Select amount column</option>
+                                            {parsedColumnNames.map(col => (
+                                                <option key={col} value={col}>{col}</option>
+                                            ))}
+                                        </select>
+                                        {checkAmountCol && (
+                                            <div className='flex flex-col'>
+                                                <div className='flex flex-1'>
+                                                    <p>
+                                                        The amount column has been flagged for having all positive values.
+                                                        Is there another column describing the transaction type as income or expense?
+                                                    </p>
+                                                    <div className='flex gap-x-2'>
+                                                        <span className='font-bold cursor-pointer' onClick={() => {
+                                                            setCheckAmountCol(false);
+                                                            setRenderFindAmountDescriptor(true);
+                                                        }}>Yes</span>
+                                                        <span className='font-bold cursor-pointer' onClick={() => setCheckAmountCol(false)}>No</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {renderFindAmountDescriptor && (
+                                            <FindAmountDescriptor 
+                                                parsedCSV={state.parsedCSV}
+                                                parsedColumnNames={parsedColumnNames}
+                                                setAmountDescriptorMappings={setAmountDescriptorMappings}
+                                                setRenderFindAmountDescriptor={setRenderFindAmountDescriptor}
+                                                setDescriptorColName={setDescriptorColName}
+                                            />
+                                        )}
+                                    </div>
+                                    
+                                )}
+                                {amountMode === 'double' && (
+                                    <div className='flex flex-col gap-y-3'>
+                                        <select
+                                            id="amount-col-select"
+                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            onChange={(e) => setAmountColNames(prev => ({...prev, col1: e.target.value}))}
+                                        >
+                                            <option value={""}>Select income column</option>
+                                            {parsedColumnNames.map(col => (
+                                                <option key={col} value={col}>{col}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            id="amount-col-select"
+                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            onChange={(e) => setAmountColNames(prev => ({...prev, col2: e.target.value}))}
+                                        >
+                                            <option value={""}>Select expense column</option>
+                                            {parsedColumnNames.map(col => (
+                                                <option key={col} value={col}>{col}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* description selector */}
+                            <div className='flex flex-col'>
+                                <label htmlFor="description-col-select" className='mb-2'>Transaction description</label>
+                                <select
+                                    id="description-col-select"
+                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    onChange={(e) => {
+                                        setDescriptionColName(e.target.value);
+                                        if (errorObject.type === 'description') setErrorObject({ field: '', message: '' });
+                                    }}
+                                >
+                                    <option value={""}>Select description column</option>
+                                    {parsedColumnNames.map(col => (
+                                        <option key={col} value={col}>{col}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* category selector */}
+                            {!state.allowCategorisation && (
+                                <div className='flex flex-col'>
+                                    <label htmlFor="category-col-select">Transaction category</label>
+                                    <select
+                                        id="category-col-select"
+                                        className='p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                        onChange={(e) => {
+                                            setCategoryColName(e.target.value);
+                                            if (errorObject.type === 'category') setErrorObject({ field: '', message: '' });
+                                        }}
+                                    >
+                                        <option value={null}>Select category column</option>
+                                        {parsedColumnNames.map(col => (
+                                            <option key={col} value={col}>{col}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <button
+                                className={saveMappingDisabled ? 
+                                    "bg-[#1a1818] opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
+                                    "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                                }
+                                onClick={saveMappingDisabled ? undefined : (async () => {
+                                    // create popup with input element for mapping name
+                                    // optionally provide image icon input?
+                                    // save mapping name and columns to localstorage
+                                    // retrieve all saved mappings from localstorage on opening saved mappings div
+                                    console.log('mappingTitle', mappingTitle);
+                                    console.log(
+                                        `Columns:
+                                            date: ${dateColName},
+                                            account: ${accountColName},
+                                            amount: ${amountColNames},
+                                            amount descriptor: ${descriptorColName}
+                                            amount mappings: ${amountDescriptorMappings}
+                                            description: ${descriptionColName},
+                                            category: ${categoryColName}
+                                        `
+                                    );
+
+                                    await db.savedMappings.add({ 
+                                        _id: uuidv4(), 
+                                        mappingTitle: mappingTitle,
+                                        date: dateColName,
+                                        account: accountColName, 
+                                        amount: amountColNames,
+                                        amountDescriptor: descriptionColName,
+                                        amountMappings: amountDescriptorMappings,
+                                        description: descriptionColName,
+                                        category: categoryColName
+                                    })
+                                })}
+                                disabled={saveMappingDisabled}
+                            >
+                                Save Mapping
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -397,69 +631,7 @@ const MapColumns = () => {
                                 - category col: ${categoryColName}`
                             );
                             
-                            const parsedCSV = [...state.parsedCSV];
-                            const isDescriptorValid = amountDescriptorMappings.income != null || amountDescriptorMappings.expense != null;
-                            const data = [];
-
-                            for (let tx of parsedCSV) {
-                                const obj = {};
-                                const firstAmountColValue = Number(tx[amountColNames.col1]);
-                                const secondAmountColValue = Number(tx[amountColNames.col2]);
-                                const desc = tx[descriptionColName];
-                                const type = tx[descriptorColName];
-                                const date = tx[dateColName];
-                                const category = tx[categoryColName];
-                                const account = tx[accountColName];
-
-                                if (amountColNames.col1 && !amountColNames.col2 && !isDescriptorValid ) { // single amount col
-                                    // data.push({ date: date, amount: firstAmountColValue, description: desc });
-                                    obj.date = date;
-                                    obj.amount = firstAmountColValue;
-                                    obj.description = desc;
-                                    obj.account = account;
-                                }
-                                
-                                else if (amountColNames.col1 && !amountColNames.col2 && isDescriptorValid) { // 1 amount col with mappings
-                                    if (amountDescriptorMappings.income.has(type)) {
-                                        // data.push({ date: date, amount: firstAmountColValue, description: desc })
-                                        obj.date = date;
-                                        obj.amount = firstAmountColValue;
-                                        obj.description = desc;
-                                        obj.account = account;
-                                    }
-                                    else if (amountDescriptorMappings.expense.has(type)) {
-                                        // data.push({ date: date, amount: firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue, description: desc })
-                                        obj.date = date;
-                                        obj.amount = firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue;
-                                        obj.description = desc;
-                                        obj.account = account;
-                                    };
-                                } 
-                                
-                                else if (amountColNames.col1 && amountColNames.col2) { // 2 amount columns (e.g. credit/debit for income and expense)
-                                    if (tx[amountColNames.col1]) {
-                                        // data.push({ date: date, amount: firstAmountColValue, description: desc });
-                                        obj.date = date;
-                                        obj.amount = firstAmountColValue;
-                                        obj.description = desc;
-                                        obj.account = account;
-                                        
-                                    } else {
-                                        // data.push({ date: date, amount: secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue, description: desc });
-                                        obj.date = date;
-                                        obj.amount = secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue;
-                                        obj.description = desc;
-                                        obj.account = account;
-                                    };
-                                };
-
-                                if (Object.entries(obj).length > 0) {
-                                    if (categoryColName) {
-                                        obj.category = category;
-                                    };
-                                    data.push(obj);
-                                } else continue;
-                            };
+                            const data = getCSVDataFromMappings(accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName);
                             
                             console.log(data);
                             dispatch({ type: "SET_DATE_FORMAT", payload: dateFormat });

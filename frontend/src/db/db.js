@@ -12,7 +12,9 @@ db.version(1).stores({
     // '_id, date, amount, type, category, description, is_trainable, trained'
     barclaysTransactions: '_id, date, amount, category, is_trainable, trained', // Primary key and indexed props
     // _id, last_reminder, title, amount, interval
-    recurringPayments: '_id, last_reminder, title, amount, interval'
+    recurringPayments: '_id, last_reminder, title, amount, interval',
+    // _id, mappingTitle, date, account, amount, amountDescriptor, amountMappings, description, category
+    savedMappings: '_id'
 });
 
 // function validateDate(date, tx) {
