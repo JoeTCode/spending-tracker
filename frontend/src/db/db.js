@@ -2,9 +2,9 @@
 import Dexie from 'dexie';
 import { v5 as uuidv5 } from "uuid";
 import { CATEGORIES } from '../utils/constants/constants';
+import { parse } from "date-fns";
 
 const CATEGORIES_SET = new Set(CATEGORIES);
-
 
 const db = new Dexie('transactionsDB');
 
@@ -15,13 +15,51 @@ db.version(1).stores({
     recurringPayments: '_id, last_reminder, title, amount, interval'
 });
 
-function validateDate(date) {
-    date = date instanceof Date ? date : new Date(date);
-    if (isNaN(date.getTime())) {
-        date = new Date(); // set tx date to now
+// function validateDate(date, tx) {
+//     const copy = date;
+//     date = date instanceof Date ? date : new Date(date);
+//     if (isNaN(date.getTime())) {
+//         date = new Date(); // set tx date to now
+//         console.log(date);
+//         console.log('Invalid date found:', tx);
+//     };
+//     return date;
+// };
+
+
+function parseDate(dateString, region = "EU") {
+    console.log(region);
+    const euFormats = [
+        "dd/MM/yyyy",
+        "dd-MM-yyyy",
+        "dd.MM.yyyy",
+        "dd MMM yyyy",  // 15 Jan 2024
+        "dd-MMM-yyyy",  // 15-Jan-2024
+        "dd/MMM/yyyy", // 15/Jan/2024
+    ];
+
+    const usFormats = [
+        "MM/dd/yyyy",
+        "MM-dd-yyyy",
+        "MM.dd.yyyy",
+        "MMM dd yyyy",  // Jan 15 2024
+        "MMM-dd-yyyy",  // Jan-15-2024
+        "MMM/dd/yyyy", // Jan/15/2024
+    ];
+
+    const formats = region === "US" ? usFormats : euFormats;
+
+    for (let fmt of formats) {
+        const parsed = parse(dateString, fmt, new Date());
+        if (!isNaN(parsed.getTime())) {
+        return parsed;
+        };
     };
-    return date;
-};
+
+    // fallback: invalid => return new Date(now)
+    console.warn("Could not parse date:", dateString);
+    return new Date();
+}
 
 function validateAmount(amount) {
     amount = parseFloat(amount) ? parseFloat(amount) : 0;
@@ -55,8 +93,8 @@ function validateDescription(description) {
     return validatedDescription;
 };
 
-function makeTransactionId({ row=null, account=null, date=null, amount=null, description=null, type=null } = {}) {
-    // checks for uniqueness in account, date, amount, description, and type fields. As the date field does not include time,
+function makeTransactionId({ row=null, account=null, date=null, amount=null, description=null } = {}) {
+    // checks for uniqueness in account, date, amount, description. As the date field does not include time,
     // a CSV row check is implemented. This means two uploads of the same CSV file will generate the same _id per row, causing
     // duplicate error.
     // Adversely, transactions with identical fields in a different CSV will be be allowed. This can be bypassed with
@@ -66,35 +104,34 @@ function makeTransactionId({ row=null, account=null, date=null, amount=null, des
     if (date) {
         const d = new Date(date);
         dateTimestamp = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-    }
+    };
     
-    const raw = [row, account, dateTimestamp, amount, description, type]
+    const raw = [row, account, dateTimestamp, amount, description]
                 .filter(v => v != null)  // removes null and undefined
                 .join('|');
     // hash
     return uuidv5(raw, uuidv5.URL); // namespace-based UUID
 };
 
-function validateTransaction(tx, row) {
+function validateTransaction(tx, row, dateFormat) {
      // Default boolean fields
     const is_trainable = tx.is_trainable ?? true;
     const trained = tx.trained ?? false;
 
     // create _id property
     const account = tx.account;
-    const date = validateDate(tx.date);
+    const date = parseDate(tx.date, dateFormat);
     const amount = validateAmount(tx.amount);
-    const type = validateType(tx.type);
+    // const type = validateType(tx.type);
     const category = validateCategory(tx.category);
     const description = validateDescription(tx.description);
-    const _id = tx._id ?? makeTransactionId({ row:row, account:account, date:date, amount:amount, description:description, type:type })
+    const _id = tx._id ?? makeTransactionId({ row:row, account:account, date:date, amount:amount, description:description })
 
     return {
         _id,
         account,
         date,
         amount,
-        type,
         category,
         description,
         is_trainable: is_trainable ?? true,

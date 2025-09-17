@@ -1,11 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useUpload } from './UploadContext';
+import { useNavigate } from 'react-router-dom';
+import CustomProgressBar from '../ProgressBar';
+import EditableGrid from '../EditableGrid';
+import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
+import Warning from '../../assets/icons/warning-circle-svgrepo-com.svg?react';
+import Tick from '../../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
+import { db } from '../../db/db';
 
-const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
-    console.log('saveData', saveData);
-    console.log('lowConfTx', lowConfTx);
+const PreviewCSV = () => {
+    // const {
+    //     saveData,
+    //     lowConfTx,
+    //     setFileParsed,
+    //     setPreviewCSV,
+    // } = useUpload();
+    const { state, dispatch } = useUpload();
+
+    console.log('saveData', state.saveData);
+    console.log('lowConfTx', state.lowConfidenceTransactions);
+
     const gridRef = useRef(null);
     // copy, with added status field (shallow copy - but tx object values are all primitive)
-    const [ transactions, setTransactions ] = useState(lowConfTx.map(tx => ({ ...tx, status: "unreviewed" })));
+    const [ transactions, setTransactions ] = useState(state.lowConfidenceTransactions.map(tx => ({ ...tx, status: "unreviewed" })));
     const [ numReviewed, setNumReviewed ] = useState(0);
     const navigate = useNavigate();
 
@@ -46,7 +63,7 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
                 }
             },
             {
-                field: "type",
+                field: "account",
                 editable: true,
                 headerClass: "font-bold",
                 width: 120
@@ -110,7 +127,7 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
         const cleanedTransactions = transactions.map(({status, ...rest}) => rest);
 
         // Update initial transactions with user-recategorised low confidence transaction
-        for (let tx of saveData) {
+        for (let tx of state.saveData) {
             const match = cleanedTransactions.find(newTx => newTx._id === tx._id);
             updatedTransactions.push(match || tx);
         };
@@ -158,7 +175,7 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
                         <span className='text-lg font-bold'>{transactions.length}</span>
                         <p className='text-sm text-neutral-400'>Total transactions</p>
                     </div>
-                    {/* <span>{numReviewed}/{lowConfTx.length}</span> */}
+
                     <div className="mt-4 mb-4 w-full">
                         <CustomProgressBar current={numReviewed} total={transactions.length} label={"Progress"} />
                     </div>
@@ -171,8 +188,11 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
             <div className="mt-4 flex justify-end gap-2">
                 <button 
                     onClick={() => {
-                        setFileParsed(false);
-                        setPreviewCSV(false);
+                        // setFileParsed(false);
+                        // dispatch({ type: "SET_FILE_PARSED", payload: false });
+                        // setPreviewCSV(false);
+                        dispatch({ type: "SET_PREVIEW_CSV", payload: false });
+                        dispatch({ type: "SET_TRANSACTIONS", payload: [] });
                     }}
                     className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >
@@ -186,4 +206,4 @@ const PreviewCSV = ({ saveData, lowConfTx, setFileParsed, setPreviewCSV }) => {
     );
 };
 
-export default PreviewCSV;
+export default PreviewCSV; 

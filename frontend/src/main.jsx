@@ -5,6 +5,7 @@ import { Auth0Provider } from '@auth0/auth0-react';
 import './index.css';
 import { Login, Upload, Dashboard, Transactions, Payments } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
+import { UploadProvider } from './components/upload/UploadContext';
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
@@ -24,7 +25,9 @@ createRoot(document.getElementById('root')).render(
                     path='/'
                     element={
                         <ProtectedRoute>
-                            <Upload />
+                            <UploadProvider>
+                                <Upload />
+                            </UploadProvider>
                         </ProtectedRoute>
                     } 
                 />

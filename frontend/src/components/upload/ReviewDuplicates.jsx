@@ -1,8 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useUpload } from './UploadContext';
+import CustomProgressBar from '../ProgressBar';
+import EditableGrid from '../EditableGrid';
+import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
 
-const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRows, setDuplicateRows, setDuplicateWarning, setFileParsed, setPreviewCSV, getRemoveFileProps, setSaveData, setLowConfTx }) => {
+const ReviewDuplicates = ({ getRemoveFileProps }) => {
+    // const {
+    //     nonDuplicateRows,
+    //     absoluteDuplicateRows,
+    //     duplicateRows, setDuplicateRows,
+    //     setDuplicateWarning,
+    //     setFileParsed,
+    //     setPreviewCSV,
+    //     getRemoveFileProps,
+    //     setSaveData,
+    //     setLowConfTx,
+    // } = useUpload();
+    const { state, dispatch } = useUpload();
     const gridRef = useRef(null);
-    const [ duplicates, setDuplicates ] = useState(duplicateRows.map(tx => ({ ...tx })));
+    const [ duplicates, setDuplicates ] = useState(state.duplicateRows.map(tx => ({ ...tx })));
     const [ numSelected, setNumSelected ] = useState(0);
     const [ selectedRows, setSelectedRows ] = useState([]);
 
@@ -37,12 +53,12 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                 headerClass: "font-bold",
                 width: 120
             },
-            {
-                field: "type",
-                editable: true,
-                headerClass: "font-bold",
-                width: 120
-            },
+            // {
+            //     field: "type",
+            //     editable: true,
+            //     headerClass: "font-bold",
+            //     width: 120
+            // },
             {
                 field: "amount",
                 editable: true,
@@ -74,10 +90,14 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
     };
 
     const handleContinue = () => {
-        setDuplicateWarning(false);
-        setDuplicateRows([]);
+        console.log('hello')
+        // setDuplicateWarning(false);
+        dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
+        // setDuplicateRows([]);
+        dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] });
         // store the non duplicates and transactions marked as non-duplicate by user
-        setSaveData([ ...nonDuplicateRows, ...selectedRows ]);
+        // setSaveData([ ...nonDuplicateRows, ...selectedRows ]);
+        dispatch({ type: "SET_SAVE_DATA", payload: [ ...state.nonDuplicateRows, ...selectedRows ] });
 
         // remove duplicate transactions that were not marked as non-duplicate from lowConfTx
         const selectedIdSet = new Set(selectedRows.map(tx => tx._id));
@@ -87,12 +107,17 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                 nonSelectedIdSet.add(tx._id);
             }
         };
-        setLowConfTx(prev => {
-            return prev.filter(tx => !nonSelectedIdSet.has(tx._id))
-        });
 
-        setPreviewCSV(true);
-        setFileParsed(true);
+        // setLowConfTx(prev => {
+        //     return prev.filter(tx => !nonSelectedIdSet.has(tx._id))
+        // });
+        dispatch({ type: "FILTER_LOW_CONFIDENCE_TRANSACTIONS", payload: nonSelectedIdSet });
+        if (state.allowCategorisation) {
+            dispatch({ type: "SET_PREVIEW_CSV", payload: true });
+        };
+        // dispatch({ type: "SET_FILE_PARSED", payload: true });
+        // setPreviewCSV(true);
+        // setFileParsed(true);
     };
 
     const handleSelectionChanged = (event) => {
@@ -103,9 +128,9 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
 
     return (
         <div className='w-full max-w-[1000px] xl:mx-[10%]'>
-            {absoluteDuplicateRows.length > 0 && (
+            {state.absoluteDuplicateRows.length > 0 && (
                 <div className='w-full bg-red-400 py-10 opacity-80 border-2 border-[#ca32328f] shadow-md rounded-lg text-center mb-5'>
-                    <span className='font-bold'>{absoluteDuplicateRows.length}</span> <p>Absolute duplicates skipped</p>
+                    <span className='font-bold'>{state.absoluteDuplicateRows.length}</span> <p>Absolute duplicates skipped</p>
                 </div>)}
             
             <div>
@@ -115,7 +140,7 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                         <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
                         <div className='w-full grid grid-cols-3'>
                             <div className='flex flex-col items-center'>
-                                <span className='text-lg font-bold'>{nonDuplicateRows.length + duplicates.length}</span>
+                                <span className='text-lg font-bold'>{state.nonDuplicateRows.length + duplicates.length + state.absoluteDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
@@ -123,7 +148,7 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                                 <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
-                                <span className='text-lg font-bold'>{nonDuplicateRows.length - absoluteDuplicateRows.length}</span>
+                                <span className='text-lg font-bold'>{state.nonDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
                             </div>
                         </div>
@@ -143,19 +168,24 @@ const ReviewDuplicates = ({ nonDuplicateRows, absoluteDuplicateRows, duplicateRo
                     <button 
                         {...getRemoveFileProps()}
                         onClick={() => {
-                            setDuplicateWarning(false);
-                            setFileParsed(false);
-                            setDuplicateRows([]);
+                            // setDuplicateWarning(false);
+                            dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
+                            // setFileParsed(false);
+                            dispatch({ type: "SET_FILE_PARSED", payload: false });
+                            // setDuplicateRows([]);
+                            dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] })
                         }}
                         className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                     >
                         Cancel
                     </button>
                     <button
-                        onClick={() => {duplicateRows.length > 0 ? handleContinue : undefined }}
-                        disabled={duplicateRows.length === 0}
+                        onClick={() => {
+                            state.duplicateRows.length > 0 && handleContinue();
+                        }}
+                        disabled={state.duplicateRows.length === 0}
                         className={
-                                duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                                state.duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
                                 "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
                         }
                     >
