@@ -30,7 +30,6 @@ db.version(1).stores({
 
 
 function parseDate(dateString, region = "EU") {
-    console.log(region);
     const euFormats = [
         "dd/MM/yyyy",
         "dd-MM-yyyy",

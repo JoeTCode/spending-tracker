@@ -19,6 +19,7 @@ import Tick from '../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
 import CustomProgressBar from '../components/ProgressBar';
 import targetCategories from '../data/targetCategories'; // TEMP
 import { useUpload } from '../components/upload/UploadContext';
+import rules from '../data/rules.json';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
@@ -261,21 +262,60 @@ const Upload = () => {
             return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
         };
 
+        const ruleBasedCategorisation = (transactions, rules) => {
+            const categorisedAndUncategorisedTransactions = [];
+            const uncategorisedTransactions = [];
+            const categorisedTransactions = [];
+
+            for (let tx of transactions) {
+                let matched = false;
+
+                for (let row of rules) {
+                    if (tx.description.includes(row.company_name)) {
+                        categorisedAndUncategorisedTransactions.push({
+                            ...tx,
+                            category: row.category
+                        });
+                        categorisedTransactions.push({
+                            ...tx,
+                            category: row.category
+                        });
+                        matched = true;
+                        break; // stop checking once matched
+                    }
+                };
+
+                if (!matched) {
+                    categorisedAndUncategorisedTransactions.push({ ...tx, category: "Uncategorised" });
+                    uncategorisedTransactions.push(tx);
+                };
+            };
+
+            console.log("rule-based categorisations:", categorisedAndUncategorisedTransactions);
+            console.log("remainder:", uncategorisedTransactions);
+            console.log("rule-based categorisations:", categorisedTransactions);
+
+            return [ categorisedTransactions, categorisedAndUncategorisedTransactions, uncategorisedTransactions ];
+        };
+
         const handleTransactions = async () => {
             if (!state.mapColumns || state.transactions.length === 0) return;
 
-            const validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
+            let validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
 
             if (state.allowCategorisation) {
                 setLoading(true);
-                const [predictedCategories, confidenceScores] = await categoriseTransactions(state.transactions);
+                const [ ruleBasedCategorisedTransactions, uncategorisedTransactions ] = ruleBasedCategorisation(validatedTransactions, rules);
+                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(uncategorisedTransactions);
                 setLoading(false);
-                validatedTransactions.forEach((tx, i) => (tx.category = predictedCategories[i]));
+                const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
+                validatedTransactions = ruleBasedCategorisedTransactions;
+                for (let tx of categorisedTransactions) validatedTransactions.push(tx);
                 // assumes predicted category is already assigned to validate transactions
-                const lowConfTransactions = getLowConfTransactions(validatedTransactions, confidenceScores);
+                const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores);
                 // setLowConfTx(lowConfTransactions);
-                dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions })
-            }
+                dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+            };
 
             // Date range
             const timestamps = validatedTransactions.map(tx => new Date(tx.date).getTime());
@@ -287,6 +327,8 @@ const Upload = () => {
 
             if (transactionsInRange.length > 0) {
                 const absDuplicates = findAbsoluteDuplicates(transactionsInRange, validatedTransactions);
+                console.log(transactionsInRange)
+                console.log(validatedTransactions);
                 const filteredTransactions = validatedTransactions.filter(
                     tx => !absDuplicates.some(d => d._id === tx._id)
                 );
@@ -294,6 +336,8 @@ const Upload = () => {
                 const nonDuplicateTransactions = filteredTransactions.filter(
                     tx => !duplicates.some(d => d._id === tx._id)
                 );
+
+                console.log('absolute dupes', absDuplicates);
 
                 if (absDuplicates.length || duplicates.length) {
                     // setDuplicateWarning(true);

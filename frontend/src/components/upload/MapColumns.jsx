@@ -317,7 +317,10 @@ const MapColumns = () => {
                                             // accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName
                                             console.log(mapping.amount);
                                             const data = getCSVDataFromMappings(mapping.account, mapping.amount, mapping.amountDescriptor, mapping.amountMappings, mapping.description, mapping.date, mapping.category);
+                                            console.log(mapping.dateFormat);
                                             console.log(data);
+                                            dispatch({ type: "SET_DATE_FORMAT", payload: mapping.dateFormat });
+                                            dispatch({ type: "SET_TRANSACTIONS", payload: data });
                                         }}
                                     >
                                         <span>{mapping.mappingTitle}</span>
@@ -590,7 +593,8 @@ const MapColumns = () => {
                                         amountDescriptor: descriptionColName,
                                         amountMappings: amountDescriptorMappings,
                                         description: descriptionColName,
-                                        category: categoryColName
+                                        category: categoryColName,
+                                        dateFormat: dateFormat
                                     })
                                 })}
                                 disabled={saveMappingDisabled}
