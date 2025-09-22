@@ -1,26 +1,91 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink } from "react-router-dom";
 import { useAuth0 } from '@auth0/auth0-react';
+// import { Menu, X } from 'lucide-react'; // icons
+import Menu from '../assets/icons/menu-svgrepo-com.svg?react';
+import Close from '../assets/icons/close-svgrepo-com.svg?react';
+import Dashboard from '../assets/icons/dashboard-svgrepo-com.svg?react';
+import Home from '../assets/icons/home-03-svgrepo-com.svg?react';
+import Transactions from '../assets/icons/transaction-svgrepo-com.svg?react';
 
-const Navbar = () => {
+const Sidebar = () => {
     const { isAuthenticated, isLoading, logout } = useAuth0();
-    if (isLoading) {
-        return <div></div>
-    }
-    
+    const [ open, setOpen ] = useState(true);
 
-    return (    
+    if (isLoading) return <div />;
+
+    return (
         <div>
-            <div>
-                <Link to="/">Home</Link>
-                <Link to="/dashboard">Dashboard</Link>
-                <Link to="/transactions">Transactions</Link>
-                {isAuthenticated ? <button onClick={
-                    () => logout({ logoutParams: { returnTo: 'http://localhost:5173/login' } })
-                }>Log Out</button> : null}
+            {/* Toggle button (hamburger)
+            <button
+                className={!open
+                    ? "p-2 fixed top-4 left-4 z-50 text-white rounded"
+                    : "hidden"
+                }
+                onClick={() => setOpen(true)}
+            >
+                {!open && <Menu className="w-5" />}
+            </button> */}
+            
+            <div
+                className={`fixed top-0 w-full bg-[#1a1818] text-white p-2 sm:px-6 sm:py-2 
+                transition-transform duration-300 z-40
+                ${open ? "translate-x-0" : "-translate-x-full"}`}
+            >
+                <div className='flex items-center justify-center sm:justify-between'>
+                    <div className='hidden font-semibold sm:block'>Track your transactions</div>
+                    <nav className="flex gap-x-5 sm:gap-x-5 md:gap-x-10">
+                        <NavLink 
+                            to="/" 
+                            className={({ isActive }) =>
+                                `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
+                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                            }
+                        >
+                            <Home className="w-5 h-5" />
+                            <span className="flex-1">Upload</span>
+                        </NavLink>
+
+                        <NavLink 
+                            to="/dashboard" 
+                            className={({ isActive }) =>
+                                `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
+                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                            }
+                        >
+                            <Dashboard className="w-5 h-5" />
+                            <span className="flex-1">Dashboard</span>
+                        </NavLink>
+
+                        <NavLink 
+                            to="/transactions" 
+                            className={({ isActive }) =>
+                                `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
+                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                            }
+                        >
+                            <Transactions className="w-5 h-5" />
+                            <span className="flex-1">Transactions</span>
+                        </NavLink>
+                        
+                        {isAuthenticated && (
+                            <button
+                                onClick={() =>
+                                    logout({
+                                        logoutParams: { returnTo: "http://localhost:5173/login" },
+                                    })
+                                }
+                                className="bg-[#747bff] px-1 sm:px-3 py-1 rounded cursor-pointer hover:bg-[#5055a7]"
+                            >
+                                Log Out
+                            </button>
+                        )}
+                    </nav>
+                </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default Navbar;
+
+export default Sidebar;

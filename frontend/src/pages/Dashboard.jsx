@@ -19,9 +19,8 @@ const Dashboard = () => {
 
         <>
             <NavBar />
-            <div className='flex flex-col items-center mx-10 sm:mx-5 md:mx-24'>
+            <div className='flex flex-col items-center mx-10 sm:mx-5 md:mx-24 md:mt-[10%] lg:mt-[5%]'>
                 <div className="mt-12 grid grid-cols-1 mb-10 gap-5 lg:grid-cols-3 lg:gap-4 lg:min-w-[1000px] xl:min-w-[1300px]">
-                    {/* B */}
                     <div>
                         <div>
                             <p className="font-medium text-xl mb-5">Overview</p>
@@ -31,15 +30,6 @@ const Dashboard = () => {
                             <TransactionsOverview />
                         </div>
                     </div>
-
-                    {/* C */}
-                    {/* <div className="mt-12 h-[200px]">
-                        <div className="flex justify-between items-baseline">
-                            <p className='font-semibold text-xl mb-5'>Upcoming Payments</p>
-                            <p className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer">View All <span className='ml-1.5'>&gt;</span></p>
-                        </div>
-                        <UpcomingPayments />
-                    </div> */}
 
                     <div>
                         <div className="flex justify-between items-baseline">
@@ -61,7 +51,6 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* A: spans 2 rows */}
                     <div className="lg:row-span-2">
                         <div className="flex justify-between items-baseline">
                             <p className='font-medium text-xl mb-5'>Recent transactions</p>
@@ -79,7 +68,6 @@ const Dashboard = () => {
                         </div>  
                     </div>
 
-                    {/* D: spans 2 columns */}
                     <div className="h-[500px] sm:h-[420px] lg:col-span-2 lg:h-[530px] flex flex-col">
                         <div className="flex justify-between items-baseline">
                             <p className='font-medium text-xl mb-5'>Income / Spending Breakdown</p>
@@ -103,7 +91,6 @@ const Dashboard = () => {
                         <div>
                             <div className="flex justify-between items-baseline">
                                 <p className='font-medium text-xl mb-5'>Spending per category</p>
-                                {/* <p className="text-sm text-gray-400">All time</p> */}
                                 <select
                                     value={selected}
                                     onChange={handleChange}
@@ -121,7 +108,6 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* G: spans all 3 columns */}
                     <div className="lg:col-span-3">
                         <div className="flex justify-between items-baseline mb-5">
                             <p className='font-medium text-xl'>Spending comparisons</p>

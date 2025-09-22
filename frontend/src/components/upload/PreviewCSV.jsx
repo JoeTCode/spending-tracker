@@ -3,7 +3,7 @@ import { useUpload } from './UploadContext';
 import { useNavigate } from 'react-router-dom';
 import CustomProgressBar from '../ProgressBar';
 import EditableGrid from '../EditableGrid';
-import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
+import { CATEGORIES, CATEGORY_TO_EMOJI, MIN_CONF_SCORE } from '../../utils/constants/constants';
 import Warning from '../../assets/icons/warning-circle-svgrepo-com.svg?react';
 import Tick from '../../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
 import { db } from '../../db/db';
@@ -165,15 +165,36 @@ const PreviewCSV = () => {
         };
     };
 
+    const confScores = state.confidenceScores
+    const lowConfScores = [];
+    for (let score of confScores) score < MIN_CONF_SCORE ? lowConfScores.push(score) : '';
+
+    const totalAverageConf = confScores.length > 0 ? (confScores.reduce((sum, current) => sum + current) / confScores.length) * 100 : null;
+    const lowConfAverage = lowConfScores.length > 0 ? (lowConfScores.reduce((sum, current) => current < MIN_CONF_SCORE ? sum + current : sum) / lowConfScores.length) * 100 : null;
+    
     return (
-        <div className='w-full max-w-[1000px] xl:mx-[10%]'>
+        <div className='w-full'>
             <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
                 <div className='flex-1'>
-                    <p>Low confidence transactions</p>
+                    <p>Review Transactions</p>
                     <p className='mb-6 text-sm text-neutral-400'>Please review and recategorise the auto-categorised records.</p>
-                    <div className='flex flex-col w-full items-center'>
-                        <span className='text-lg font-bold'>{transactions.length}</span>
-                        <p className='text-sm text-neutral-400'>Total transactions</p>
+                    <div className='grid grid-cols-4 w-full items-center'>
+                        <div className='text-center'>
+                            <span className='text-lg font-bold'>{transactions.length}</span>
+                            <p className='text-sm text-neutral-400'>Low-confidence transactions</p>
+                        </div>
+                        <div className='text-center'>
+                            <span className='text-lg font-bold'>{lowConfAverage ? `${lowConfAverage.toFixed(2)}%` : '--'}</span>
+                            <p className='text-sm text-neutral-400'>Low-confidence mean conf. score</p>
+                        </div>
+                        <div className='text-center'>
+                            <span className='text-lg font-bold'>{state.transactions.length}</span>
+                            <p className='text-sm text-neutral-400'>Total transactions</p>
+                        </div>
+                        <div className='text-center'>
+                            <span className='text-lg font-bold'>{totalAverageConf ? `${totalAverageConf.toFixed(2)}%` : '--'}</span>
+                            <p className='text-sm text-neutral-400'>Total mean conf. score</p>
+                        </div>
                     </div>
 
                     <div className="mt-4 mb-4 w-full">
@@ -191,8 +212,9 @@ const PreviewCSV = () => {
                         // setFileParsed(false);
                         // dispatch({ type: "SET_FILE_PARSED", payload: false });
                         // setPreviewCSV(false);
-                        dispatch({ type: "SET_PREVIEW_CSV", payload: false });
+                        // dispatch({ type: "SET_PREVIEW_CSV", payload: false });
                         dispatch({ type: "SET_TRANSACTIONS", payload: [] });
+                        dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
                     className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >

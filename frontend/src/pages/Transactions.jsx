@@ -3,10 +3,11 @@ import { useAuth0 } from '@auth0/auth0-react';
 import React, { useRef, useState, useEffect } from 'react';
 // import { updateTransactions, getTransactions, deleteTransaction } from '../api/transactions';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS } from '../utils/constants/constants';
-import { getClientModel, saveClientModel } from '../utils/modelIO';
-import { getModelWeights, weightAverage } from '../api/globalModel';
-import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
+// import { getClientModel, saveClientModel } from '../utils/modelIO';
+// import { getModelWeights, weightAverage } from '../api/globalModel';
+// import { train, predict, accuracy, getDeltas, getBufferFromWeights } from '../utils/model';
 import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
+import { trainModel } from '../api/model';
 import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
 import UndoLeft from '../assets/icons/undo-left-round-svgrepo-com.svg?react'
 import UndoRight from '../assets/icons/undo-right-round-svgrepo-com.svg?react';
@@ -95,46 +96,46 @@ const createHeaders = (setUndos) => ([
     }
 ]);
 
-const trainModel = async (transactions) => {
-    const descriptions = [];
-    const targets = [];
-    for (let tx of transactions) {
-        if (CATEGORIES_SET.has(tx['category'])) {
-            descriptions.push(tx['description']);
-            targets.push(tx['category']);
-        };
-    };
+// const trainModel = async (transactions) => {
+//     const descriptions = [];
+//     const targets = [];
+//     for (let tx of transactions) {
+//         if (CATEGORIES_SET.has(tx['category'])) {
+//             descriptions.push(tx['description']);
+//             targets.push(tx['category']);
+//         };
+//     };
 
-    const model = await getClientModel();
-    const trainedModel = await train(model, descriptions, targets);
-    const predictions = await predict(trainedModel, descriptions);
-    console.log(accuracy(predictions, targets));
-};
+//     const model = await getClientModel();
+//     const trainedModel = await train(model, descriptions, targets);
+//     const predictions = await predict(trainedModel, descriptions);
+//     console.log(accuracy(predictions, targets));
+// };
 
-const testWeightAvg = async (transactions, token) => {
-    const descriptions = [];
-    const targets = [];
-    for (let tx of transactions) {
-        if (CATEGORIES_SET.has(tx['category'])) {
-            descriptions.push(tx['description']);
-            targets.push(tx['category']);
-        };
-    };
-    const clientModel = await getClientModel(token);
-    const globalModelWeights = await getModelWeights(token);
-    const trainedModel = await train(clientModel, descriptions, targets);
-    const weights = trainedModel.getWeights();
-    // const weights = clientModel.getWeights();
-    const deltas = getDeltas(weights, globalModelWeights);
-    const [ buffer, shapes ] = await getBufferFromWeights(deltas);
+// const testWeightAvg = async (transactions, token) => {
+//     const descriptions = [];
+//     const targets = [];
+//     for (let tx of transactions) {
+//         if (CATEGORIES_SET.has(tx['category'])) {
+//             descriptions.push(tx['description']);
+//             targets.push(tx['category']);
+//         };
+//     };
+//     const clientModel = await getClientModel(token);
+//     const globalModelWeights = await getModelWeights(token);
+//     const trainedModel = await train(clientModel, descriptions, targets);
+//     const weights = trainedModel.getWeights();
+//     // const weights = clientModel.getWeights();
+//     const deltas = getDeltas(weights, globalModelWeights);
+//     const [ buffer, shapes ] = await getBufferFromWeights(deltas);
 
-    // post to weight averaging route
-    await weightAverage(token, buffer, shapes);
+//     // post to weight averaging route
+//     await weightAverage(token, buffer, shapes);
     
-    // get new model from db via api and save it to indexedDB clientside
-    const newGlobalModelWeights = await getModelWeights(token);
-    saveClientModel(newGlobalModelWeights);
-};
+//     // get new model from db via api and save it to indexedDB clientside
+//     const newGlobalModelWeights = await getModelWeights(token);
+//     saveClientModel(newGlobalModelWeights);
+// };
 
 const Undo = ({ undos, undo }) => (
   <button 
@@ -493,17 +494,37 @@ const Transactions = () => {
                     }
                 </div>
             </div>
+            
+            <div className='flex'>
+                {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
+                row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
+                <button 
+                    onClick={() => {
+                        const descriptions = [];
+                        const targets = [];
+                        for (let tx of rowData) {
+                            if (CATEGORIES_SET.has(tx['category'])) {
+                                descriptions.push(tx['description']);
+                                targets.push(tx['category']);
+                            };
+                        };
+                        trainModel(descriptions, targets);
+                    }}
+                    className='bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+                > 
+                    Train
+                </button>
 
-            {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
-            row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
-            <button onClick={() => trainModel(rowData)}>Train</button>
-
-            <button onClick={async () => {
-                const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-                testWeightAvg(rowData, token);
-            }}>
-                Test Weight Average
-            </button>
+                {/* <button onClick={async () => {
+                    const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+                        testWeightAvg(rowData, token);
+                    }}
+                    className='bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+                >
+                    Test Weight Average
+                </button> */}
+            </div>
+            
         </>
     )
 }

@@ -270,7 +270,7 @@ const MapColumns = () => {
     };
     
     return (
-        <div className='w-full mx-[20%]'>
+        <div className='w-full'>
             <div className='bg-[#1a1818] w-full p-10'>
                 <div className=''>
                     <p>Map CSV columns</p>
@@ -609,12 +609,9 @@ const MapColumns = () => {
             <div className='mt-2 flex justify-end gap-2'>
                 <button 
                     onClick={() => {
-                        // setParsedCSV([]);
-                        dispatch({ type: "SET_PARSED_CSV", payload: [] })
-                        // setFileParsed(false);
-                        dispatch({ type: "SET_FILE_PARSED", payload: false })
-                        // setMapColumns(false);
-                        dispatch({ type: "SET_MAP_COLUMNS", payload: false })
+                        dispatch({ type: "SET_PARSED_CSV", payload: [] });
+                        // dispatch({ type: "SET_MAP_COLUMNS", payload: false });
+                        dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
                     className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >

@@ -1,30 +1,24 @@
 import { NavBar } from '../components';
-import { ReviewDuplicates, PreviewCSV, MapColumns } from '../components/upload';
+import { ReviewDuplicates, PreviewCSV, MapColumns, UploadProgress } from '../components/upload';
 // import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { createModel, predict } from '../utils/model';
-import { getClientModel, saveClientModel } from '../utils/modelIO';
-import { MIN_CONF_SCORE, CATEGORIES, CATEGORY_TO_EMOJI } from '../utils/constants/constants';
-import { devGetModelWeights } from '../api/globalModel';
+// import { predict } from '../utils/model';
+// import { getClientModel, saveClientModel } from '../utils/modelIO';
+import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
+// import { devGetModelWeights } from '../api/globalModel';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
-import { pipeline } from '@huggingface/transformers';
-import * as tf from '@tensorflow/tfjs';
+// import { pipeline } from '@huggingface/transformers';
+
 import { useNavigate } from "react-router-dom";
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 // import Switch from '../components/Switch';
-import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
-import Tick from '../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
-import CustomProgressBar from '../components/ProgressBar';
-import targetCategories from '../data/targetCategories'; // TEMP
 import { useUpload } from '../components/upload/UploadContext';
-import rules from '../data/rules.json';
+// import rules from '../data/rules.json';
+import { getPredictions } from '../api/model';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
-
-// TEMP
-
 
 function formatDescription(desc) {
     let formattedDesc = String(desc).split('\t')[0].trim();
@@ -128,7 +122,7 @@ const UploadCSV = ({ getRootProps }) => (
             <Switch />
         </div>
         <div className='bg-[#1a1818] p-8 rounded-lg'>
-            <div className='flex flex-col px-90 py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
+            <div className='flex flex-col py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
                 <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
                 <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
                 <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
@@ -145,38 +139,7 @@ const Upload = () => {
     const { CSVReader } = useCSVReader();
     const { getAccessTokenSilently } = useAuth0();
     const navigate = useNavigate();
-
-    // const [ transactions, setTransactions ] = useState([]); // list of dicts
-    // const [ lowConfTx, setLowConfTx ] = useState([]);
-    // const [ saveData, setSaveData ] = useState([]);
-    // const [ duplicateRows, setDuplicateRows ] = useState([]);
-    // const [ absoluteDuplicateRows, setAbsoluteDuplicateRows ] = useState([]); 
-    // const [ parsedCSV, setParsedCSV ] = useState([]);
-    // const [ columnNames, setColumnNames ] = useState([]);
-
-    // const [ fileParsed, setFileParsed ] = useState(false);
-    // const [ mapColumns, setMapColumns ] = useState(false);
-    // const [ allowCategorisation, setAllowCategorisation ] = useState(true);
-    // const [ duplicateWarning, setDuplicateWarning ] = useState(false);
-    // const [ previewCSV, setPreviewCSV ] = useState(false);
-
-    // const { 
-    //     transactions, setTransactions,
-    //     lowConfTx, setLowConfTx,
-    //     saveData, setSaveData,
-    //     duplicateRows, setDuplicateRows,
-    //     absoluteDuplicateRows, setAbsoluteDuplicateRows,
-    //     previewCSV, setPreviewCSV,
-    //     parsedCSV, setParsedCSV,
-    //     setColumnNames,
-
-    //     // booleans
-    //     fileParsed, setFileParsed,
-    //     allowCategorisation, setAllowCategorisation,
-    //     duplicateWarning, setDuplicateWarning,
-    //     mapColumns, setMapColumns
-    // } = useUpload();
-
+    
     const [ correctionsCount, setCorrectionsCount ] = useState(() => {
             const saved = localStorage.getItem("count");
             if (saved === null) {
@@ -185,6 +148,7 @@ const Upload = () => {
             }
             return parseInt(saved);
     });
+
     const incrementCorrectionsCount = () => {
         setCorrectionsCount(prevCount => {
             const newCount = prevCount + 1;
@@ -195,7 +159,7 @@ const Upload = () => {
     const [ loading, setLoading ] = useState(false);
 
 
-    const getLowConfTransactions = (transactions, confScores) => {
+    const getLowConfTransactions = (transactions, confScores, MIN_CONF_SCORE) => {
         const res = [];
         for (let i = 0; i < transactions.length; i++) {
             if (confScores[i] < MIN_CONF_SCORE) {
@@ -206,47 +170,43 @@ const Upload = () => {
         return res;
     };
 
-    async function categoriseTransactions(formattedTransactions, batchSize = 32) {
-        const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-        const predictions = [];
-        const confidenceScores = [];
-        
-        if (state.transactions.length > 0) {
-            const timer = new Date().getTime();
-            const model = await getClientModel(token);
-            // Create a feature-extraction pipeline
-            const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    useEffect(() => {
+        console.log(state.stage);
+    }, [state.stage]);
 
-            const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
+    // async function categoriseTransactions(formattedTransactions, batchSize = 32) {
+    //     const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
+    //     const predictions = [];
+    //     const confidenceScores = [];
+
+    //     if (state.transactions.length > 0) {
+    //         const timer = new Date().getTime();
+    //         const model = await getClientModel(token);
+    //         // Create a feature-extraction pipeline
+    //         const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+
+    //         const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
             
-            for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
-                const batch = transactionsDescriptions.slice(i, i + batchSize);
-                const getConfScores = true;
-                const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
-                predictions.push(preds);
-                confidenceScores.push(confScores);
+    //         for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
+    //             const batch = transactionsDescriptions.slice(i, i + batchSize);
+    //             const getConfScores = true;
+    //             const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
+    //             predictions.push(preds);
+    //             confidenceScores.push(confScores);
 
-                // Yield back to the browser
-                await new Promise(r => setTimeout(r, 0));
-            };
+    //             // Yield back to the browser
+    //             await new Promise(r => setTimeout(r, 0));
+    //         };
 
-            console.log(`inference time: ${(new Date().getTime() - timer) / 1000} seconds`);
+    //         console.log(`inference time: ${(new Date().getTime() - timer) / 1000} seconds`);
             
-            return [predictions.flat(), confidenceScores.flat()];
-        };
-    };
-
+    //         return [predictions.flat(), confidenceScores.flat()];
+    //     };
+    // };
     
     useEffect(() => {
         const validateAllTransactions = (transactions, dateFormat) =>
             transactions.map((tx, i) => validateTransaction(tx, i, dateFormat));
-
-        // const categoriseAll = async (transactions) => {
-        //     const [predictedCategories, confidenceScores] = await categoriseTransactions(transactions);
-        //     // attach categories
-        //     transactions.forEach((tx, i) => (tx.category = predictedCategories[i]));
-        //     return { transactions, confidenceScores };
-        // };
 
         const findAbsoluteDuplicates = (dbTxs, newTxs) => {
             const dbIdSet = new Set(dbTxs.map(tx => tx._id));
@@ -262,59 +222,85 @@ const Upload = () => {
             return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
         };
 
-        const ruleBasedCategorisation = (transactions, rules) => {
-            const categorisedAndUncategorisedTransactions = [];
-            const uncategorisedTransactions = [];
-            const categorisedTransactions = [];
+        // const ruleBasedCategorisation = (transactions, rules) => {
+        //     const categorisedAndUncategorisedTransactions = [];
+        //     const uncategorisedTransactions = [];
+        //     const categorisedTransactions = [];
 
-            for (let tx of transactions) {
-                let matched = false;
+        //     for (let tx of transactions) {
+        //         let matched = false;
 
-                for (let row of rules) {
-                    if (tx.description.includes(row.company_name)) {
-                        categorisedAndUncategorisedTransactions.push({
-                            ...tx,
-                            category: row.category
-                        });
-                        categorisedTransactions.push({
-                            ...tx,
-                            category: row.category
-                        });
-                        matched = true;
-                        break; // stop checking once matched
-                    }
-                };
+        //         for (let row of rules) {
+        //             if (tx.description.includes(row.company_name)) {
+        //                 categorisedAndUncategorisedTransactions.push({
+        //                     ...tx,
+        //                     category: row.category
+        //                 });
+        //                 categorisedTransactions.push({
+        //                     ...tx,
+        //                     category: row.category
+        //                 });
+        //                 matched = true;
+        //                 break; // stop checking once matched
+        //             }
+        //         };
 
-                if (!matched) {
-                    categorisedAndUncategorisedTransactions.push({ ...tx, category: "Uncategorised" });
-                    uncategorisedTransactions.push(tx);
-                };
-            };
+        //         if (!matched) {
+        //             categorisedAndUncategorisedTransactions.push({ ...tx, category: "Uncategorised" });
+        //             uncategorisedTransactions.push(tx);
+        //         };
+        //     };
 
-            console.log("rule-based categorisations:", categorisedAndUncategorisedTransactions);
-            console.log("remainder:", uncategorisedTransactions);
-            console.log("rule-based categorisations:", categorisedTransactions);
+        //     console.log("rule-based categorisations:", categorisedAndUncategorisedTransactions);
+        //     console.log("remainder:", uncategorisedTransactions);
+        //     console.log("rule-based categorisations:", categorisedTransactions);
 
-            return [ categorisedTransactions, categorisedAndUncategorisedTransactions, uncategorisedTransactions ];
-        };
+        //     return [ categorisedTransactions, categorisedAndUncategorisedTransactions, uncategorisedTransactions ];
+        // };
 
         const handleTransactions = async () => {
-            if (!state.mapColumns || state.transactions.length === 0) return;
+            if (state.transactions.length === 0) {
+                if (state.stage === "mapColumns") {
+                    dispatch({ type: "SET_STAGE", payload: "upload" });
+                    console.warn("Uploaded transactions not found");
+                };
+                return;
+            };
 
             let validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
 
             if (state.allowCategorisation) {
+                // setLoading(true);
+                // const [ ruleBasedCategorisedTransactions, uncategorisedTransactions ] = ruleBasedCategorisation(validatedTransactions, rules);
+                // const [ predictedCategories, confidenceScores ] = await categoriseTransactions(uncategorisedTransactions);
+                // setLoading(false);
+                // const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
+                // validatedTransactions = ruleBasedCategorisedTransactions;
+                // for (let tx of categorisedTransactions) validatedTransactions.push(tx);
+                // // assumes predicted category is already assigned to validate transactions
+                // const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores, MIN_CONF_SCORE);
+                
+                // dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
+                // dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+
                 setLoading(true);
-                const [ ruleBasedCategorisedTransactions, uncategorisedTransactions ] = ruleBasedCategorisation(validatedTransactions, rules);
-                const [ predictedCategories, confidenceScores ] = await categoriseTransactions(uncategorisedTransactions);
+                const res = await getPredictions(validatedTransactions);
                 setLoading(false);
-                const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
-                validatedTransactions = ruleBasedCategorisedTransactions;
-                for (let tx of categorisedTransactions) validatedTransactions.push(tx);
-                // assumes predicted category is already assigned to validate transactions
-                const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores);
-                // setLowConfTx(lowConfTransactions);
+                const confidenceScores = res.data.map(tx => tx.confidence);
+                validatedTransactions = validatedTransactions.map((tx, i) => ({ ...tx, category: res.data[i].predicted_category }))
+                const lowConfTransactions = getLowConfTransactions(validatedTransactions, confidenceScores, MIN_CONF_SCORE);
+
+                dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
                 dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+
+                // const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
+                // validatedTransactions = ruleBasedCategorisedTransactions;
+                // for (let tx of categorisedTransactions) validatedTransactions.push(tx);
+                // // assumes predicted category is already assigned to validate transactions
+                // const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores, MIN_CONF_SCORE);
+                
+                // dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
+                // dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
             };
 
             // Date range
@@ -325,67 +311,55 @@ const Upload = () => {
                 .between(new Date(minTime), new Date(maxTime), true, true)
                 .toArray();
 
-            if (transactionsInRange.length > 0) {
-                const absDuplicates = findAbsoluteDuplicates(transactionsInRange, validatedTransactions);
-                console.log(transactionsInRange)
-                console.log(validatedTransactions);
-                const filteredTransactions = validatedTransactions.filter(
-                    tx => !absDuplicates.some(d => d._id === tx._id)
-                );
-                const duplicates = findPossibleDuplicates(filteredTransactions, validatedTransactions);
-                const nonDuplicateTransactions = filteredTransactions.filter(
-                    tx => !duplicates.some(d => d._id === tx._id)
-                );
 
-                console.log('absolute dupes', absDuplicates);
+            const absDuplicates = findAbsoluteDuplicates(transactionsInRange, validatedTransactions);
+            console.log(transactionsInRange)
+            console.log(validatedTransactions);
+            const filteredTransactions = validatedTransactions.filter(
+                tx => !absDuplicates.some(d => d._id === tx._id)
+            );
+            console.log(filteredTransactions, validatedTransactions);
+            const duplicates = findPossibleDuplicates(transactionsInRange, filteredTransactions);
+            const nonDuplicateTransactions = filteredTransactions.filter(
+                tx => !duplicates.some(d => d._id === tx._id)
+            );
 
-                if (absDuplicates.length || duplicates.length) {
-                    // setDuplicateWarning(true);
-                    dispatch({ type: "SET_MAP_COLUMNS", payload: false });
-                    dispatch({ type: "SET_DUPLICATE_WARNING", payload: true });
-                    // setAbsoluteDuplicateRows(absDuplicates);
-                    dispatch({ type: "SET_ABSOLUTE_DUPLICATE_ROWS", payload: absDuplicates });
-                    // setDuplicateRows(duplicates);
-                    dispatch({ type: "SET_DUPLICATE_ROWS", payload: duplicates });
-                    dispatch({ type: "SET_NON_DUPLICATE_ROWS", payload: nonDuplicateTransactions });
-                    // setSaveData(validatedTransactions.filter(tx => !duplicates.includes(tx)));
-                    // dispatch({ type: "SET_SAVE_DATA", payload: validatedTransactions.filter(tx => !duplicates.includes(tx)) });
-                    // setPreviewCSV(false);
-                    dispatch({ type: "SET_PREVIEW_CSV", payload: false });
-                    return;
-                }
-            }
+            console.log('absolute dupes', absDuplicates);
+            console.log('dupes', duplicates);
 
-            if (state.allowCategorisation) {
-                // setSaveData(validatedTransactions);
-                dispatch({ type: "SET_SAVE_DATA", payload: validatedTransactions })
-                dispatch({ type: "SET_MAP_COLUMNS", payload: false });
-                dispatch({ type: "SET_PREVIEW_CSV", payload: true });
-                dispatch({ type: "SET_FILE_PARSED", payload: true });
-            } else {
-                await db.barclaysTransactions.bulkAdd(validatedTransactions);
-                navigate('/dashboard');
-            }
+            dispatch({ type: "SET_STAGE", payload: "reviewDuplicates" });
+            dispatch({ type: "SET_ABSOLUTE_DUPLICATE_ROWS", payload: absDuplicates });
+            dispatch({ type: "SET_DUPLICATE_ROWS", payload: duplicates });
+            dispatch({ type: "SET_NON_DUPLICATE_ROWS", payload: nonDuplicateTransactions });
         };
 
         handleTransactions();
     }, [state.transactions]);
 
     const renderContent = (getRootProps, getRemoveFileProps) => {
-        if (state.mapColumns) {
-            return loading ?
-                <div>Loading...</div> : <MapColumns/>
+        if (state.stage === 'mapColumns') {
+            if (loading) {
+                return (
+                    <div>Loading...</div>
+                )
+            }
+            else return <MapColumns/>
+
         };
-        if (state.duplicateWarning) {
+        if (state.stage === 'reviewDuplicates') {
             return (
-                <ReviewDuplicates getRemoveFileProps={getRemoveFileProps} />
+                <>
+                    <ReviewDuplicates getRemoveFileProps={getRemoveFileProps} />
+                </>                
             );
         };
 
-        if (state.previewCSV) {
+        if (state.stage === 'review') {
             return (
-                <PreviewCSV />
-            )
+                <>
+                    <PreviewCSV />
+                </>                
+            );
         };
 
         return (
@@ -397,36 +371,33 @@ const Upload = () => {
     return (
         <>
             <NavBar />
-            
-            <div className='flex justify-center mt-[20%] '>
-                <CSVReader 
-                    onUploadAccepted={(results) => {
-                        const cleaned = removeErrorRows(results);
-
-                        // setParsedCSV(cleaned);
-                        dispatch({ type: "SET_PARSED_CSV", payload: cleaned });
-                        // setFileParsed(true);
-                        dispatch({ type: "SET_FILE_PARSED", payload: true });
-                        // setMapColumns(true);
-                        dispatch({ type: "SET_MAP_COLUMNS", payload: true });
-                    }}
-                    config={{ header: true, skipEmptyLines: true }}
-                    noDrag
-                >
-                    {({
-                        getRootProps,
-                        acceptedFile,
-                        ProgressBar,
-                        getRemoveFileProps,
-                        Remove,
-                    }) => (
-                        <>
-                            {renderContent(getRootProps, getRemoveFileProps)}
-                        </>
-                    )}
-                </CSVReader>
+            <div className='flex justify-center content-center w-full mb-20'>
+                <div className='flex flex-col justify-center mt-[10%] w-full max-w-[1000px]'>
+                    <CSVReader 
+                        onUploadAccepted={(results) => {
+                            const cleaned = removeErrorRows(results);
+                            dispatch({ type: "SET_PARSED_CSV", payload: cleaned });
+                            // dispatch({ type: "SET_MAP_COLUMNS", payload: true });
+                            dispatch({ type: "SET_STAGE", payload: "mapColumns"})
+                        }}
+                        config={{ header: true, skipEmptyLines: true }}
+                        noDrag
+                    >
+                        {({
+                            getRootProps,
+                            acceptedFile,
+                            ProgressBar,
+                            getRemoveFileProps,
+                            Remove,
+                        }) => (
+                            <>
+                                <UploadProgress stage={state.stage} />
+                                {renderContent(getRootProps, getRemoveFileProps)}
+                            </>
+                        )}
+                    </CSVReader>
+                </div>
             </div>
-            
         </>
     )
 }

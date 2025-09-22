@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Auth0Provider } from '@auth0/auth0-react';
 import './index.css';
-import { Login, Upload, Dashboard, Transactions, Payments } from './pages';
+import { Login, Upload, Dashboard, Transactions } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UploadProvider } from './components/upload/UploadContext';
 
@@ -44,14 +44,6 @@ createRoot(document.getElementById('root')).render(
                     element={
                         <ProtectedRoute>
                             <Transactions />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path='/payments'
-                    element={
-                        <ProtectedRoute>
-                            <Payments />
                         </ProtectedRoute>
                     }
                 />

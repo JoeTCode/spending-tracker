@@ -3,24 +3,16 @@ import { useUpload } from './UploadContext';
 import CustomProgressBar from '../ProgressBar';
 import EditableGrid from '../EditableGrid';
 import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
+import { db } from '../../db/db';
+import { useNavigate } from 'react-router-dom';
 
 const ReviewDuplicates = ({ getRemoveFileProps }) => {
-    // const {
-    //     nonDuplicateRows,
-    //     absoluteDuplicateRows,
-    //     duplicateRows, setDuplicateRows,
-    //     setDuplicateWarning,
-    //     setFileParsed,
-    //     setPreviewCSV,
-    //     getRemoveFileProps,
-    //     setSaveData,
-    //     setLowConfTx,
-    // } = useUpload();
     const { state, dispatch } = useUpload();
     const gridRef = useRef(null);
     const [ duplicates, setDuplicates ] = useState(state.duplicateRows.map(tx => ({ ...tx })));
     const [ numSelected, setNumSelected ] = useState(0);
     const [ selectedRows, setSelectedRows ] = useState([]);
+    const navigate = useNavigate();
 
     const headers = [
             {
@@ -89,15 +81,14 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
         );
     };
 
-    const handleContinue = () => {
-        console.log('hello')
+    const handleContinue = async () => {
         // setDuplicateWarning(false);
-        dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
+        // dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
         // setDuplicateRows([]);
         dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] });
         // store the non duplicates and transactions marked as non-duplicate by user
         // setSaveData([ ...nonDuplicateRows, ...selectedRows ]);
-        dispatch({ type: "SET_SAVE_DATA", payload: [ ...state.nonDuplicateRows, ...selectedRows ] });
+        
 
         // remove duplicate transactions that were not marked as non-duplicate from lowConfTx
         const selectedIdSet = new Set(selectedRows.map(tx => tx._id));
@@ -111,10 +102,18 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
         // setLowConfTx(prev => {
         //     return prev.filter(tx => !nonSelectedIdSet.has(tx._id))
         // });
-        dispatch({ type: "FILTER_LOW_CONFIDENCE_TRANSACTIONS", payload: nonSelectedIdSet });
+        const saveData = [ ...state.nonDuplicateRows, ...selectedRows ];
         if (state.allowCategorisation) {
-            dispatch({ type: "SET_PREVIEW_CSV", payload: true });
-        };
+            dispatch({ type: "SET_SAVE_DATA", payload: saveData });
+            // remove non selected transactions from low conf tx
+            dispatch({ type: "FILTER_LOW_CONFIDENCE_TRANSACTIONS", payload: nonSelectedIdSet });
+            // dispatch({ type: "SET_PREVIEW_CSV", payload: true });
+            dispatch({ type: "SET_STAGE", payload: "review"});
+        } else {
+            await db.barclaysTransactions.bulkAdd(saveData);
+            navigate('/dashboard');
+        }
+
         // dispatch({ type: "SET_FILE_PARSED", payload: true });
         // setPreviewCSV(true);
         // setFileParsed(true);
@@ -127,7 +126,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
     }
 
     return (
-        <div className='w-full max-w-[1000px] xl:mx-[10%]'>
+        <div className='w-full'>
             {state.absoluteDuplicateRows.length > 0 && (
                 <div className='w-full bg-red-400 py-10 opacity-80 border-2 border-[#ca32328f] shadow-md rounded-lg text-center mb-5'>
                     <span className='font-bold'>{state.absoluteDuplicateRows.length}</span> <p>Absolute duplicates skipped</p>
@@ -168,11 +167,8 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                     <button 
                         {...getRemoveFileProps()}
                         onClick={() => {
-                            // setDuplicateWarning(false);
-                            dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
-                            // setFileParsed(false);
-                            dispatch({ type: "SET_FILE_PARSED", payload: false });
-                            // setDuplicateRows([]);
+                            // dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
+                            dispatch({ type: "SET_STAGE", payload: "upload"});
                             dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] })
                         }}
                         className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
@@ -181,11 +177,11 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                     </button>
                     <button
                         onClick={() => {
-                            state.duplicateRows.length > 0 && handleContinue();
+                            state.nonDuplicateRows.length > 0 ? handleContinue() : undefined;
                         }}
-                        disabled={state.duplicateRows.length === 0}
+                        disabled={state.nonDuplicateRows.length === 0}
                         className={
-                                state.duplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                                state.nonDuplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
                                 "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
                         }
                     >

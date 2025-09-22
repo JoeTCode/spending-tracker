@@ -12,12 +12,10 @@ const initialState = {
 	columnNames: [],
 	parsedCSV: [],
 	dateFormat: [],
+	confidenceScores: [],
+	stage: "upload",
 	// booleans
-	previewCSV: false,
-	fileParsed: false,
-	allowCategorisation: true,
-	duplicateWarning: false,
-	mapColumns: false,
+	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
 };
 
 const uploadReducer = (state, action) => {
@@ -38,31 +36,18 @@ const uploadReducer = (state, action) => {
 	case "SET_COLUMN_NAMES": return { ...state, columnNames: action.payload };
 	case "SET_PARSED_CSV": return { ...state, parsedCSV: action.payload };
 	case "SET_DATE_FORMAT": return { ...state, dateFormat: action.payload };
+	case "SET_CONFIDENCE_SCORES": return { ...state, confidenceScores: action.payload };
+	case "SET_STAGE": return { ...state, stage: action.payload };
 	// booleans
-	case "SET_PREVIEW_CSV": return { ...state, previewCSV: action.payload };
-    case "SET_FILE_PARSED": return { ...state, fileParsed: action.payload };
-	case "SET_ALLOW_CATEGORISATION": return { ...state, allowCategorisation: action.payload };
-	case "SET_DUPLICATE_WARNING": return { ...state, duplicateWarning: action.payload };
-    case "SET_MAP_COLUMNS": return { ...state, mapColumns: action.payload };
+	case "SET_ALLOW_CATEGORISATION": {
+		localStorage.setItem('allowCategorisation', action.payload);
+		return { ...state, allowCategorisation: action.payload }
+	};
     default: return state;
   };
 };
 
 export const UploadProvider = ({ children }) => {
-	// const [ transactions, setTransactions ] = useState([]); // list of dicts
-	// const [ saveData, setSaveData ] = useState([]);
-	// const [ absoluteDuplicateRows, setAbsoluteDuplicateRows ] = useState([]);
-	// const [ duplicateRows, setDuplicateRows ] = useState([]);
-	// const [ lowConfTx, setLowConfTx ] = useState([]);
-	// const [ parsedCSV, setParsedCSV ] = useState([]);
-	// const [ columnNames, setColumnNames ] = useState([]);
-
-	// const [ duplicateWarning, setDuplicateWarning ] = useState(false);
-	// const [ fileParsed, setFileParsed ] = useState(false);
-	// const [ previewCSV, setPreviewCSV ] = useState(false);
-	// const [ allowCategorisation, setAllowCategorisation ] = useState(true);
-	// const [ mapColumns, setMapColumns ] = useState(false);
-
 	const [ state, dispatch ] = useReducer(uploadReducer, initialState);
 
 	return (
