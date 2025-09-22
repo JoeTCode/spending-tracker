@@ -1,21 +1,13 @@
 import { NavBar } from '../components';
 import { ReviewDuplicates, PreviewCSV, MapColumns, UploadProgress } from '../components/upload';
-// import { uploadTransactions } from '../api/transactions';
 import { useCSVReader } from 'react-papaparse';
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-// import { predict } from '../utils/model';
-// import { getClientModel, saveClientModel } from '../utils/modelIO';
 import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
-// import { devGetModelWeights } from '../api/globalModel';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
-// import { pipeline } from '@huggingface/transformers';
-
 import { useNavigate } from "react-router-dom";
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
-// import Switch from '../components/Switch';
 import { useUpload } from '../components/upload/UploadContext';
-// import rules from '../data/rules.json';
 import { getPredictions } from '../api/model';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
@@ -173,36 +165,6 @@ const Upload = () => {
     useEffect(() => {
         console.log(state.stage);
     }, [state.stage]);
-
-    // async function categoriseTransactions(formattedTransactions, batchSize = 32) {
-    //     const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-    //     const predictions = [];
-    //     const confidenceScores = [];
-
-    //     if (state.transactions.length > 0) {
-    //         const timer = new Date().getTime();
-    //         const model = await getClientModel(token);
-    //         // Create a feature-extraction pipeline
-    //         const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-
-    //         const transactionsDescriptions = formattedTransactions.map(tx => tx['description'])
-            
-    //         for (let i = 0; i < transactionsDescriptions.length; i += batchSize) {
-    //             const batch = transactionsDescriptions.slice(i, i + batchSize);
-    //             const getConfScores = true;
-    //             const [ preds, confScores ] = await predict(model, extractor, batch, getConfScores);
-    //             predictions.push(preds);
-    //             confidenceScores.push(confScores);
-
-    //             // Yield back to the browser
-    //             await new Promise(r => setTimeout(r, 0));
-    //         };
-
-    //         console.log(`inference time: ${(new Date().getTime() - timer) / 1000} seconds`);
-            
-    //         return [predictions.flat(), confidenceScores.flat()];
-    //     };
-    // };
     
     useEffect(() => {
         const validateAllTransactions = (transactions, dateFormat) =>
@@ -222,42 +184,6 @@ const Upload = () => {
             return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
         };
 
-        // const ruleBasedCategorisation = (transactions, rules) => {
-        //     const categorisedAndUncategorisedTransactions = [];
-        //     const uncategorisedTransactions = [];
-        //     const categorisedTransactions = [];
-
-        //     for (let tx of transactions) {
-        //         let matched = false;
-
-        //         for (let row of rules) {
-        //             if (tx.description.includes(row.company_name)) {
-        //                 categorisedAndUncategorisedTransactions.push({
-        //                     ...tx,
-        //                     category: row.category
-        //                 });
-        //                 categorisedTransactions.push({
-        //                     ...tx,
-        //                     category: row.category
-        //                 });
-        //                 matched = true;
-        //                 break; // stop checking once matched
-        //             }
-        //         };
-
-        //         if (!matched) {
-        //             categorisedAndUncategorisedTransactions.push({ ...tx, category: "Uncategorised" });
-        //             uncategorisedTransactions.push(tx);
-        //         };
-        //     };
-
-        //     console.log("rule-based categorisations:", categorisedAndUncategorisedTransactions);
-        //     console.log("remainder:", uncategorisedTransactions);
-        //     console.log("rule-based categorisations:", categorisedTransactions);
-
-        //     return [ categorisedTransactions, categorisedAndUncategorisedTransactions, uncategorisedTransactions ];
-        // };
-
         const handleTransactions = async () => {
             if (state.transactions.length === 0) {
                 if (state.stage === "mapColumns") {
@@ -270,19 +196,6 @@ const Upload = () => {
             let validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
 
             if (state.allowCategorisation) {
-                // setLoading(true);
-                // const [ ruleBasedCategorisedTransactions, uncategorisedTransactions ] = ruleBasedCategorisation(validatedTransactions, rules);
-                // const [ predictedCategories, confidenceScores ] = await categoriseTransactions(uncategorisedTransactions);
-                // setLoading(false);
-                // const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
-                // validatedTransactions = ruleBasedCategorisedTransactions;
-                // for (let tx of categorisedTransactions) validatedTransactions.push(tx);
-                // // assumes predicted category is already assigned to validate transactions
-                // const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores, MIN_CONF_SCORE);
-                
-                // dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
-                // dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
-
                 setLoading(true);
                 const res = await getPredictions(validatedTransactions);
                 setLoading(false);
@@ -292,15 +205,6 @@ const Upload = () => {
 
                 dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
                 dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
-
-                // const categorisedTransactions = uncategorisedTransactions.map((tx, i) => ({ ...tx, category: predictedCategories[i] }));
-                // validatedTransactions = ruleBasedCategorisedTransactions;
-                // for (let tx of categorisedTransactions) validatedTransactions.push(tx);
-                // // assumes predicted category is already assigned to validate transactions
-                // const lowConfTransactions = getLowConfTransactions(categorisedTransactions, confidenceScores, MIN_CONF_SCORE);
-                
-                // dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
-                // dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
             };
 
             // Date range
