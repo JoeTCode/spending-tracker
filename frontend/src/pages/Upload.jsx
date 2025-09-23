@@ -196,15 +196,21 @@ const Upload = () => {
             let validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
 
             if (state.allowCategorisation) {
-                setLoading(true);
-                const res = await getPredictions(validatedTransactions);
-                setLoading(false);
-                const confidenceScores = res.data.map(tx => tx.confidence);
-                validatedTransactions = validatedTransactions.map((tx, i) => ({ ...tx, category: res.data[i].predicted_category }))
-                const lowConfTransactions = getLowConfTransactions(validatedTransactions, confidenceScores, MIN_CONF_SCORE);
+                const descriptions = validatedTransactions.map(tx => tx.description);
 
-                dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
-                dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+                setLoading(true);
+                
+                setTimeout(async () => {
+                    const res = await getPredictions(descriptions);
+                    const confidenceScores = res.data.map(tx => tx.confidence);
+                    validatedTransactions = validatedTransactions.map((tx, i) => ({ ...tx, category: res.data[i].predicted_category }));
+                    const lowConfTransactions = getLowConfTransactions(validatedTransactions, confidenceScores, MIN_CONF_SCORE);
+                    
+                    dispatch({ type: "SET_LOADING", type: false });
+                    dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
+                    dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+                    setLoading(false);
+                }, 0);
             };
 
             // Date range
@@ -241,15 +247,13 @@ const Upload = () => {
     }, [state.transactions]);
 
     const renderContent = (getRootProps, getRemoveFileProps) => {
+
         if (state.stage === 'mapColumns') {
             if (loading) {
-                return (
-                    <div>Loading...</div>
-                )
-            }
-            else return <MapColumns/>
-
+                return <div>Loading...</div>
+            } else return <MapColumns/>
         };
+
         if (state.stage === 'reviewDuplicates') {
             return (
                 <>

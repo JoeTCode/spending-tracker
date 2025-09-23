@@ -159,9 +159,12 @@ export default function CategoryPieChart({ range }) {
 					</PieChart>
 				</ResponsiveContainer>
 			) : (
-				<div className='text-center mt-[28%]'>
-					No transactions found
-				</div>	
+				<div className='flex h-full w-full justify-center items-center'>
+					<div>
+						No transactions found
+					</div>
+				</div>
+	
 			)}
 			
 		</div>

@@ -1,9 +1,33 @@
 import axios from 'axios';
+import { pipeline } from '@huggingface/transformers';
+
+const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+
+const createEmbeddingsArray = (embeddings) => {
+    // Convert flat Float32Array into nested JS array
+    const embeddingsArray = [];
+    for (let i = 0; i < embeddings.ort_tensor.dims[0]; i++) {
+        const start = i * embeddings.ort_tensor.dims[1];
+        const end = start + embeddings.ort_tensor.dims[1];
+        embeddingsArray.push(Array.from(embeddings.ort_tensor.cpuData.slice(start, end)));
+    };
+
+    return embeddingsArray;
+};
 
 export const getPredictions = async (descriptions) => {
+
+    const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
+    const embeddingsArray = createEmbeddingsArray(embeddings);
+    console.log(descriptions);
+    console.log(embeddingsArray);
+
     try {
         const res = await axios.post("http://127.0.0.1:8000/predict", {
-            transactions: descriptions
+            predict_data: {
+                embeddings: embeddingsArray,
+                descriptions: descriptions
+            }
         });
 
         return res;
@@ -15,14 +39,20 @@ export const getPredictions = async (descriptions) => {
 };
 
 export const trainModel = async (descriptions, categories) => {
+    const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
+    const embeddingsArray = createEmbeddingsArray(embeddings);
+
     const arr = [];
-    for (let i = 0; i < descriptions.length; i++) {
-        arr.push({ description: descriptions[i], category: categories[i] });
+    for (let i = 0; i < embeddingsArray.length; i++) {
+        arr.push({ embedding: embeddingsArray[i], category: categories[i] });
     };
 
     try {
         const res = await axios.post("http://127.0.0.1:8000/train", {
-            train_transactions: arr
+            train_data: {
+                embeddings: embeddingsArray,
+                categories: categories
+            }
         });
 
         return res;

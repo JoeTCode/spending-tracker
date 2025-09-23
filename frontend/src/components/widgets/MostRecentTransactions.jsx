@@ -47,8 +47,7 @@ const MostRecentTransactions = () => {
 
     return (
         <div className='
-                h-[610px] shadow-lg sm:h-[746px] rounded-lg bg-[#1a1818] 
-                transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl
+                h-[610px] shadow-lg sm:h-[746px] rounded-lg bg-[#1a1818] cursor-pointer
             '
             onClick={() => navigate('/transactions')}
         >
@@ -85,7 +84,11 @@ const MostRecentTransactions = () => {
                         })}
                     </div>
                 </div>
-            ) : (<div> No transactions found </div>)}
+            ) : (
+                <div className='flex h-full justify-center items-center'>
+                    <div> No transactions found </div>
+                </div>                
+            )}
         </div>
         
     );

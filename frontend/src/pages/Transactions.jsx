@@ -118,11 +118,11 @@ const Redo = ({ redos, redo }) => (
   </button>
 );
 
-const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, rowData, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
     const prevMonth = new Date(selectedTimeframe);
     prevMonth.setMonth(prevMonth.getMonth() - 1)
 
-    if (prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
+    if (rowData.length === 0 || prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
         return (
             <button
                 className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
@@ -158,11 +158,11 @@ const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowDa
     )
 };
 
-const Next = ({ setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Next = ({ setUndos, setRedos, selectedTimeframe, getTransactions, rowData, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
     const nextMonth = new Date(selectedTimeframe);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-    if (nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
+    if (rowData.length === 0 || nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
         return (
             <button
                 className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
@@ -225,9 +225,7 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
 const Transactions = () => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
-    // const [ headers, setHeaders ] = useState(headers);
-
-    const [ rowData, setRowData ] = useState(null);
+    const [ rowData, setRowData ] = useState([]);
     const [ undos, setUndos ] = useState([]);
     const [ redos, setRedos ] = useState([]);
     const gridRef = useRef(null);
@@ -296,6 +294,8 @@ const Transactions = () => {
     useEffect(() => {
         const retrieveData = async () => {
             const data = await getTransactions({ rangeType: 'a', sorted: 'desc' });
+            if (data.length === 0) return;
+
             setTransactions(data);
 
             let latest = new Date(data[0].date);
@@ -404,31 +404,59 @@ const Transactions = () => {
             <NavBar /> 
             <div className='flex justify-center w-full mt-40 mb-10'>
                 <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10'>
-                    {isFilteredByAll ?
-                        <div className='flex ml-2 items-center mb-5'>
-                            <DateRange className='h-5 w-5' />
-                            <h2 className='text-gray-300 ml-2'>
-                                All Transactions
-                            </h2>
-                        </div> : 
-                        <div className='flex ml-2 items-center mb-5'>
-                            <DateRange className='h-5 w-5' />
-                            <h2 className='text-gray-300 ml-2'>
-                                {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
-                            </h2>
+                    <div className='flex justify-between'>
+                        {isFilteredByAll ?
+                            <div className='flex ml-2 items-center mb-5'>
+                                <DateRange className='h-5 w-5' />
+                                <h2 className='text-gray-300 ml-2'>
+                                    All Transactions
+                                </h2>
+                            </div> : 
+                            <div className='flex ml-2 items-center mb-5'>
+                                <DateRange className='h-5 w-5' />
+                                <h2 className='text-gray-300 ml-2'>
+                                    {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
+                                </h2>
+                            </div>
+                        }
+                        <div className='flex'>
+                            {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
+                            row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
+                            <button 
+                                onClick={
+                                    rowData.length === 0 ? undefined : 
+                                        () => {
+                                            const descriptions = [];
+                                            const targets = [];
+                                            for (let tx of rowData) {
+                                                if (CATEGORIES_SET.has(tx['category'])) {
+                                                    descriptions.push(tx['description']);
+                                                    targets.push(tx['category']);
+                                                };
+                                            };
+                                            trainModel(descriptions, targets);
+                                        }}
+                                className={rowData.length === 0 ? 
+                                    'bg-gray-600 rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
+                                    'bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+                                }
+                                disabled={rowData.length === 0}
+                            > 
+                                Train
+                            </button>
                         </div>
-                        
-                    }
+                    </div>
+                    
                     <div className='flex justify-between mb-3'>
                         <div className='flex'>
                             <Prev 
                                 setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
-                                setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                rowData={rowData} setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
                                 transactionsDateRange={transactionsDateRange} 
                             />
                             <Next 
                                 setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
-                                setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                rowData={rowData} setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
                                 transactionsDateRange={transactionsDateRange}
                             />
                             <All 
@@ -448,29 +476,7 @@ const Transactions = () => {
                         </div>) : null
                     }
                 </div>
-            </div>
-            
-            <div className='flex'>
-                {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
-                row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
-                <button 
-                    onClick={() => {
-                        const descriptions = [];
-                        const targets = [];
-                        for (let tx of rowData) {
-                            if (CATEGORIES_SET.has(tx['category'])) {
-                                descriptions.push(tx['description']);
-                                targets.push(tx['category']);
-                            };
-                        };
-                        trainModel(descriptions, targets);
-                    }}
-                    className='bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
-                > 
-                    Train
-                </button>
-            </div>
-            
+            </div>            
         </>
     )
 }

@@ -315,10 +315,9 @@ const MapColumns = () => {
                                         className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-black rounded-lg'
                                         onClick={() => {
                                             // accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName
-                                            console.log(mapping.amount);
+
                                             const data = getCSVDataFromMappings(mapping.account, mapping.amount, mapping.amountDescriptor, mapping.amountMappings, mapping.description, mapping.date, mapping.category);
-                                            console.log(mapping.dateFormat);
-                                            console.log(data);
+
                                             dispatch({ type: "SET_DATE_FORMAT", payload: mapping.dateFormat });
                                             dispatch({ type: "SET_TRANSACTIONS", payload: data });
                                         }}
@@ -634,7 +633,7 @@ const MapColumns = () => {
                             
                             const data = getCSVDataFromMappings(accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName);
                             
-                            console.log(data);
+                            if (state.allowCategorisation) dispatch({ type: "SET_LOADING", payload: true });
                             dispatch({ type: "SET_DATE_FORMAT", payload: dateFormat });
                             dispatch({ type: "SET_TRANSACTIONS", payload: data });
                         })

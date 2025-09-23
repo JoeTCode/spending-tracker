@@ -15,6 +15,7 @@ const initialState = {
 	confidenceScores: [],
 	stage: "upload",
 	// booleans
+	loading: false,
 	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
 };
 
@@ -39,6 +40,7 @@ const uploadReducer = (state, action) => {
 	case "SET_CONFIDENCE_SCORES": return { ...state, confidenceScores: action.payload };
 	case "SET_STAGE": return { ...state, stage: action.payload };
 	// booleans
+	case "SET_LOADING": return { ...state, loading: action.payload };
 	case "SET_ALLOW_CATEGORISATION": {
 		localStorage.setItem('allowCategorisation', action.payload);
 		return { ...state, allowCategorisation: action.payload }
