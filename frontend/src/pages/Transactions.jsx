@@ -14,9 +14,11 @@ import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
 import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
 import Edit from '../assets/icons/edit-1-svgrepo-com.svg?react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Close from '../assets/icons/close-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
-const CORRECTIONSTRIGGER = 10;
 const UNDO_REDO_DELAY = 500;
 
 // customise column format and functions for the EditableGrid cols argument
@@ -40,7 +42,6 @@ const createHeaders = (setUndos) => ([
         cellEditor: "agSelectCellEditor",
         cellEditorParams: { values: CATEGORIES },
         singleClickEdit: true,
-        // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
         headerClass: "font-bold",
         width: 170,
         cellRenderer: params => {
@@ -50,11 +51,6 @@ const createHeaders = (setUndos) => ([
     {
         field: "amount",
         editable: true,
-        // valueParser: params => {
-        //     const value = parseFloat(params.newValue);
-        //     if (isNaN(value)) return params.oldValue; // reject invalid input
-        //     return value;
-        // },
         width: 130,
         headerClass: "font-bold",
         cellRenderer: params => {
@@ -363,12 +359,10 @@ const Transactions = () => {
 
         if (descriptions.length === 0 || targets.length === 0) {
             // timeout to show loading spinner, then exit
-            setTimeout(() => {
-                setIsTraining(false);
-                console.warn(`Tranasctions not found`)
-                return;
-            }, 500);
-        } 
+            setIsTraining(false);
+            console.warn(`Tranasctions not found`)
+            return false;
+        }
         
         else {
             try {
@@ -387,8 +381,11 @@ const Transactions = () => {
                     changes: { trained: true }
                 }));
                 db.barclaysTransactions.bulkUpdate(updateObjects);
+                return true;
+
             } catch (err) {
-                setIsTraining(false);
+                return false;
+
             } finally {
                 setIsTraining(false);
             }
@@ -425,7 +422,9 @@ const Transactions = () => {
                                 <button
                                     onClick={async () =>{
                                         setIsTraining(true);
-                                        await handleTrain();
+                                        const res = await handleTrain();
+                                        if (res) toast.success("Training successfully completed!");
+                                        else toast.error("Something went wrong!");
                                     }}
                                     disabled={!canTrain || isTraining}
                                     className={
@@ -504,7 +503,26 @@ const Transactions = () => {
                         }
                     </div>
                 </div>
-            </div>            
+            </div>
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                toastClassName={() =>
+                    "p-4 bg-white dark:bg-gray-900 text-black dark:text-white rounded-lg shadow-lg flex"
+                }
+                bodyClassName="text-sm font-medium"
+                progressClassName="bg-purple-500 dark:bg-purple-300"
+                closeButton={({ closeToast }) => (
+                    <Close 
+                        onClick={closeToast}
+                        className='
+                            relative bottom-[9px] left-[10px] h-4 w-4 text-gray-500 dark:text-gray-300 hover:text-gray-700
+                            dark:hover:text-gray-500 cursor-pointer duration-300 ease-out
+                        '
+                    />
+
+                )}
+            />          
         </>
     )
 }

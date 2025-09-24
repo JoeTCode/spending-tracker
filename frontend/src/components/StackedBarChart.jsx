@@ -60,7 +60,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <div 
             className={`custom-tooltip 
               z-[9999] pointer-events-auto 
-              p-5 pt-3 pr-10
+              p-5 pt-3 pr-7
               bg-white border rounded-lg shadow-lg text-sm
               ${isVisible ? 'visible' : 'invisible'}`
             }
@@ -69,7 +69,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             {isVisible && (
                 <>
                     {/* Month title */}
-                    <p className="label font-bold mb-5 text-gray-700">{`${label}`}</p>
+                    <p className="label font-bold mb-3 text-gray-700">{`${label}`}</p>
 
                     {/* expenses */}
                     <div 
@@ -92,9 +92,6 @@ const CustomTooltip = ({ active, payload, label }) => {
                             {`${payload[1].name}: ${payload[1].value.toFixed(2)}`}
                         </p> 
                     </div>
-
-                    {/* {showExpenseCategories && <p>{expenseCategories.join(', ')}</p>}
-                    {pinExpenseCategories && <p>{expenseCategories.join(', ')}</p>} */}
 
                     {/* Scrollable section */}
                     {(showExpenseCategories || pinExpenseCategories) && (
@@ -127,9 +124,6 @@ const CustomTooltip = ({ active, payload, label }) => {
                         </p> 
                     </div>
 
-                    {/* {showIncomeCategories && <p>{incomeCategories.join(', ')}</p>}
-                    {pinIncomeCategories && <p>{incomeCategories.join(', ')}</p>} */}
-
                     {/* Scrollable section */}
                     {(showIncomeCategories || pinIncomeCategories) && (
                         <div className="max-h-24 overflow-y-auto border-t border-gray-500 mt-2 pt-2 ">
@@ -144,21 +138,18 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-const StackedBarChart = () => {
+const StackedBarChart = ({ selectedYear }) => {
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
     const thisMonth = new Date();
-    const [ selectedMonth, setSelectedMonth ] = useState(thisMonth.getMonth());
-    // const [ totalExpenses, setTotalExpenses ] = useState(0);
-    // const [ totalIncome, setTotalIncome ] = useState(0);
     const [ dc, setDc ] = useState(false);
 
     // Retrieve and format data
     useEffect(() => {
         const retrieveData = async () => {
             const token = await getAccessTokenSilently({ audience: "http://localhost:5000", scope: "read:current_user" });
-            const data = await getTransactions({ rangeType: 'y' });
-            // console.log(data);
+            const data = await getTransactions({ rangeType: 'y', selectedYear: selectedYear });
+
             const makeCategoryDict = () => {
                 const dict = {};
                 for (let category of CATEGORIES) {
@@ -196,29 +187,23 @@ const StackedBarChart = () => {
                 };
             };
             
-            // let tempIncome = 0;
-            // let tempExpenses = 0;
             for (let row of data) {
                 const date = new Date(row.date)
                 const monthObj = dataByMonth[date.getMonth()];
                
                 if (row.amount >= 0) {
                     monthObj.income += row.amount;
-                    // tempIncome += row.amount;
                 } else {
-                    monthObj.expense += Math.abs(row.amount)
-                    // tempExpenses += Math.abs(row.amount);
+                    monthObj.expense += Math.abs(row.amount);
                 };
             };
             
-            // setTotalIncome(tempIncome);
-            // setTotalExpenses(tempExpenses);
             setTransactions(dataByMonth);
         };
 
         retrieveData();
     
-    }, []);   
+    }, [selectedYear]);   
 
     return ( 
         <>

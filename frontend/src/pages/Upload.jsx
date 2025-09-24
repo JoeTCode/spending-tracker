@@ -9,6 +9,9 @@ import { useNavigate } from "react-router-dom";
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
 import { getPredictions } from '../api/model';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Close from '../assets/icons/close-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
@@ -139,26 +142,7 @@ const UploadCSV = ({ getRootProps }) => (
 const Upload = () => {
     const { state, dispatch } = useUpload();
     const { CSVReader } = useCSVReader();
-    const { getAccessTokenSilently } = useAuth0();
-    const navigate = useNavigate();
-    
-    const [ correctionsCount, setCorrectionsCount ] = useState(() => {
-            const saved = localStorage.getItem("count");
-            if (saved === null) {
-                localStorage.setItem("count", "0");
-                return 0;
-            }
-            return parseInt(saved);
-    });
 
-    const incrementCorrectionsCount = () => {
-        setCorrectionsCount(prevCount => {
-            const newCount = prevCount + 1;
-            localStorage.setItem("count", newCount.toString());
-            return newCount;
-        });
-    };
-    // const [ loading, setLoading ] = useState(false);
     const [ categorisedTransactions, setCategorisedTransactions ] = useState([]);
 
 
@@ -192,6 +176,7 @@ const Upload = () => {
             if (!state.allowCategorisation) {
                 dispatch({ type: "SET_LOADING", payload: false });
                 dispatch({ type: "SET_STAGE", payload: "upload" });
+                toast.success("Categorisation skipped!");
                 return;
             };
 
@@ -204,6 +189,7 @@ const Upload = () => {
                     dispatch({ type: "SET_STAGE", payload: "upload" });
                     dispatch({ type: "SET_LOADING", payload: false });
                     setCategorisedTransactions([]);
+                    toast.error("Categorisation failed");
                     return;
                 };
 
@@ -223,10 +209,12 @@ const Upload = () => {
                 dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
                 dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
                 dispatch({ type: "SET_LOADING", payload: false });
+                toast.success("Categorisation successfully completed!");
             } catch (err) {
                 console.error(err);
                 dispatch({ type: "SET_LOADING", payload: false });
                 setCategorisedTransactions([]);
+                toast.error("Categorisation failed");
             };
         };
 
@@ -346,6 +334,25 @@ const Upload = () => {
                     </CSVReader>
                 </div>
             </div>
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                toastClassName={() =>
+                    "p-4 bg-white dark:bg-gray-900 text-black dark:text-white rounded-lg shadow-lg flex"
+                }
+                bodyClassName="text-sm font-medium"
+                progressClassName="bg-purple-500 dark:bg-purple-300"
+                closeButton={({ closeToast }) => (
+                    <Close 
+                        onClick={closeToast}
+                        className='
+                            relative bottom-[9px] left-[10px] h-4 w-4 text-gray-500 dark:text-gray-300 hover:text-gray-700
+                            dark:hover:text-gray-500 cursor-pointer duration-300 ease-out
+                        '
+                    />
+
+                )}
+            />
         </>
     )
 }

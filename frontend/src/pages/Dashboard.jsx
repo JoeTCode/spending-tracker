@@ -1,19 +1,46 @@
 import { NavBar, StackedBarChart, PieChart, LineChart } from '../components';
 import { SpendingComparison, TransactionsOverview, UpcomingPayments, MostRecentTransactions } from '../components/widgets';
-import { useAuth0 } from '@auth0/auth0-react';
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ChevronRight from '../assets/icons/chevron-right-svgrepo-com.svg?react';
 
+const YearDropdown = ({ startYearOffset = 10, onChange }) => {
+    const currentYear = new Date().getFullYear();
+    const years = Array.from(
+        { length: startYearOffset + 1 },
+        (_, i) => currentYear - i
+    );
+
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+
+    const handleChange = (e) => {
+        const year = parseInt(e.target.value, 10);
+        setSelectedYear(year);
+        if (onChange) onChange(year);
+    };
+
+    return (
+        <select 
+            value={selectedYear}
+            onChange={handleChange}
+            className="p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
+            {years.map((year) => (
+                <option key={year} value={year}>
+                {year}
+                </option>
+            ))}
+        </select>
+    );
+};
 
 const Dashboard = () => {
-    const navigate = useNavigate();
     const options = ["Past Week", "Past Month", "Past 3 Months", "Past Year", "All Time"];
     const [ selected, setSelected ] = useState(options[options.length - 1]);
     const [ paymentCount, setPaymentCount ] = useState(0);
     const [ showAllPayments, setShowAllPayments ] = useState(false);
-    const handleChange = (e) => {
-        setSelected(e.target.value)
-    };
+    const [ lineChartSelectedYear, setLineChartSelectedYear ] = useState(new Date().getFullYear());
+    const [ barChartSelectedYear, setBarChartSelectedYear ] = useState(new Date().getFullYear());
 
     return (
 
@@ -41,9 +68,10 @@ const Dashboard = () => {
                                     </span>
                                 )}
                             </p>
-                            <p className="text-sm text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => setShowAllPayments(true)} >
-                                View All <span className='ml-1.5'>&gt;</span>
-                            </p>
+                            <div className="flex gap-x-1 text-sm text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => setShowAllPayments(true)} >
+                                <p>View All</p>
+                                <ChevronRight className='w-3 h-3 relative top-[5px]'/>
+                            </div>
                         </div>
 
                         <div>
@@ -57,9 +85,10 @@ const Dashboard = () => {
                             <p className="text-sm text-gray-400 cursor-pointer" >
                                 <Link 
                                     to="/transactions" 
-                                    className="no-underline text-gray-400 hover:text-gray-600"
+                                    className="flex gap-x-1 no-underline text-gray-400 hover:text-gray-600"
                                 >
-                                    View All <span className='ml-1.5'>&gt;</span>
+                                    <p>View All</p>
+                                    <ChevronRight className='w-3 h-3 relative top-[5px]'/>
                                 </Link>
                             </p>
                         </div>
@@ -71,10 +100,11 @@ const Dashboard = () => {
                     <div className="h-[500px] sm:h-[420px] lg:col-span-2 lg:h-[530px] flex flex-col">
                         <div className="flex justify-between items-baseline">
                             <p className='font-medium text-xl mb-5'>Income / Spending Breakdown</p>
-                            <p className="text-sm text-gray-400">This calendar year</p>
+                            {/* <p className="text-sm text-gray-400">This calendar year</p> */}
+                            <YearDropdown onChange={setBarChartSelectedYear}/>
                         </div>
                         <div className='flex-1 min-h-0'>
-                            <StackedBarChart />
+                            <StackedBarChart selectedYear={barChartSelectedYear} />
                         </div>
                         
                     </div>
@@ -83,18 +113,17 @@ const Dashboard = () => {
                         <div className='mt-[3px]'>
                             <div className="flex justify-between items-baseline">
                                 <p className='font-medium text-xl mb-5'>Income / Spending Trends</p>
-                                <p className="text-sm text-gray-400">This calendar year</p>
+                                <YearDropdown onChange={setLineChartSelectedYear}/>
                             </div>
-                            
-                            <LineChart />
+                            <LineChart selectedYear={lineChartSelectedYear} />
                         </div>
                         <div>
                             <div className="flex justify-between items-baseline">
                                 <p className='font-medium text-xl mb-5'>Spending per category</p>
                                 <select
                                     value={selected}
-                                    onChange={handleChange}
-                                    className="w-34 p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    onChange={(e) => setSelected(e.target.value)}
+                                    className="p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                                 >
                                     {options.map((opt, idx) => (
                                         <option key={idx} value={opt} className='text-sm'>

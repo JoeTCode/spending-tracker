@@ -2,7 +2,6 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Sector, Legend, Tooltip } fro
 import React, { useState, useEffect } from 'react';
 import { getTransactions } from '../db/db.js';
 import { CATEGORIES } from '../utils/constants/constants';
-import { useNavigate } from 'react-router-dom';
 
 const toRemove = new Set(['Income', 'Transfer', 'Finance & Fees'])
 const FILTERED_CATEGORIES = CATEGORIES.filter(category => !toRemove.has(category));
@@ -21,19 +20,18 @@ const CATEGORY_COLORS = {
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white border rounded-lg shadow-lg p-3 text-sm">
-        <p className="font-semibold text-gray-700">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={`item-${index}`} className="text-gray-500">
-            {entry.name}: <span className="font-medium">{entry.value.toFixed(2)}</span>
-          </p>
-        ))}
-      </div>
-    );
-  }
-
+	if (active && payload && payload.length) {
+		return (
+			<div className="bg-white border rounded-lg shadow-lg p-3 text-sm">
+				<p className="font-semibold text-gray-700">{label}</p>
+				{payload.map((entry, index) => (
+					<p key={`item-${index}`} className="text-gray-500">
+						{entry.name}: <span className="font-medium">{entry.value.toFixed(2)}</span>
+					</p>
+				))}
+			</div>
+		);
+	}
   return null;
 };
 
@@ -85,11 +83,6 @@ async function saveData ({ type, selectedMonth, retrievalRange, start, end }, se
 export default function CategoryPieChart({ range }) {
     const [ spendingPerCategory, setSpendingPerCategory ] = useState([]);
 	const [ categoryToPercentage, setCategoryToPercentage ] = useState({});
-	const navigate = useNavigate();
-
-    // useEffect(() => {
-    //     saveData({ type: "a" }, setSpendingPerCategory, setCategoryToPercentage);
-    // }, []);
 
 	useEffect(() => {
 		const today = new Date();

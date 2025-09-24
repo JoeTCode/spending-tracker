@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTransactions } from '../../db/db.js';
+import ChevronRight from '../../assets/icons/chevron-right-svgrepo-com.svg?react';
+import ChevronLeft from '../../assets/icons/chevron-left-svgrepo-com.svg?react';
 
 // #242424 dark theme
 
@@ -107,7 +109,7 @@ const TransactionsOverviewCard = () => {
                     <select
                         value={selected}
                         onChange={handleChange}
-                        className="w-34 p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        className="p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                     >
                         {options.map((opt, idx) => (
                             <option key={idx} value={opt} className='text-sm'>
@@ -121,7 +123,10 @@ const TransactionsOverviewCard = () => {
                     {summaryItems[currentIndex].value}
                 </span>
                 <div className='flex justify-between'>
-                    <span className='text-sm cursor-pointer' onClick={prev}>&lt; Previous</span>
+                    <span className='flex gap-x-1 text-sm cursor-pointer' onClick={prev}>
+                        <ChevronLeft className='relative top-[6px] h-3 w-3' />
+                        <p>Previous</p>
+                    </span>
                     
                     {/* Pagination Dots */}
                     <div className="flex mt-2 space-x-2">
@@ -129,14 +134,20 @@ const TransactionsOverviewCard = () => {
                             <button
                                 key={idx}
                                 onClick={() => setCurrentIndex(idx)}
-                                className={`w-3 h-3 cursor-pointer rounded-full transition-colors focus:outline-none ${
-                                idx === currentIndex ? "bg-gray-200" : "bg-gray-600"
-                                }`}
+                                className={
+                                    `w-3 h-3 cursor-pointer rounded-full transition-colors focus:outline-none 
+                                    ${idx === currentIndex ? "bg-gray-200" : "bg-gray-600"}`
+                                }
                             />
                         ))}
                     </div>
 
-                    <span className='text-sm cursor-pointer' onClick={next}>Next &gt;</span>
+                    <span className='flex gap-x-1 text-sm cursor-pointer' onClick={next}>
+                        <p>
+                            Next
+                        </p>
+                        <ChevronRight className='relative top-[6px] h-3 w-3'/>
+                    </span>
                 </div>
                 
             </div>

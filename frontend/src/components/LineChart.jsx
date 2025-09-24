@@ -20,12 +20,12 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function IncomeLineChart() {
+export default function IncomeLineChart({ selectedYear }) {
     const [ dataPerMonth, setDataPerMonth ] = useState([]);
     
     useEffect(() => {
         const saveData = async () => {
-            const data = await getTransactions({ rangeType: 'y' });
+            const data = await getTransactions({ rangeType: 'y', selectedYear: selectedYear });
             
             const incomeMonthBuckets = [];
             const expenseMonthBuckets = [];
@@ -68,7 +68,7 @@ export default function IncomeLineChart() {
 
         saveData();
         
-    }, []);
+    }, [selectedYear]);
 
     return (
         <div className="

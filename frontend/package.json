@@ -25,6 +25,7 @@
     "react-dom": "^19.1.0",
     "react-papaparse": "^4.4.0",
     "react-router-dom": "^7.6.3",
+    "react-toastify": "^11.0.5",
     "recharts": "^3.0.2",
     "tailwindcss": "^4.1.12",
     "uuid": "^11.1.0"

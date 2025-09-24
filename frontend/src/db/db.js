@@ -225,7 +225,8 @@ export async function getTransactions(
             break;
 
         case 'y':
-            const yearStart = new Date();
+            let yearStart = new Date();
+            if (selectedYear) yearStart.setFullYear(selectedYear);
             yearStart.setHours(0, 0, 0, 0);
             yearStart.setDate(1);
             yearStart.setMonth(0);
