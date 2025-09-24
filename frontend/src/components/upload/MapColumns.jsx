@@ -7,16 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Trash from '../../assets/icons/trash-svgrepo-com.svg?react';
 
 const MapColumns = () => {
-    // const {
-    //     parsedCSV, setParsedCSV,
-    //     setFileParsed,
-    //     setMapColumns,
-    //     setColumnNames,
-    //     allowCategorisation,
-    // } = useUpload();
-
     const { state, dispatch } = useUpload();
-    
     const [ dateColName, setDateColName ] = useState('');
     const [ descriptionColName, setDescriptionColName ] = useState('');
     const [ accountColName, setAccountColName ] = useState('');
@@ -30,10 +21,12 @@ const MapColumns = () => {
     const [ amountDescriptorMappings, setAmountDescriptorMappings ] = useState({"income": null, "expense": null});
     const [ descriptorColName, setDescriptorColName ] = useState("");
     const [ dateFormat, setDateFormat ] = useState("");
-    const [ showMoreMappings, setShowMoreMappings ] = useState(false);
-    const [ showLessMappings, setShowLessMappings ] = useState(true);
-    const [ showMoreSavedMappings, setShowMoreSavedMappings ] = useState(true);
-    const [ showLessSavedMappings, setShowLessSavedMappings ] = useState(false);
+    const [ showMoreSavedMappings, setShowMoreSavedMappings ] = useState(() => {
+        return localStorage.getItem("showMoreSavedMappings") === "true" && true
+    });
+    const [ showMoreMappings, setShowMoreMappings ] = useState(() => {
+        return localStorage.getItem("showMoreMappings") === "true" && true
+    });
     const [ savedMappings, setSavedMappings ] = useState([]);
     const [ mappingTitle, setMappingTitle ] = useState("");
 
@@ -127,6 +120,8 @@ const MapColumns = () => {
                 if (categoryColName) {
                     obj.category = category;
                 };
+                obj.is_trainable = true;
+                obj.trained = false;
                 data.push(obj);
             } else continue;
         };
@@ -279,44 +274,45 @@ const MapColumns = () => {
                 <div className='w-full rounded-lg'>
 
                     {/* Saved mappings expandable div */}
-                    {showMoreSavedMappings && (
-                        <div 
-                            className='flex w-full h-full justify-between items-center cursor-pointer mb-4'
-                            onClick={() => {
-                                setShowMoreSavedMappings(false);
-                                setShowLessSavedMappings(true);
-                            }}
-                        >
-                            <p>Saved mappings</p>
+
+                    <div 
+                        className='flex w-full h-full justify-between items-center cursor-pointer mb-4'
+                        onClick={() => {
+                            setShowMoreSavedMappings(prev => {
+                                localStorage.setItem("showMoreSavedMappings", !prev);
+                                return !prev;
+                            });
+                        }}
+                    >
+                        <p>Saved mappings</p>
+                        {showMoreSavedMappings ? ( 
                             <ShowMore className='w-5 h-5 text-white' />
-                        </div>
-                    )}
-                    
-                    {showLessSavedMappings && (
-                        <div 
-                            className='flex w-full h-full justify-between items-center cursor-pointer mb-4'
-                            onClick={() => {
-                                setShowMoreSavedMappings(true);
-                                setShowLessSavedMappings(false);
-                            }}
-                        >
-                            <p>Saved mappings</p>
+                        ) : (
                             <ShowLess className='w-5 h-5 text-white' />
-                        </div>
-                    )}
+                        )}
+                    </div>
 
-
-                    <div className={showLessSavedMappings ? 'mb-6': 'hidden'}>
+                    <div className={showMoreSavedMappings ? 'mb-6': 'hidden'}>
                         <div>
                             {savedMappings.map(mapping => {
                                 return (
                                     <div 
                                         key={mapping._id}
                                         className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-black rounded-lg'
-                                        onClick={() => {
-                                            // accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName
+                                        onClick={async () => {
+                                            dispatch({ type: "SET_LOADING", payload: true });
+                                            
+                                            await new Promise(resolve => setTimeout(resolve, 0));
 
-                                            const data = getCSVDataFromMappings(mapping.account, mapping.amount, mapping.amountDescriptor, mapping.amountMappings, mapping.description, mapping.date, mapping.category);
+                                            const data = getCSVDataFromMappings(
+                                                mapping.account,
+                                                mapping.amount, 
+                                                mapping.amountDescriptor, 
+                                                mapping.amountMappings,
+                                                mapping.description, 
+                                                mapping.date, 
+                                                mapping.category
+                                            );
 
                                             dispatch({ type: "SET_DATE_FORMAT", payload: mapping.dateFormat });
                                             dispatch({ type: "SET_TRANSACTIONS", payload: data });
@@ -330,36 +326,26 @@ const MapColumns = () => {
                         </div>
                     </div>
 
-
                     {/* Mappings expandable div */}
-                    {showMoreMappings && (
-                        <div 
-                            className='flex w-full h-full justify-between items-center cursor-pointer'
-                            onClick={() => {
-                                setShowMoreMappings(false);
-                                setShowLessMappings(true);
-                            }}
-                        >
-                            <p>Set mappings</p>
+                    <div 
+                        className='flex w-full h-full justify-between items-center cursor-pointer'
+                        onClick={() => {
+                            setShowMoreMappings(prev => {
+                                localStorage.setItem("showMoreMappings", !prev);
+                                return !prev;
+                            });
+                        }}
+                    >
+                        <p>Set mappings</p>
+                        {showMoreMappings ? (
                             <ShowMore className='w-5 h-5 text-white' />
-                        </div>
-                    )}
-                    
-                    {showLessMappings && (
-                        <div 
-                            className='flex w-full h-full justify-between items-center cursor-pointer'
-                            onClick={() => {
-                                setShowMoreMappings(true);
-                                setShowLessMappings(false);
-                            }}
-                        >
-                            <p>Set mappings</p>
+                        ): (
                             <ShowLess className='w-5 h-5 text-white' />
-                        </div>
-                    )}
+                        )}                        
+                    </div>
                     
                     <div
-                        className={showLessMappings ? '': 'hidden'}
+                        className={showMoreMappings ? '': 'hidden'}
                     >
                         {errorObject.field && (
                             <div className='bg-red-400 py-10 px-5 text-center'>
@@ -619,21 +605,21 @@ const MapColumns = () => {
                 <button 
                     onClick={
                         saveButtonDisabled ? undefined : 
-                        (() => {
-                            console.log(
-                                `date column: ${dateColName}
-                                - amount col: ${JSON.stringify(amountColNames)}
-                                - description col: ${descriptionColName}
-                                - descriptor col: ${descriptorColName}
-                                - amount descriptor mappings: 
-                                    income: ${Array.from(amountDescriptorMappings.income ?? [])},
-                                    expense: ${Array.from(amountDescriptorMappings.expense ?? [])},
-                                - category col: ${categoryColName}`
+                        (async () => {
+                            dispatch({ type: "SET_LOADING", payload: true });
+
+                            await new Promise(resolve => setTimeout(resolve, 0));
+
+                            const data = getCSVDataFromMappings(
+                                accountColName, 
+                                amountColNames,
+                                descriptorColName, 
+                                amountDescriptorMappings, 
+                                descriptionColName, 
+                                dateColName, 
+                                categoryColName
                             );
                             
-                            const data = getCSVDataFromMappings(accountColName, amountColNames, descriptorColName, amountDescriptorMappings, descriptionColName, dateColName, categoryColName);
-                            
-                            if (state.allowCategorisation) dispatch({ type: "SET_LOADING", payload: true });
                             dispatch({ type: "SET_DATE_FORMAT", payload: dateFormat });
                             dispatch({ type: "SET_TRANSACTIONS", payload: data });
                         })

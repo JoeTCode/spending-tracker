@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 
 const UploadProgress = ({ stage }) => {
-    console.log(stage);
     const uploadActive = stage.toLowerCase() === 'upload';
     const mapColumnsActive = stage.toLowerCase() === 'mapcolumns';
     const checkDuplicatesActive = stage.toLowerCase() === 'reviewduplicates';

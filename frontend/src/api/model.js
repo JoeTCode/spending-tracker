@@ -16,11 +16,8 @@ const createEmbeddingsArray = (embeddings) => {
 };
 
 export const getPredictions = async (descriptions) => {
-
     const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
     const embeddingsArray = createEmbeddingsArray(embeddings);
-    console.log(descriptions);
-    console.log(embeddingsArray);
 
     try {
         const res = await axios.post("http://127.0.0.1:8000/predict", {

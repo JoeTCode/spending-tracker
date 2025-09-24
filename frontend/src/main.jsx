@@ -6,6 +6,7 @@ import './index.css';
 import { Login, Upload, Dashboard, Transactions } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UploadProvider } from './components/upload/UploadContext';
+import { PageProvider } from "./pages/PageContext";
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
@@ -25,17 +26,22 @@ createRoot(document.getElementById('root')).render(
                     path='/'
                     element={
                         <ProtectedRoute>
-                            <UploadProvider>
-                                <Upload />
-                            </UploadProvider>
+                            <PageProvider>
+                                <UploadProvider>
+                                    <Upload />
+                                </UploadProvider>
+                            </PageProvider>
                         </ProtectedRoute>
                     } 
                 />
+                
                 <Route
                     path='/dashboard'
                     element={
                         <ProtectedRoute>
-                            <Dashboard />
+                            <PageProvider>
+                                <Dashboard />
+                            </PageProvider>
                         </ProtectedRoute>
                     } 
                 />
@@ -43,7 +49,9 @@ createRoot(document.getElementById('root')).render(
                     path='/transactions'
                     element={
                         <ProtectedRoute>
-                            <Transactions />
+                            <PageProvider>
+                                <Transactions />
+                            </PageProvider>
                         </ProtectedRoute>
                     }
                 />

@@ -23,3 +23,4 @@ export const CATEGORY_TO_EMOJI = {
     "Transfer": "🔄 Transfer",
     "Other / Misc": "📦 Other / Misc"
 };
+export const MIN_CORRECTIONS = 10

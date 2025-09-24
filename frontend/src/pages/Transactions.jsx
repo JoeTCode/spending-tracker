@@ -1,7 +1,7 @@
 import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
-import React, { useRef, useState, useEffect } from 'react';
-import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS } from '../utils/constants/constants';
+import { useRef, useState, useEffect } from 'react';
+import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS, MIN_CORRECTIONS } from '../utils/constants/constants';
 import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
 import { trainModel } from '../api/model';
 import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
@@ -10,6 +10,10 @@ import UndoRight from '../assets/icons/undo-right-round-svgrepo-com.svg?react';
 import ChevronLeft from '../assets/icons/chevron-left-svgrepo-com.svg?react';
 import ChevronRight from '../assets/icons/chevron-right-svgrepo-com.svg?react';
 import DateRange from '../assets/icons/date-range-svgrepo-com.svg?react';
+import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
+import { usePage } from './PageContext';
+import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
+import Edit from '../assets/icons/edit-1-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const CORRECTIONSTRIGGER = 10;
@@ -27,7 +31,8 @@ const createHeaders = (setUndos) => ([
     {
         field: "description",
         editable: true,
-        headerClass: "font-bold"
+        headerClass: "font-bold",
+        width: 315
     },
     {
         field: "category",
@@ -41,12 +46,6 @@ const createHeaders = (setUndos) => ([
         cellRenderer: params => {
             return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
         }
-    },
-    {
-        field: "type",
-        editable: true,
-        headerClass: "font-bold",
-        width: 120
     },
     {
         field: "amount",
@@ -118,11 +117,10 @@ const Redo = ({ redos, redo }) => (
   </button>
 );
 
-const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, rowData, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
     const prevMonth = new Date(selectedTimeframe);
     prevMonth.setMonth(prevMonth.getMonth() - 1)
-
-    if (rowData.length === 0 || prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
+    if (noTransactions || prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
         return (
             <button
                 className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
@@ -158,11 +156,11 @@ const Prev = ({ setUndos, setRedos, selectedTimeframe, getTransactions, rowData,
     )
 };
 
-const Next = ({ setUndos, setRedos, selectedTimeframe, getTransactions, rowData, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
     const nextMonth = new Date(selectedTimeframe);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-    if (rowData.length === 0 || nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
+    if (noTransactions || nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
         return (
             <button
                 className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
@@ -223,6 +221,7 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
 );
 // flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50
 const Transactions = () => {
+    const { state, dispatch } = usePage();
     const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
     const [ rowData, setRowData ] = useState([]);
@@ -234,66 +233,13 @@ const Transactions = () => {
     const [ isFilteredByAll, setIsFilteredByAll ] = useState(true);
     const [ transactionsDateRange, setTransactionsDateRange ] = useState({ min: null, max:null });
     const [ latestTransaction, setLatestTransaction ] = useState(null);
-    const [correctionsCount, setCorrectionsCount] = useState(() => {
-        const saved = localStorage.getItem("count");
-        if (saved === null) {
-            localStorage.setItem("count", "0");
-            return 0;
-        }
-        return parseInt(saved);
-    });
+    const [ isTraining, setIsTraining ] = useState(false);
+    const canTrain = state.corrections >= MIN_CORRECTIONS && transactions.length > 0;
 
-    // useEffect(() => {
-    //     const testLogger = () => {
-    //         console.log('undos', undos);
-    //         console.log('redos', redos);
-    //     };
-
-    //     testLogger();
-    // }, [undos, redos]);
-
-    // If user makes more than CORRECTIONSTRIGGER number of corrections to the grid, train model on any untrained 
-    // corrected/not-corrected transactions and perform federated averaging with the global model
-    // useEffect(() => {
-    //     const executeWeightAverage = async (descriptions, categories) => {
-    //             const clientModel = await getClientModel();
-    //             const globalModelWeights = await getModelWeights();
-    //             const trainedModel = await train(clientModel, descriptions, categories);
-    //             const weights = trainedModel.getWeights();
-    //             const deltas = getDeltas(weights, globalModelWeights);
-    //             // post to weight averaging route
-    //             const newWeights = await weightAverage(token, deltas);
-    //             const avgModel = createModel();
-    //             avgModel.setWeights(newWeights);
-
-    //             const d = [];
-    //             const t = [];
-    //             for (let tx of transactions) {
-    //                 if (CATEGORIES_SET.has(tx['category'])) {
-    //                     d.push(tx['description']);
-    //                     t.push(tx['category']);
-    //                 };
-    //             };
-
-    //             const predictions = await predict(avgModel, t);
-    //             console.log(accuracy(predictions, t));
-
-    //     };
-
-    //     if (correctionsCount >= CORRECTIONSTRIGGER) {
-    //         const descriptions = corrections.map(correction => correction.description);
-    //         const categories = corrections.map(correction => correction.category);
-            
-    //         executeWeightAverage(descriptions, categories);
-    //         // const model = saveClientModel(newModelWeights);
-    //         // setClientModel(model);
-    //     };
-
-    // }, [correctionsCount])
-    
     useEffect(() => {
         const retrieveData = async () => {
             const data = await getTransactions({ rangeType: 'a', sorted: 'desc' });
+
             if (data.length === 0) return;
 
             setTransactions(data);
@@ -312,8 +258,7 @@ const Transactions = () => {
             latest.setMonth(latest.getMonth() + 1)
             latest.setDate(latest.getDate() - 1)
             setTransactionsDateRange({min: earliest, max: latest});
-            console.log({min: earliest, max: latest})
-
+            
             setRowData(data); // new
         };
 
@@ -377,9 +322,10 @@ const Transactions = () => {
         setRedos([]);
         const column = params.column.colId;
 
-        if (column === 'Category') {
+        if (column === 'category') {
             if (CATEGORIES_SET.has(updatedRow[column])) {
                 updatedRow['trained'] = false;
+                dispatch({ type: "SET_CORRECTIONS", payload: state.corrections + 1 });
             };
         };
 
@@ -399,82 +345,164 @@ const Transactions = () => {
         };
     };
 
+    // trains on all transaction data, not rowData (which is selected page specific)
+    const handleTrain = async () => {
+        await new Promise(r => setTimeout(r, 0));
+
+        const descriptions = [];
+        const targets = [];
+        const idMap = new Set([]);
+
+        for (let tx of transactions) {
+            if (CATEGORIES_SET.has(tx.category) && !tx.trained && tx.is_trainable) {
+                descriptions.push(tx.description);
+                targets.push(tx.category);
+                idMap.add(tx._id);
+            };
+        };
+
+        if (descriptions.length === 0 || targets.length === 0) {
+            // timeout to show loading spinner, then exit
+            setTimeout(() => {
+                setIsTraining(false);
+                console.warn(`Tranasctions not found`)
+                return;
+            }, 500);
+        } 
+        
+        else {
+            try {
+                await trainModel(descriptions, targets);
+
+                setTransactions(prev =>
+                    prev.map(tx => 
+                        idMap.has(tx._id) ? { ...tx, trained: true } : tx
+                    )
+                );
+
+                dispatch({ type: "SET_CORRECTIONS", payload: 0 });
+
+                const updateObjects = [...idMap].map(id => ({
+                    key: id, 
+                    changes: { trained: true }
+                }));
+                db.barclaysTransactions.bulkUpdate(updateObjects);
+            } catch (err) {
+                setIsTraining(false);
+            } finally {
+                setIsTraining(false);
+            }
+        };                     
+    };
+
     return (
         <>
             <NavBar /> 
-            <div className='flex justify-center w-full mt-40 mb-10'>
-                <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10'>
-                    <div className='flex justify-between'>
-                        {isFilteredByAll ?
-                            <div className='flex ml-2 items-center mb-5'>
-                                <DateRange className='h-5 w-5' />
-                                <h2 className='text-gray-300 ml-2'>
-                                    All Transactions
-                                </h2>
-                            </div> : 
-                            <div className='flex ml-2 items-center mb-5'>
-                                <DateRange className='h-5 w-5' />
-                                <h2 className='text-gray-300 ml-2'>
-                                    {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
-                                </h2>
-                            </div>
-                        }
-                        <div className='flex'>
-                            {/* User can manually train corrected/added transactions, this will set a trained flag to true for each
-                            row in thwe grid that is trained, this will NOT execute model averaging with the global model. */}
-                            <button 
-                                onClick={
-                                    rowData.length === 0 ? undefined : 
-                                        () => {
-                                            const descriptions = [];
-                                            const targets = [];
-                                            for (let tx of rowData) {
-                                                if (CATEGORIES_SET.has(tx['category'])) {
-                                                    descriptions.push(tx['description']);
-                                                    targets.push(tx['category']);
-                                                };
-                                            };
-                                            trainModel(descriptions, targets);
-                                        }}
-                                className={rowData.length === 0 ? 
-                                    'bg-gray-600 rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
-                                    'bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
-                                }
-                                disabled={rowData.length === 0}
-                            > 
-                                Train
-                            </button>
-                        </div>
-                    </div>
+            <div className='flex w-full justify-center'>            
+                <div className='flex flex-col justify-center mt-40 mb-10 max-w-[1000px]'>
                     
-                    <div className='flex justify-between mb-3'>
-                        <div className='flex'>
-                            <Prev 
-                                setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
-                                rowData={rowData} setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
-                                transactionsDateRange={transactionsDateRange} 
-                            />
-                            <Next 
-                                setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
-                                rowData={rowData} setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
-                                transactionsDateRange={transactionsDateRange}
-                            />
-                            <All 
-                                setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData}
-                                isFilteredByAll={isFilteredByAll} setIsFilteredByAll={setIsFilteredByAll} setSelectedTimeframe={setSelectedTimeframe}
-                                latestTransaction={latestTransaction}
-                            />
+                    <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
+                                    <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-purple-900 dark:text-purple-100">AI Model Training</h4>
+                                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                                        Train the AI with your re-categorisations and transaction descriptions
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <div className="flex items-center gap-1">
+                                        <Edit className="relative top-[1px] h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                        <span className="text-sm font-medium">{state.corrections}/{MIN_CORRECTIONS}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Edits made</p>
+                                </div>
+                                <button
+                                    onClick={async () =>{
+                                        setIsTraining(true);
+                                        await handleTrain();
+                                    }}
+                                    disabled={!canTrain || isTraining}
+                                    className={
+                                        isTraining ? "flex items-center gap-2 bg-[#1a1818] rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
+                                        "flex items-center gap-1 bg-[#1a1818] hover:bg-black rounded-lg py-1 px-2 cursor-pointer" :
+                                        "flex items-center gap-1 cursor-not-allowed bg-neutral-700 opacity-60 rounded-lg py-1 px-2"
+                                    }
+                                >
+                                    {isTraining ? (
+                                        <>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            <span className='relative top-[-1px] text-sm'>Training...</span>                                            
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Brain className="h-5 w-5 text-sm" />
+                                            <span className='relative top-[-2px]'>Train AI</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
-                        <div className='flex'>
-                            <Undo undos={undos} undo={undo} />
-                            <Redo redos={redos} redo={redo} />
-                        </div>
+                        {!canTrain && (
+                            <div className="mt-3 flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400">
+                                <Warning className="h-4 w-4 relative top-[1px]" />
+                                <span>Re-categorise {MIN_CORRECTIONS - state.corrections} more transaction{MIN_CORRECTIONS - state.corrections !== 1 ? 's' : ''} to enable training</span>
+                            </div>
+                        )}
                     </div>
 
-                    {rowData && rowData.length > 0 ? ( <div className='h-170 w-206'>
-                        <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
-                        </div>) : null
-                    }
+                    <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10 mt-4'>
+                        <div className='flex justify-between'>
+                            {isFilteredByAll ?
+                                <div className='flex ml-2 items-center mb-5'>
+                                    <DateRange className='h-5 w-5' />
+                                    <h2 className='text-gray-300 ml-2'>
+                                        All Transactions
+                                    </h2>
+                                </div> : 
+                                <div className='flex ml-2 items-center mb-5'>
+                                    <DateRange className='h-5 w-5' />
+                                    <h2 className='text-gray-300 ml-2'>
+                                        {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
+                                    </h2>
+                                </div>
+                            }
+                        </div>
+                        
+                        <div className='flex justify-between mb-3'>
+                            <div className='flex'>
+                                <Prev 
+                                    noTransactions={transactions.length === 0} setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
+                                    setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                    transactionsDateRange={transactionsDateRange} 
+                                />
+                                <Next 
+                                    noTransactions={transactions.length === 0} setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
+                                    setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
+                                    transactionsDateRange={transactionsDateRange}
+                                />
+                                <All 
+                                    setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData}
+                                    isFilteredByAll={isFilteredByAll} setIsFilteredByAll={setIsFilteredByAll} setSelectedTimeframe={setSelectedTimeframe}
+                                    latestTransaction={latestTransaction}
+                                />
+                            </div>
+                            <div className='flex'>
+                                <Undo undos={undos} undo={undo} />
+                                <Redo redos={redos} redo={redo} />
+                            </div>
+                        </div>
+
+                        {rowData && rowData.length > 0 ? ( <div className='h-170 w-206'>
+                            <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
+                            </div>) : null
+                        }
+                    </div>
                 </div>
             </div>            
         </>

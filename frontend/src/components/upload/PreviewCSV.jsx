@@ -7,18 +7,11 @@ import { CATEGORIES, CATEGORY_TO_EMOJI, MIN_CONF_SCORE } from '../../utils/const
 import Warning from '../../assets/icons/warning-circle-svgrepo-com.svg?react';
 import Tick from '../../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
 import { db } from '../../db/db';
+import { usePage } from '../../pages/PageContext'
 
 const PreviewCSV = () => {
-    // const {
-    //     saveData,
-    //     lowConfTx,
-    //     setFileParsed,
-    //     setPreviewCSV,
-    // } = useUpload();
     const { state, dispatch } = useUpload();
-
-    console.log('saveData', state.saveData);
-    console.log('lowConfTx', state.lowConfidenceTransactions);
+    const { state: pageState, dispatch: pageDispatch } = usePage();
 
     const gridRef = useRef(null);
     // copy, with added status field (shallow copy - but tx object values are all primitive)
@@ -143,12 +136,7 @@ const PreviewCSV = () => {
         const column = params.column.colId;
 
         if (column === 'category') {
-            // console.log(correctionsCount);
-            // if (CATEGORIES_SET.has(updatedRow[column])) {
-            //     incrementCorrectionsCount();
-            // };
-            // update status column
-
+            pageDispatch({ type: "SET_CORRECTIONS", payload: pageState.corrections + 1 });
             if (updatedRow.status === 'unreviewed') {
                 updatedRow.status = 'reviewed';
                 setTransactions(prev =>

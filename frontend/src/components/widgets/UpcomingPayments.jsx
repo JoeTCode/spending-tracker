@@ -291,7 +291,6 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
     }, [upcomingPayments]);
 
     useEffect(() => {
-        console.log(showAllPayments);
         const retrievePayments = async () => {
             const payments = await getPayments('d');
             setUpcomingPayments(payments);

@@ -47,6 +47,16 @@ const Switch = ()  => {
     );
 };
 
+const LoadingOverlay = ({ loading }) => {
+  if (!loading) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-20 z-50">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-white"></div>
+    </div>
+  );
+};
+
 const removeErrorRows = (parsedCSV) => {
     let invalidRows = new Set([]);
     const errorRows = parsedCSV.errors.flat();
@@ -148,7 +158,8 @@ const Upload = () => {
             return newCount;
         });
     };
-    const [ loading, setLoading ] = useState(false);
+    // const [ loading, setLoading ] = useState(false);
+    const [ categorisedTransactions, setCategorisedTransactions ] = useState([]);
 
 
     const getLowConfTransactions = (transactions, confScores, MIN_CONF_SCORE) => {
@@ -163,12 +174,67 @@ const Upload = () => {
     };
 
     useEffect(() => {
-        console.log(state.stage);
-    }, [state.stage]);
-    
-    useEffect(() => {
+        if (state.transactions.length === 0) {
+            if (state.stage === "mapColumns") {
+                dispatch({ type: "SET_STAGE", payload: "upload" });
+                console.warn("Uploaded transactions not found");
+            };
+            
+            return;
+        };
+
         const validateAllTransactions = (transactions, dateFormat) =>
             transactions.map((tx, i) => validateTransaction(tx, i, dateFormat));
+
+        const handleTransactions = async () => {
+            const validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
+
+            if (!state.allowCategorisation) {
+                dispatch({ type: "SET_LOADING", payload: false });
+                dispatch({ type: "SET_STAGE", payload: "upload" });
+                return;
+            };
+
+            try {
+                const descriptions = validatedTransactions.map(tx => tx.description);
+
+                const res = await getPredictions(descriptions);
+                if (!res || !res.data || res.data.length === 0) { // api call failed
+                    dispatch({ type: "SET_TRANSACTIONS", payload: [] });
+                    dispatch({ type: "SET_STAGE", payload: "upload" });
+                    dispatch({ type: "SET_LOADING", payload: false });
+                    setCategorisedTransactions([]);
+                    return;
+                };
+
+                const updatedTransactions = validatedTransactions.map((tx, i) => ({
+                     ...tx, 
+                     category: res.data[i].predicted_category 
+                }));
+
+                const confidenceScores = res.data.map(tx => tx.confidence);
+                const lowConfTransactions = getLowConfTransactions(
+                    updatedTransactions,
+                    confidenceScores,
+                    MIN_CONF_SCORE
+                );
+
+                setCategorisedTransactions(updatedTransactions);                
+                dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
+                dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
+                dispatch({ type: "SET_LOADING", payload: false });
+            } catch (err) {
+                console.error(err);
+                dispatch({ type: "SET_LOADING", payload: false });
+                setCategorisedTransactions([]);
+            };
+        };
+
+        handleTransactions()
+    }, [state.transactions])
+
+    useEffect(() => {
+        if (categorisedTransactions.length === 0) return;
 
         const findAbsoluteDuplicates = (dbTxs, newTxs) => {
             const dbIdSet = new Set(dbTxs.map(tx => tx._id));
@@ -184,37 +250,16 @@ const Upload = () => {
             return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
         };
 
-        const handleTransactions = async () => {
-            if (state.transactions.length === 0) {
-                if (state.stage === "mapColumns") {
-                    dispatch({ type: "SET_STAGE", payload: "upload" });
-                    console.warn("Uploaded transactions not found");
-                };
+        const findDuplicates = async (updatedTransactions) => {
+
+            if (updatedTransactions.length === 0) {
+                dispatch({ type: "SET_LOADING", payload: false });
+                dispatch({ type: "SET_STAGE", payload: "upload" });
                 return;
             };
 
-            let validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
-
-            if (state.allowCategorisation) {
-                const descriptions = validatedTransactions.map(tx => tx.description);
-
-                setLoading(true);
-                
-                setTimeout(async () => {
-                    const res = await getPredictions(descriptions);
-                    const confidenceScores = res.data.map(tx => tx.confidence);
-                    validatedTransactions = validatedTransactions.map((tx, i) => ({ ...tx, category: res.data[i].predicted_category }));
-                    const lowConfTransactions = getLowConfTransactions(validatedTransactions, confidenceScores, MIN_CONF_SCORE);
-                    
-                    dispatch({ type: "SET_LOADING", type: false });
-                    dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
-                    dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
-                    setLoading(false);
-                }, 0);
-            };
-
             // Date range
-            const timestamps = validatedTransactions.map(tx => new Date(tx.date).getTime());
+            const timestamps = updatedTransactions.map(tx => new Date(tx.date).getTime());
             const [minTime, maxTime] = [Math.min(...timestamps), Math.max(...timestamps)];
             const transactionsInRange = await db.barclaysTransactions
                 .where('date')
@@ -222,20 +267,15 @@ const Upload = () => {
                 .toArray();
 
 
-            const absDuplicates = findAbsoluteDuplicates(transactionsInRange, validatedTransactions);
-            console.log(transactionsInRange)
-            console.log(validatedTransactions);
-            const filteredTransactions = validatedTransactions.filter(
+            const absDuplicates = findAbsoluteDuplicates(transactionsInRange, updatedTransactions);
+            const filteredTransactions = updatedTransactions.filter(
                 tx => !absDuplicates.some(d => d._id === tx._id)
             );
-            console.log(filteredTransactions, validatedTransactions);
+
             const duplicates = findPossibleDuplicates(transactionsInRange, filteredTransactions);
             const nonDuplicateTransactions = filteredTransactions.filter(
                 tx => !duplicates.some(d => d._id === tx._id)
             );
-
-            console.log('absolute dupes', absDuplicates);
-            console.log('dupes', duplicates);
 
             dispatch({ type: "SET_STAGE", payload: "reviewDuplicates" });
             dispatch({ type: "SET_ABSOLUTE_DUPLICATE_ROWS", payload: absDuplicates });
@@ -243,14 +283,14 @@ const Upload = () => {
             dispatch({ type: "SET_NON_DUPLICATE_ROWS", payload: nonDuplicateTransactions });
         };
 
-        handleTransactions();
-    }, [state.transactions]);
+        findDuplicates(categorisedTransactions);
+    }, [categorisedTransactions]);
 
     const renderContent = (getRootProps, getRemoveFileProps) => {
 
         if (state.stage === 'mapColumns') {
-            if (loading) {
-                return <div>Loading...</div>
+            if (state.loading) {
+                return <LoadingOverlay loading={state.loading} />
             } else return <MapColumns/>
         };
 

@@ -88,7 +88,6 @@ const SpendingComparisonCard = () => {
             };
         };
 
-        console.log(res);
         setSpendingComparison(res);
 
     }, [currentMonthTransactions]);

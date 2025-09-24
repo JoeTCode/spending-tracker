@@ -154,7 +154,6 @@ export async function getTransactions(
     let transactions = [];
     switch (rangeType) {
         case 'custom':
-            console.log(rangeType, customStart, customEnd)
             transactions = await db.barclaysTransactions
                 .where('date')
                 .between(customStart, customEnd, true, false) // true= includes bounds
@@ -204,7 +203,6 @@ export async function getTransactions(
                     .orderBy("date")
                     .toArray();
             } else transactions = await db.barclaysTransactions.toArray();
-            console.log(transactions);
             break;
 
         case 'vm':
@@ -246,12 +244,13 @@ export async function getTransactions(
     for (let tx of transactions) {
         response.push(
             {
-                _id: tx['_id'],
-                date: new Date(tx['date']).toISOString().split('T')[0],
-                amount: tx['amount'],
-                type: tx['type'],
-                category: tx['category'],
-                description: tx['description']
+                _id: tx._id,
+                date: new Date(tx.date).toISOString().split('T')[0],
+                amount: tx.amount,
+                category: tx.category,
+                description: tx.description,
+                trained: tx.trained,
+                is_trainable: tx.is_trainable,
             }
         );
     };
@@ -316,7 +315,6 @@ export async function getPayments(rangeType) {
 };
 
 export async function updatePayment(payment) {
-    console.log(payment);
     await db.recurringPayments.update(payment._id, payment);
 };
 
