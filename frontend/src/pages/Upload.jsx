@@ -5,7 +5,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
-import { useNavigate } from "react-router-dom";
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
 import { getPredictions } from '../api/model';

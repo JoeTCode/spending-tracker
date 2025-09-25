@@ -1,7 +1,7 @@
 import { NavBar, StackedBarChart, PieChart, LineChart } from '../components';
 import { SpendingComparison, TransactionsOverview, UpcomingPayments, MostRecentTransactions } from '../components/widgets';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import ChevronRight from '../assets/icons/chevron-right-svgrepo-com.svg?react';
 
 const YearDropdown = ({ startYearOffset = 10, onChange }) => {
