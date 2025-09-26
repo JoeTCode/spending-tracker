@@ -15,6 +15,7 @@ const initialState = {
 	confidenceScores: [],
 	stage: "upload",
 	corrections: parseInt(localStorage.getItem('corrections')) || 0,
+	csvFilename: "",
 	// booleans
 	loading: false,
 	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
@@ -41,6 +42,7 @@ const uploadReducer = (state, action) => {
 		case "SET_CONFIDENCE_SCORES": return { ...state, confidenceScores: action.payload };
 		case "SET_STAGE": return { ...state, stage: action.payload };
 		case "SET_CORRECTIONS": return { ...state, corrections: action.payload };
+		case "SET_CSV_FILENAME": return { ...state, csvFilename: action.payload };
 		// booleans
 		case "SET_LOADING": return { ...state, loading: action.payload };
 		case "SET_ALLOW_CATEGORISATION": {

@@ -120,9 +120,11 @@ const MapColumns = () => {
                 if (categoryColName) {
                     obj.category = category;
                 };
+
                 obj.is_trainable = true;
                 obj.trained = false;
                 data.push(obj);
+
             } else continue;
         };
         

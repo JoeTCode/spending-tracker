@@ -82,7 +82,7 @@ const Dashboard = () => {
                     <div className="lg:row-span-2">
                         <div className="flex justify-between items-baseline">
                             <p className='font-medium text-xl mb-5'>Recent transactions</p>
-                            <p className="text-sm text-gray-400 cursor-pointer" >
+                            <div className="text-sm text-gray-400 cursor-pointer" >
                                 <Link 
                                     to="/transactions" 
                                     className="flex gap-x-1 no-underline text-gray-400 hover:text-gray-600"
@@ -90,7 +90,7 @@ const Dashboard = () => {
                                     <p>View All</p>
                                     <ChevronRight className='w-3 h-3 relative top-[5px]'/>
                                 </Link>
-                            </p>
+                            </div>
                         </div>
                         <div>
                             <MostRecentTransactions />

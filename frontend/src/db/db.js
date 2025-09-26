@@ -9,25 +9,14 @@ const CATEGORIES_SET = new Set(CATEGORIES);
 const db = new Dexie('transactionsDB');
 
 db.version(1).stores({
+    csvData: '++id, &name, date',
     // '_id, date, amount, type, category, description, is_trainable, trained'
-    barclaysTransactions: '_id, date, amount, category, is_trainable, trained', // Primary key and indexed props
+    transactions: '_id, date, amount, category, is_trainable, trained, csvId', // Primary key and indexed props
     // _id, last_reminder, title, amount, interval
     recurringPayments: '_id, last_reminder, title, amount, interval',
     // _id, mappingTitle, date, account, amount, amountDescriptor, amountMappings, description, category
     savedMappings: '_id'
 });
-
-// function validateDate(date, tx) {
-//     const copy = date;
-//     date = date instanceof Date ? date : new Date(date);
-//     if (isNaN(date.getTime())) {
-//         date = new Date(); // set tx date to now
-//         console.log(date);
-//         console.log('Invalid date found:', tx);
-//     };
-//     return date;
-// };
-
 
 function parseDate(dateString, region = "EU") {
     const euFormats = [
@@ -65,15 +54,6 @@ function parseDate(dateString, region = "EU") {
 function validateAmount(amount) {
     amount = parseFloat(amount) ? parseFloat(amount) : 0;
     return Math.round(amount * 100) / 100; // normalize decimals 2 d.p.
-};
-
-function validateType(type) {
-    let validatedType = "";
-    if (typeof type === "string") {
-        validatedType = type.trim();
-    };
-
-    return validatedType;
 };
 
 function validateCategory(category) {
@@ -154,13 +134,13 @@ export async function getTransactions(
     let transactions = [];
     switch (rangeType) {
         case 'custom':
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                 .where('date')
                 .between(customStart, customEnd, true, false) // true= includes bounds
                 .toArray();
             break;
         case 'latest-n':
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                 .orderBy("date")   // order by the "date" index
                 .reverse()         // descending (latest first)
                 .limit(numRetrieved)
@@ -174,7 +154,7 @@ export async function getTransactions(
             const end = new Date(today);
             end.setHours(23, 59, 59, 999);
 
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                                     .where('date')
                                     .between(weekAgo, end, true, false) // true= includes bounds
                                     .toArray();
@@ -185,7 +165,7 @@ export async function getTransactions(
             thisMonth.setHours(0, 0, 0, 0);
             thisMonth.setDate(1);
 
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                                     .where('date')
                                     .aboveOrEqual(thisMonth)
                                     .toArray();
@@ -194,15 +174,15 @@ export async function getTransactions(
         case 'a':
             
             if (sorted === 'desc') {
-                transactions = await db.barclaysTransactions
+                transactions = await db.transactions
                     .orderBy("date")
                     .reverse()   // latest first
                     .toArray();
             } else if (sorted === 'asc') {
-                transactions = await db.barclaysTransactions
+                transactions = await db.transactions
                     .orderBy("date")
                     .toArray();
-            } else transactions = await db.barclaysTransactions.toArray();
+            } else transactions = await db.transactions.toArray();
             break;
 
         case 'vm':
@@ -218,7 +198,7 @@ export async function getTransactions(
             }
             monthEnd.setMonth(monthEnd.getMonth() + 1)
 
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                         .where('date')
                         .between(monthStart, monthEnd, true, false) // true=true includes bounds
                         .toArray();
@@ -234,7 +214,7 @@ export async function getTransactions(
             const yearEnd = new Date(yearStart);
             yearEnd.setFullYear(yearEnd.getFullYear() + 1);
 
-            transactions = await db.barclaysTransactions
+            transactions = await db.transactions
                 .where('date')
                 .between(yearStart, yearEnd, true, false) // true=true includes bounds
                 .toArray();
@@ -252,6 +232,7 @@ export async function getTransactions(
                 description: tx.description,
                 trained: tx.trained,
                 is_trainable: tx.is_trainable,
+                csvId: tx.csvId,
             }
         );
     };
@@ -261,15 +242,21 @@ export async function getTransactions(
 
 export async function updateTransaction(transaction) {
     if (CATEGORIES_SET.has(transaction["Category"])) {
-        await db.barclaysTransactions.put({ ...transaction, trained: false }, transaction._id);
+        await db.transactions.put({ ...transaction, trained: false }, transaction._id);
     } else {
-        await db.barclaysTransactions.put(transaction, transaction._id);
+        await db.transactions.put(transaction, transaction._id);
     };
 };
 
 export async function deleteTransaction(transaction) {
-    await db.barclaysTransactions.delete(transaction._id);
+    await db.transactions.delete(transaction._id);
 }
+
+export async function addTransactions(transactions, csvFilename) {
+    const csvId = await db.csvData.add({ name: csvFilename, date: new Date().toUTCString() });
+    const transcationsWithCsvId = transactions.map(tx => ({ ...tx, csvId: csvId }));
+    await db.transactions.bulkAdd(transcationsWithCsvId);
+};
 
 export async function getPayments(rangeType) {
     let payments;

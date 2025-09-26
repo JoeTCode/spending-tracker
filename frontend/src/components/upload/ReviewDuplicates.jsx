@@ -3,7 +3,7 @@ import { useUpload } from './UploadContext';
 import CustomProgressBar from '../ProgressBar';
 import EditableGrid from '../EditableGrid';
 import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
-import { db } from '../../db/db';
+import { db, addTransactions } from '../../db/db';
 import { useNavigate } from 'react-router-dom';
 
 const ReviewDuplicates = ({ getRemoveFileProps }) => {
@@ -32,7 +32,6 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                 cellEditor: "agSelectCellEditor",
                 cellEditorParams: { values: CATEGORIES },
                 singleClickEdit: true,
-                // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
                 headerClass: "font-bold",
                 width: 170,
                 cellRenderer: params => {
@@ -45,12 +44,6 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                 headerClass: "font-bold",
                 width: 120
             },
-            // {
-            //     field: "type",
-            //     editable: true,
-            //     headerClass: "font-bold",
-            //     width: 120
-            // },
             {
                 field: "amount",
                 editable: true,
@@ -67,14 +60,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
             },
     ];
 
-    const handleCellChange = (updatedRow, params) => {
-        const column = params.column.colId;
-        // if (column === 'category') {
-        //     // console.log(correctionsCount);
-        //     // if (CATEGORIES_SET.has(updatedRow[column])) {
-        //     //     incrementCorrectionsCount();
-        //     // };
-        // }
+    const handleCellChange = (updatedRow) => {
 
         setDuplicates(prev =>
             prev.map(row => row._id === updatedRow._id ? updatedRow : row)
@@ -99,9 +85,6 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
             }
         };
 
-        // setLowConfTx(prev => {
-        //     return prev.filter(tx => !nonSelectedIdSet.has(tx._id))
-        // });
         const saveData = [ ...state.nonDuplicateRows, ...selectedRows ];
         if (state.allowCategorisation) {
             dispatch({ type: "SET_SAVE_DATA", payload: saveData });
@@ -110,13 +93,9 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
             // dispatch({ type: "SET_PREVIEW_CSV", payload: true });
             dispatch({ type: "SET_STAGE", payload: "review"});
         } else {
-            await db.barclaysTransactions.bulkAdd(saveData);
+            await addTransactions(saveData, state.csvFilename);
             navigate('/dashboard');
         }
-
-        // dispatch({ type: "SET_FILE_PARSED", payload: true });
-        // setPreviewCSV(true);
-        // setFileParsed(true);
     };
 
     const handleSelectionChanged = (event) => {

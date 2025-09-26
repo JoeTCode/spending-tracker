@@ -20,6 +20,7 @@ import Close from '../assets/icons/close-svgrepo-com.svg?react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const UNDO_REDO_DELAY = 500;
+const SELECT_CSV_DEFAULT = "Filter by CSV";
 
 // customise column format and functions for the EditableGrid cols argument
 const createHeaders = (setUndos) => ([
@@ -92,8 +93,8 @@ const Undo = ({ undos, undo }) => (
     onClick={undos.length > 0 ? undo : undefined} 
     disabled={undos.length === 0} 
     className={undos.length === 0 ? 
-        "w-20 flex items-center bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
-        'w-20 flex items-center bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+        "w-20 flex items-center bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
+        'w-20 flex items-center bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
   >
     <UndoLeft className='w-5 h-5 relative top-[1px]' />
     <span>Undo</span>
@@ -105,21 +106,21 @@ const Redo = ({ redos, redo }) => (
     onClick={redos.length > 0 ? redo : undefined} 
     disabled={redos.length === 0} 
     className={redos.length === 0 ? 
-        "w-20 flex items-center bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
-        'w-20 flex items-center bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+        "w-20 flex items-center bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
+        'w-20 flex items-center bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
   >
     <UndoRight className='w-5 h-5 relative top-[1px]' />
     Redo
   </button>
 );
 
-const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange, setSelectedCsvName }) => {
     const prevMonth = new Date(selectedTimeframe);
     prevMonth.setMonth(prevMonth.getMonth() - 1)
     if (noTransactions || prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
         return (
             <button
-                className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
                 disabled={true}
             >
                 <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
@@ -133,7 +134,7 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
             onClick={async () => {
                 setUndos([]);
                 setRedos([]);
-
+                setSelectedCsvName(SELECT_CSV_DEFAULT);
                 console.log('PREV', prevMonth);
                 const prevTransactions = await getTransactions({ rangeType: 'vm', selectedMonth: prevMonth.getMonth(), selectedYear: prevMonth.getFullYear() });
                 
@@ -144,7 +145,7 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 });
                 setIsFilteredByAll(false);
             }}
-            className='flex items-center gap-1 bg-[#141212] rounded-lg m-1 p-1 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+            className='flex items-center gap-1 bg-[#141212] rounded-lg p-1 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
         >
             <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
             <span>Previous</span>
@@ -152,14 +153,14 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
     )
 };
 
-const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange }) => {
+const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransactions, setRowData, setSelectedTimeframe, setIsFilteredByAll, transactionsDateRange, setSelectedCsvName }) => {
     const nextMonth = new Date(selectedTimeframe);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
     if (noTransactions || nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
         return (
             <button
-                className="flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
                 disabled={true}
             >
                 <span>Next</span>
@@ -173,7 +174,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 onClick={async () => {
                     setUndos([]);
                     setRedos([]);
-                    
+                    setSelectedCsvName(SELECT_CSV_DEFAULT);
                     console.log('NEXT', nextMonth);
                     const nextTransactions = await getTransactions({ rangeType:'vm', selectedMonth: nextMonth.getMonth(), selectedYear: nextMonth.getFullYear() });
                     setRowData(nextTransactions);
@@ -183,7 +184,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                     });
                     setIsFilteredByAll(false);
                 }}
-                className='flex items-center gap-1 bg-[#141212] rounded-lg m-1 p-1 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+                className='flex items-center gap-1 bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
             >
                 <span className=''>Next</span>
                 <ChevronRight className='h-5 w-5 relative top-[1px]'/>
@@ -193,7 +194,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
     
 };
 
-const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll, setIsFilteredByAll, setSelectedTimeframe, latestTransaction }) => (
+const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll, setIsFilteredByAll, setSelectedTimeframe, latestTransaction, setSelectedCsvName }) => (
     <button 
         onClick={
             isFilteredByAll ? 
@@ -201,6 +202,7 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
             async () => {
                 setUndos([]);
                 setRedos([]);
+                setSelectedCsvName(SELECT_CSV_DEFAULT);
                 setSelectedTimeframe(new Date(latestTransaction));
                 const allTransactions = await getTransactions({ rangeType: 'a' });
                 console.log(latestTransaction);
@@ -209,8 +211,8 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
             })
         }
         disabled={isFilteredByAll}
-        className={isFilteredByAll ? 'bg-gray-600 rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
-            'bg-[#141212] rounded-lg m-1 p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'}
+        className={isFilteredByAll ? 'bg-gray-600 rounded-lg p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
+            'bg-[#141212] rounded-lg p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'}
     >
         All
     </button>
@@ -231,9 +233,12 @@ const Transactions = () => {
     const [ latestTransaction, setLatestTransaction ] = useState(null);
     const [ isTraining, setIsTraining ] = useState(false);
     const canTrain = state.corrections >= MIN_CORRECTIONS && transactions.length > 0;
+    const [ csvNames, setCsvNames ] = useState([]);
+    const [ csvNamesToId, setCsvNamesToId ] = useState({});
+    const [ selectedCsvName, setSelectedCsvName ] = useState('');
 
     useEffect(() => {
-        const retrieveData = async () => {
+        const retrieveTransactionData = async () => {
             const data = await getTransactions({ rangeType: 'a', sorted: 'desc' });
 
             if (data.length === 0) return;
@@ -258,9 +263,28 @@ const Transactions = () => {
             setRowData(data); // new
         };
 
-        retrieveData();
-    
+        const queryCsvDb = async () => {
+            const csvData = await db.csvData.toArray();
+            setCsvNames(csvData.map(data => data.name));
+
+            const obj = {};
+            for (let data of csvData) {
+                obj[data.name] = data.id;
+            };
+            setCsvNamesToId(obj);
+        };
+
+        queryCsvDb();
+        retrieveTransactionData();
     }, []);
+
+    useEffect(() => {
+        if (selectedCsvName) {
+            const id = csvNamesToId[selectedCsvName];
+            const filtered = transactions.filter(tx => tx.csvId !== id);
+            setRowData(filtered);
+        }
+    }, [selectedCsvName]);
 
     async function undo() {
         const undosPopped = [...undos];
@@ -279,7 +303,7 @@ const Transactions = () => {
         if (timerId) clearTimeout(timerId);
         // start timer
         const id = setTimeout(async () => {
-            if (action.type === 'delete') await db.barclaysTransactions.add(action.row);
+            if (action.type === 'delete') await db.transactions.add(action.row);
             else await updateTransaction(action.before);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
@@ -305,7 +329,7 @@ const Transactions = () => {
         if (timerId) clearTimeout(timerId);
         // start timer
         const id = setTimeout(async () => {
-            if (action.type === 'delete') await db.barclaysTransactions.delete(action.row._id);
+            if (action.type === 'delete') await db.transactions.delete(action.row._id);
             else await updateTransaction(action.after);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
@@ -380,7 +404,7 @@ const Transactions = () => {
                     key: id, 
                     changes: { trained: true }
                 }));
-                db.barclaysTransactions.bulkUpdate(updateObjects);
+                db.transactions.bulkUpdate(updateObjects);
                 return true;
 
             } catch (err) {
@@ -457,7 +481,9 @@ const Transactions = () => {
 
                     <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10 mt-4'>
                         <div className='flex justify-between'>
-                            {isFilteredByAll ?
+                            {
+                                selectedCsvName && selectedCsvName !== SELECT_CSV_DEFAULT ? <div></div>:
+                                isFilteredByAll ?
                                 <div className='flex ml-2 items-center mb-5'>
                                     <DateRange className='h-5 w-5' />
                                     <h2 className='text-gray-300 ml-2'>
@@ -471,27 +497,51 @@ const Transactions = () => {
                                     </h2>
                                 </div>
                             }
+                            <button
+                                className={rowData.length === 0 ? 
+                                    'flex gap-x-2 mb-5 bg-gray-600 rounded-lg py-2 px-3 shadow-lg cursor-not-allowed text-sm opacity-50' :
+                                    'flex gap-x-2 mb-5 bg-[#141212] rounded-lg py-2 px-3 shadow-lg cursor-pointer hover:bg-black text-sm'
+                                }
+                            >
+                                <Trash className="relative top-[1px] w-5 h-5" />
+                                Delete filtered
+                            </button>
                         </div>
                         
                         <div className='flex justify-between mb-3'>
-                            <div className='flex'>
+                            <div className='flex gap-x-2'>
                                 <Prev 
                                     noTransactions={transactions.length === 0} setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
                                     setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
-                                    transactionsDateRange={transactionsDateRange} 
+                                    transactionsDateRange={transactionsDateRange} setSelectedCsvName={setSelectedCsvName}
                                 />
                                 <Next 
                                     noTransactions={transactions.length === 0} setUndos={setUndos} setRedos={setRedos} selectedTimeframe={new Date(selectedTimeframe)} getTransactions={getTransactions}
                                     setRowData={setRowData} setSelectedTimeframe={setSelectedTimeframe} setIsFilteredByAll={setIsFilteredByAll}
-                                    transactionsDateRange={transactionsDateRange}
+                                    transactionsDateRange={transactionsDateRange} setSelectedCsvName={setSelectedCsvName}
                                 />
                                 <All 
                                     setUndos={setUndos} setRedos={setRedos} getTransactions={getTransactions} setRowData={setRowData}
                                     isFilteredByAll={isFilteredByAll} setIsFilteredByAll={setIsFilteredByAll} setSelectedTimeframe={setSelectedTimeframe}
-                                    latestTransaction={latestTransaction}
+                                    latestTransaction={latestTransaction} setSelectedCsvName={setSelectedCsvName}
                                 />
+                                <select
+                                    className={rowData.length === 0 ? 
+                                        'flex gap-x-2 items-center bg-gray-600 rounded-lg py-2 px-3 shadow-lg cursor-not-allowed text-sm opacity-50 h-8 max-w-40' :
+                                        'flex gap-x-2 items-center bg-[#141212] rounded-lg py-2 px-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8 max-w-40'
+                                    }
+                                    value={selectedCsvName}
+                                    onChange={(e) => setSelectedCsvName(e.target.value)}
+                                >
+                                    <option value={null}>{SELECT_CSV_DEFAULT}</option>
+                                    {csvNames.map(name => (
+                                        <option key={name} value={name}>
+                                            {name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                            <div className='flex'>
+                            <div className='flex gap-x-2'>
                                 <Undo undos={undos} undo={undo} />
                                 <Redo redos={redos} redo={redo} />
                             </div>

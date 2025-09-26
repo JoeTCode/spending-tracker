@@ -1,6 +1,6 @@
 import { NavBar } from '../components';
 import { ReviewDuplicates, PreviewCSV, MapColumns, UploadProgress } from '../components/upload';
-import { useCSVReader } from 'react-papaparse';
+import { useCSVReader, formatFileSize } from 'react-papaparse';
 import React, { useRef, useState, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
@@ -116,34 +116,126 @@ const logModelAccuracy = (targetCategories, predictedCategories) => {
     console.log('Score:', (numMatches*100)/predictedCategories.length);
 };
 
-const UploadCSV = ({ getRootProps }) => (
-    <div>
-        <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
-            <div>
-                <p className='text-white'>Auto-Categorisation</p>
-                <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
-            </div>
-            <Switch />
-        </div>
-        <div className='bg-[#1a1818] p-8 rounded-lg'>
-            <div className='flex flex-col py-40 inset-1 border-1 border-dashed border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors duration-100 ease-in text-center items-center'>
-                <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
-                <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
-                <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
-                <div {...getRootProps()}>
-                    <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
+const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps, isLoading, parsedCSV, dispatch }) => {
+    const [ filename, setFilename ] = useState(new Date().toUTCString());
+
+    useEffect(() => {
+        if (acceptedFile) setFilename(acceptedFile.name);
+    }, [acceptedFile])
+    const onFileNameChange = (value) => {
+        setFilename(value);
+    };
+
+    const getUniqueCsvFilename = async (filename) => {
+        let baseName = filename;
+        let counter = 1;
+        let uniqueName = baseName;
+
+        // get all CSV names already in the database
+        const existingNames = (await db.csvData.toArray()).map(tx => tx.name);
+        console.log(existingNames);
+        while (existingNames.includes(uniqueName)) {
+            uniqueName = `${baseName} (${counter})`;
+            counter++;
+        };
+        console.log('filename', uniqueName);
+        return uniqueName;
+    };
+    
+    const validateFileName = async (filename) => {
+        let parsedFilename = filename;
+
+        // check if file name was renamed to empty string
+        if (!filename) parsedFilename = new Date().toUTCString();
+
+        // check if file name exists in db
+        const uniqueFilename = await getUniqueCsvFilename(parsedFilename);
+        return uniqueFilename;
+    };
+
+    const handleFileUpload = async () => {
+        if (parsedCSV.length > 0) {
+            const validatedFilename = await validateFileName(filename);
+            dispatch({ type: "SET_CSV_FILENAME", payload: validatedFilename });
+            dispatch({ type: "SET_PARSED_CSV", payload: parsedCSV });
+            dispatch({ type: "SET_STAGE", payload: "mapColumns"})
+        }
+        // toast here
+        else console.warn("CSV failed to parse");
+    };
+
+    return (
+        <div>
+            <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
+                <div>
+                    <p className='text-white'>Auto-Categorisation</p>
+                    <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
                 </div>
-            </div>  
+                <Switch />
+            </div>
+
+            <div className='bg-[#1a1818] p-8 rounded-lg min-h-[500px]'>
+
+                        <div 
+                            className='
+                                flex flex-col justify-center inset-1 border-1 border-dashed
+                                border-neutral-500 hover:border-neutral-600 rounded-lg transition-colors
+                                duration-100 ease-in text-center items-center min-h-[500px]
+                            '
+                            {...getRootProps()}
+                            onClick={(e) => e.stopPropagation()} 
+                        >
+                            {acceptedFile ? (
+                                <div className='justify-center'>
+                                    <div className='flex flex-col border-1 border-neutral-600 rounded-lg p-4'>
+                                        <div className='flex justify-between gap-x-10'>
+                                            <input onChange={(e) => onFileNameChange(e.target.value)} defaultValue={acceptedFile.name} type='text' id='filename' name='filename' className='text-sm w-60 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-400' />
+                                            <Close className="h-5 w-5 m-2 cursor-pointer hover:bg-neutral-600 rounded-lg" {...getRemoveFileProps()} />
+                                        </div>
+                                        <span className='px-2 text-sm text-neutral-600 self-start'>{formatFileSize(acceptedFile.size)}</span>
+                                        <div className='h-1 mt-1'>
+                                            <ProgressBar style={{ height:'80%', width: '100%', backgroundColor: '#646cff' }} />
+                                        </div>
+
+                                        <button 
+                                            className={
+                                                isLoading ? 
+                                                'text-sm bg-black opacity-20 rounded-lg py-1 mt-1 cursor-not-allowed' :
+                                                'text-sm bg-black rounded-lg py-1 mt-1 cursor-pointer'
+                                            }
+                                            onClick={isLoading ? undefined : handleFileUpload}
+                                        >
+                                            Upload
+                                        </button>
+
+                                    </div>
+                                </div>
+
+                            ) : 
+                            (
+                                <>
+                                    <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
+                                    <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
+                                    <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
+                                    
+                                    <div {...getRootProps()}>
+                                        <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+            </div>
         </div>
-    </div>
-);
+    )
+};
 
 const Upload = () => {
     const { state, dispatch } = useUpload();
     const { CSVReader } = useCSVReader();
 
     const [ categorisedTransactions, setCategorisedTransactions ] = useState([]);
-
+    const [ isLoading, setIsLoading ] = useState(true);
+    const [ parsedCSV, setParsedCSV ] = useState([]);
 
     const getLowConfTransactions = (transactions, confScores, MIN_CONF_SCORE) => {
         const res = [];
@@ -248,7 +340,7 @@ const Upload = () => {
             // Date range
             const timestamps = updatedTransactions.map(tx => new Date(tx.date).getTime());
             const [minTime, maxTime] = [Math.min(...timestamps), Math.max(...timestamps)];
-            const transactionsInRange = await db.barclaysTransactions
+            const transactionsInRange = await db.transactions
                 .where('date')
                 .between(new Date(minTime), new Date(maxTime), true, true)
                 .toArray();
@@ -273,7 +365,7 @@ const Upload = () => {
         findDuplicates(categorisedTransactions);
     }, [categorisedTransactions]);
 
-    const renderContent = (getRootProps, getRemoveFileProps) => {
+    const renderContent = (getRootProps, acceptedFile, ProgressBar, getRemoveFileProps, parsedCSV) => {
 
         if (state.stage === 'mapColumns') {
             if (state.loading) {
@@ -297,8 +389,14 @@ const Upload = () => {
             );
         };
 
+        
         return (
-            <UploadCSV getRootProps={getRootProps} />
+            
+            <UploadCSV 
+                getRootProps={getRootProps} acceptedFile={acceptedFile} ProgressBar={ProgressBar} 
+                getRemoveFileProps={getRemoveFileProps} isLoading={isLoading} parsedCSV={parsedCSV}
+                dispatch={dispatch}
+            />
         );
     };
         
@@ -310,24 +408,24 @@ const Upload = () => {
                 <div className='flex flex-col justify-center mt-[10%] w-full max-w-[1000px]'>
                     <CSVReader 
                         onUploadAccepted={(results) => {
-                            const cleaned = removeErrorRows(results);
-                            dispatch({ type: "SET_PARSED_CSV", payload: cleaned });
-                            // dispatch({ type: "SET_MAP_COLUMNS", payload: true });
-                            dispatch({ type: "SET_STAGE", payload: "mapColumns"})
+                            setIsLoading(false);
+                            const cleaned = removeErrorRows(results)
+                            // .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
+                            setParsedCSV(cleaned);
+                            // dispatch({ type: "SET_PARSED_CSV", payload: cleaned });
+                            // dispatch({ type: "SET_STAGE", payload: "mapColumns"})
                         }}
                         config={{ header: true, skipEmptyLines: true }}
-                        noDrag
                     >
                         {({
                             getRootProps,
                             acceptedFile,
                             ProgressBar,
-                            getRemoveFileProps,
-                            Remove,
+                            getRemoveFileProps
                         }) => (
                             <>
                                 <UploadProgress stage={state.stage} />
-                                {renderContent(getRootProps, getRemoveFileProps)}
+                                {renderContent(getRootProps, acceptedFile, ProgressBar, getRemoveFileProps, parsedCSV)}
                             </>
                         )}
                     </CSVReader>
