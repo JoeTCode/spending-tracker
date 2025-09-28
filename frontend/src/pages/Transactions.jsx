@@ -2,7 +2,7 @@ import { NavBar, EditableGrid } from '../components';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useRef, useState, useEffect } from 'react';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS, MIN_CORRECTIONS } from '../utils/constants/constants';
-import { db, getTransactions, updateTransaction, deleteTransaction } from '../db/db';
+import { db, getTransactions, updateTransaction, removeTransaction, bulkRemoveTransactions, bulkRestoreTransactions, restoreTransaction } from '../db/db';
 import { trainModel } from '../api/model';
 import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
 import UndoLeft from '../assets/icons/undo-left-round-svgrepo-com.svg?react'
@@ -23,7 +23,7 @@ const UNDO_REDO_DELAY = 500;
 const SELECT_CSV_DEFAULT = "Filter by CSV";
 
 // customise column format and functions for the EditableGrid cols argument
-const createHeaders = (setUndos) => ([
+const createHeaders = (setUndos, setTransactions) => ([
     {
         field: "date",
         sort: "desc",
@@ -69,14 +69,18 @@ const createHeaders = (setUndos) => ([
         headerClass: "font-bold",
         cellRenderer: props => {
             const deleteRow = async () => {
-                const deletedRow = props.api.applyTransaction({ remove: [props.data] })
-                await deleteTransaction(deletedRow.remove[0].data);
+                const deletedRowData = props.api.applyTransaction({ remove: [props.data] })
+                const deletedRow = deletedRowData.remove[0].data
+                const csvData = await db.csvData.get(deletedRow.csvId);
+                
+                await removeTransaction(deletedRow);
+                setTransactions(prev => prev.filter(tx => tx._id !== deletedRow._id));
+
                 setUndos((prev) => {
                     if (prev) {
-                        console.log(deletedRow)
-                        return [...prev, { type: 'delete', row: deletedRow.remove[0].data, index: deletedRow.remove[0].sourceRowIndex }] // { {row_x}, {row_y}, {type: 'delete', row: {row_z}} }
+                        return [...prev, { type: 'delete', row: deletedRow, csvData: csvData }] // { {row_x}, {row_y}, {type: 'delete', row: {row_z}} }
                     } else {
-                        return [{ type: 'delete', row: deletedRow.remove[0].data }]
+                        return [{ type: 'delete', row: deletedRow }]
                     };
                 });
             };
@@ -137,7 +141,7 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 setSelectedCsvName(SELECT_CSV_DEFAULT);
                 console.log('PREV', prevMonth);
                 const prevTransactions = await getTransactions({ rangeType: 'vm', selectedMonth: prevMonth.getMonth(), selectedYear: prevMonth.getFullYear() });
-                
+                console.log('prev', prevTransactions);
                 setRowData(prevTransactions);
                 setSelectedTimeframe(prev => {
                     const dateObj = new Date(prev);
@@ -190,8 +194,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 <ChevronRight className='h-5 w-5 relative top-[1px]'/>
             </button>
         );
-    }
-    
+    };    
 };
 
 const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll, setIsFilteredByAll, setSelectedTimeframe, latestTransaction, setSelectedCsvName }) => (
@@ -265,6 +268,7 @@ const Transactions = () => {
 
         const queryCsvDb = async () => {
             const csvData = await db.csvData.toArray();
+            console.log(csvData);
             setCsvNames(csvData.map(data => data.name));
 
             const obj = {};
@@ -279,9 +283,12 @@ const Transactions = () => {
     }, []);
 
     useEffect(() => {
-        if (selectedCsvName) {
+        if (selectedCsvName === "all") {
+            setRowData(transactions);
+        }
+        else {
             const id = csvNamesToId[selectedCsvName];
-            const filtered = transactions.filter(tx => tx.csvId !== id);
+            const filtered = transactions.filter(tx => tx.csvId === id);
             setRowData(filtered);
         }
     }, [selectedCsvName]);
@@ -291,19 +298,34 @@ const Transactions = () => {
         const action = undosPopped.pop();
         if (!action) return;
 
-        if (action.type === 'delete') {
-            gridRef.current.api.applyTransaction({ add: [action.row] });
-            setRedos(prev => [...prev, action]);
+        if (gridRef.current?.api) {
+            if (action.type === 'deleteFiltered') {
+                gridRef.current.api.applyTransaction({ add: action.rows });
+                setRedos(prev => [...prev, action]);
+            }
+
+            else if (action.type === 'delete') {
+                gridRef.current.api.applyTransaction({ add: [action.row] });
+                setRedos(prev => [...prev, action]);
+            }
+            else {
+                gridRef.current.api.applyTransaction({ update: [action.before] });
+                setRedos(prev => [...prev, action]);
+            };
         }
-        else {
-            gridRef.current.api.applyTransaction({ update: [action.before] });
-            setRedos(prev => [...prev, action]);
-        };
 
         if (timerId) clearTimeout(timerId);
         // start timer
         const id = setTimeout(async () => {
-            if (action.type === 'delete') await db.transactions.add(action.row);
+            if (action.type === 'deleteFiltered') {
+                const restoredRows = await bulkRestoreTransactions(action.rows, action.csvData);
+                setRowData(restoredRows);
+                setTransactions(prev => [...prev, ...restoredRows]);
+            }
+            else if (action.type === 'delete') {
+                await restoreTransaction(action.row, action.csvData);
+                setTransactions(prev => [...prev, action.row]);
+            }
             else await updateTransaction(action.before);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
@@ -317,7 +339,11 @@ const Transactions = () => {
         const action = redosPopped.pop();
         if (!action) return;
 
-        if (action.type === 'delete') {
+        if (action.type === 'deleteFiltered') {
+            gridRef.current.api.applyTransaction({ remove: action.rows });
+            setUndos(prev => [...prev, action]);
+        }
+        else if (action.type === 'delete') {
             gridRef.current.api.applyTransaction({ remove: [action.row] });
             setUndos(prev => [...prev, action]);
         }
@@ -327,16 +353,25 @@ const Transactions = () => {
         };
 
         if (timerId) clearTimeout(timerId);
+        
         // start timer
         const id = setTimeout(async () => {
-            if (action.type === 'delete') await db.transactions.delete(action.row._id);
+            if (action.type === 'deleteFiltered') {
+                await bulkRemoveTransactions(action.rows);
+                const idMap = new Set(action.rows.map(tx => tx._id));
+                setTransactions(prev => prev.filter(tx => !idMap.has(tx._id)));
+            }
+            else if (action.type === 'delete') {
+                await removeTransaction(action.row);
+                setTransactions(prev => prev.filter(tx => tx._id !== action.row._id));
+            }
             else await updateTransaction(action.after);
             setTimerId(null);
         }, UNDO_REDO_DELAY);
 
         setTimerId(id);
         setRedos(redosPopped)
-    }
+    };
 
     const handleCellChange = async (updatedRow, params) => {
         setRedos([]);
@@ -439,17 +474,20 @@ const Transactions = () => {
                                 <div className="text-right">
                                     <div className="flex items-center gap-1">
                                         <Edit className="relative top-[1px] h-4 w-4 text-purple-600 dark:text-purple-400" />
-                                        <span className="text-sm font-medium">{state.corrections}/{MIN_CORRECTIONS}</span>
+                                        <span className="text-sm font-medium">{state.corrections > MIN_CORRECTIONS ? MIN_CORRECTIONS : state.corrections}/{MIN_CORRECTIONS}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">Edits made</p>
                                 </div>
                                 <button
-                                    onClick={async () =>{
-                                        setIsTraining(true);
-                                        const res = await handleTrain();
-                                        if (res) toast.success("Training successfully completed!");
-                                        else toast.error("Something went wrong!");
-                                    }}
+                                    onClick={canTrain || isTraining ? 
+                                        (async () => {
+                                            setIsTraining(true);
+                                            const res = await handleTrain();
+                                            if (res) toast.success("Training successfully completed!");
+                                            else toast.error("Something went wrong!");
+                                        })
+                                        : undefined 
+                                    }
                                     disabled={!canTrain || isTraining}
                                     className={
                                         isTraining ? "flex items-center gap-2 bg-[#1a1818] rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
@@ -471,7 +509,7 @@ const Transactions = () => {
                                 </button>
                             </div>
                         </div>
-                        {!canTrain && (
+                        {!canTrain && transactions.length > 0 && (MIN_CORRECTIONS > state.corrections) && (
                             <div className="mt-3 flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400">
                                 <Warning className="h-4 w-4 relative top-[1px]" />
                                 <span>Re-categorise {MIN_CORRECTIONS - state.corrections} more transaction{MIN_CORRECTIONS - state.corrections !== 1 ? 's' : ''} to enable training</span>
@@ -479,7 +517,7 @@ const Transactions = () => {
                         )}
                     </div>
 
-                    <div className='bg-[#1a1818] min-w-[905px] shadow-lg rounded-lg p-10 pt-10 mt-4'>
+                    <div className='bg-[#1a1818] min-w-[905px]  shadow-lg rounded-lg p-10 pt-10 mt-4'>
                         <div className='flex justify-between'>
                             {
                                 selectedCsvName && selectedCsvName !== SELECT_CSV_DEFAULT ? <div></div>:
@@ -501,6 +539,24 @@ const Transactions = () => {
                                 className={rowData.length === 0 ? 
                                     'flex gap-x-2 mb-5 bg-gray-600 rounded-lg py-2 px-3 shadow-lg cursor-not-allowed text-sm opacity-50' :
                                     'flex gap-x-2 mb-5 bg-[#141212] rounded-lg py-2 px-3 shadow-lg cursor-pointer hover:bg-black text-sm'
+                                }
+                                onClick={rowData.length === 0 ? undefined :
+                                    async () => {
+                                        setRowData([]);
+                                                              
+                                        const uniqueCsvIds = new Set(rowData.map(row => row.csvId));
+                                        const csvData = await db.csvData.toArray();
+                                        const restoredCsvData = csvData.filter(data => uniqueCsvIds.has(data.id));
+                                        setUndos((prev) => {
+                                            if (prev) {
+                                                return [...prev, { type: 'deleteFiltered', rows: rowData, csvData: restoredCsvData }];
+                                            } else return [{ type: 'deleteFiltered', rows: rowData, csvData: restoredCsvData }];
+                                        });
+
+                                        await bulkRemoveTransactions(rowData);
+                                        const idMap = new Set(rowData.map(tx => tx._id));
+                                        setTransactions(prev => prev.filter(tx => !idMap.has(tx._id)));
+                                    }
                                 }
                             >
                                 <Trash className="relative top-[1px] w-5 h-5" />
@@ -533,7 +589,7 @@ const Transactions = () => {
                                     value={selectedCsvName}
                                     onChange={(e) => setSelectedCsvName(e.target.value)}
                                 >
-                                    <option value={null}>{SELECT_CSV_DEFAULT}</option>
+                                    <option value={"all"}>{SELECT_CSV_DEFAULT}</option>
                                     {csvNames.map(name => (
                                         <option key={name} value={name}>
                                             {name}
@@ -546,10 +602,10 @@ const Transactions = () => {
                                 <Redo redos={redos} redo={redo} />
                             </div>
                         </div>
-
+                        
                         {rowData && rowData.length > 0 ? ( <div className='h-170 w-206'>
-                            <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos)} onCellChange={handleCellChange} />
-                            </div>) : null
+                            <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos, setTransactions)} onCellChange={handleCellChange} />
+                            </div>) : <div>No data</div>
                         }
                     </div>
                 </div>

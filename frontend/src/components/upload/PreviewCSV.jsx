@@ -6,7 +6,7 @@ import EditableGrid from '../EditableGrid';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MIN_CONF_SCORE } from '../../utils/constants/constants';
 import Warning from '../../assets/icons/warning-circle-svgrepo-com.svg?react';
 import Tick from '../../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
-import { addTransactions } from '../../db/db';
+import { bulkAddTransactions } from '../../db/db';
 import { usePage } from '../../pages/PageContext'
 
 const PreviewCSV = () => {
@@ -125,7 +125,7 @@ const PreviewCSV = () => {
             updatedTransactions.push(match || tx);
         };
 
-        await addTransactions(updatedTransactions, state.csvFilename);
+        await bulkAddTransactions(updatedTransactions, state.csvFilename, state.dateFormat);
         console.log('Data saved successfully');
 
         navigate("/dashboard");

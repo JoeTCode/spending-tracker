@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUpload } from './UploadContext';
+import { usePage } from '../../pages/PageContext';
 import ShowMore from '../../assets/icons/expand-more-alt-svgrepo-com.svg?react';
 import ShowLess from '../../assets/icons/expand-less-alt-svgrepo-com.svg?react';
 import { db } from '../../db/db';
@@ -8,6 +9,8 @@ import Trash from '../../assets/icons/trash-svgrepo-com.svg?react';
 
 const MapColumns = () => {
     const { state, dispatch } = useUpload();
+    const { state: pageState, dispatch: pageDispatch } = usePage();
+
     const [ dateColName, setDateColName ] = useState('');
     const [ descriptionColName, setDescriptionColName ] = useState('');
     const [ accountColName, setAccountColName ] = useState('');
@@ -36,7 +39,7 @@ const MapColumns = () => {
         !dateFormat ||
         !amountColNames.col1 ||
         !descriptionColName ||
-        (!state.allowCategorisation && !categoryColName) ||
+        (!pageState.allowCategorisation && !categoryColName) ||
         (!descriptorColName && renderFindAmountDescriptor);
     
     const saveMappingDisabled =
@@ -45,7 +48,7 @@ const MapColumns = () => {
         !dateFormat ||
         !amountColNames.col1 ||
         !descriptionColName ||
-        (!state.allowCategorisation && !categoryColName) ||
+        (!pageState.allowCategorisation && !categoryColName) ||
         (!descriptorColName && renderFindAmountDescriptor) ||
         !mappingTitle;
 
@@ -127,8 +130,8 @@ const MapColumns = () => {
 
             } else continue;
         };
-        
-        return data;
+
+        return data.filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));;
     };
 
     useEffect(() => {
@@ -529,7 +532,7 @@ const MapColumns = () => {
                             </div>
 
                             {/* category selector */}
-                            {!state.allowCategorisation && (
+                            {!pageState.allowCategorisation && (
                                 <div className='flex flex-col'>
                                     <label htmlFor="category-col-select">Transaction category</label>
                                     <select

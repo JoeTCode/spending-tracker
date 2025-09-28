@@ -11,6 +11,7 @@ import { getPredictions } from '../api/model';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
+import { usePage } from './PageContext';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 
@@ -29,20 +30,22 @@ function formatDate(date) {
 }
 
 const Switch = ()  => {
-    const { state, dispatch } = useUpload();
+    const { state: pageState, dispatch: pageDispatch } = usePage();
 
     return (
         <label className="relative inline-flex items-center cursor-pointer">
             <input
                 type="checkbox"
                 className="sr-only peer"
-                checked={state.allowCategorisation}
-                onChange={(e) => dispatch({ type: "SET_ALLOW_CATEGORISATION", payload:e.target.checked })}
+                checked={pageState.allowCategorisation}
+                onChange={(e) => {
+                    pageDispatch({ type: "SET_ALLOW_CATEGORISATION", payload: e.target.checked });
+                }}
             />
             <div className="w-9 h-5 bg-gray-400 rounded-full peer-checked:bg-[#646cff] transition-colors duration-200 ease-in">
                 <div
                 className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in
-                ${state.allowCategorisation ? "translate-x-4" : "translate-x-0"}`}
+                ${pageState.allowCategorisation ? "translate-x-4" : "translate-x-0"}`}
                 />
             </div>
         </label>
@@ -122,6 +125,7 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
     useEffect(() => {
         if (acceptedFile) setFilename(acceptedFile.name);
     }, [acceptedFile])
+
     const onFileNameChange = (value) => {
         setFilename(value);
     };
@@ -231,9 +235,9 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
 
 const Upload = () => {
     const { state, dispatch } = useUpload();
-    const { CSVReader } = useCSVReader();
+    const { state: pageState, dispatch: pageDispatch } = usePage();
 
-    const [ categorisedTransactions, setCategorisedTransactions ] = useState([]);
+    const { CSVReader } = useCSVReader();
     const [ isLoading, setIsLoading ] = useState(true);
     const [ parsedCSV, setParsedCSV ] = useState([]);
 
@@ -247,6 +251,48 @@ const Upload = () => {
 
         return res;
     };
+
+    const findDuplicates = async (updatedTransactions) => {
+
+        const findAbsoluteDuplicates = (dbTxs, newTxs) => {
+            const dbIdSet = new Set(dbTxs.map(tx => tx._id));
+            return newTxs.filter((tx, i) =>
+                dbIdSet.has(makeTransactionId({ row: i, ...tx }))
+            );
+        };
+
+        const findPossibleDuplicates = (dbTxs, newTxs) => {
+            const dbFieldHashes = new Set(dbTxs.map(tx =>
+                makeTransactionId({ ...tx })
+            ));
+            return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
+        };
+
+        // Date range
+        const timestamps = updatedTransactions.map(tx => new Date(tx.date).getTime());
+        const [minTime, maxTime] = [Math.min(...timestamps), Math.max(...timestamps)];
+        const transactionsInRange = await db.transactions
+            .where('date')
+            .between(new Date(minTime), new Date(maxTime), true, true)
+            .toArray();
+
+
+        const absDuplicates = findAbsoluteDuplicates(transactionsInRange, updatedTransactions);
+        const filteredTransactions = updatedTransactions.filter(
+            tx => !absDuplicates.some(d => d._id === tx._id)
+        );
+
+        const duplicates = findPossibleDuplicates(transactionsInRange, filteredTransactions);
+        const nonDuplicateTransactions = filteredTransactions.filter(
+            tx => !duplicates.some(d => d._id === tx._id)
+        );
+
+        dispatch({ type: "SET_STAGE", payload: "reviewDuplicates" });
+        dispatch({ type: "SET_ABSOLUTE_DUPLICATE_ROWS", payload: absDuplicates });
+        dispatch({ type: "SET_DUPLICATE_ROWS", payload: duplicates });
+        dispatch({ type: "SET_NON_DUPLICATE_ROWS", payload: nonDuplicateTransactions });
+    };
+
 
     useEffect(() => {
         if (state.transactions.length === 0) {
@@ -264,10 +310,16 @@ const Upload = () => {
         const handleTransactions = async () => {
             const validatedTransactions = validateAllTransactions(state.transactions, state.dateFormat);
 
-            if (!state.allowCategorisation) {
+            if (validatedTransactions.length === 0) {
                 dispatch({ type: "SET_LOADING", payload: false });
                 dispatch({ type: "SET_STAGE", payload: "upload" });
-                toast.success("Categorisation skipped!");
+                return;
+            };
+
+            if (!pageState.allowCategorisation) {
+                dispatch({ type: "SET_LOADING", payload: false });
+                findDuplicates(validatedTransactions);
+                toast.success("Categorisation skipped");
                 return;
             };
 
@@ -279,7 +331,6 @@ const Upload = () => {
                     dispatch({ type: "SET_TRANSACTIONS", payload: [] });
                     dispatch({ type: "SET_STAGE", payload: "upload" });
                     dispatch({ type: "SET_LOADING", payload: false });
-                    setCategorisedTransactions([]);
                     toast.error("Categorisation failed");
                     return;
                 };
@@ -295,75 +346,22 @@ const Upload = () => {
                     confidenceScores,
                     MIN_CONF_SCORE
                 );
-
-                setCategorisedTransactions(updatedTransactions);                
+              
                 dispatch({ type: "SET_CONFIDENCE_SCORES", payload: confidenceScores });
                 dispatch({ type: "SET_LOW_CONFIDENCE_TRANSACTIONS", payload: lowConfTransactions });
                 dispatch({ type: "SET_LOADING", payload: false });
+
+                findDuplicates(updatedTransactions);
                 toast.success("Categorisation successfully completed!");
             } catch (err) {
                 console.error(err);
                 dispatch({ type: "SET_LOADING", payload: false });
-                setCategorisedTransactions([]);
                 toast.error("Categorisation failed");
             };
         };
 
         handleTransactions()
     }, [state.transactions])
-
-    useEffect(() => {
-        if (categorisedTransactions.length === 0) return;
-
-        const findAbsoluteDuplicates = (dbTxs, newTxs) => {
-            const dbIdSet = new Set(dbTxs.map(tx => tx._id));
-            return newTxs.filter((tx, i) =>
-                dbIdSet.has(makeTransactionId({ row: i, ...tx }))
-            );
-        };
-
-        const findPossibleDuplicates = (dbTxs, newTxs) => {
-            const dbFieldHashes = new Set(dbTxs.map(tx =>
-                makeTransactionId({ ...tx })
-            ));
-            return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
-        };
-
-        const findDuplicates = async (updatedTransactions) => {
-
-            if (updatedTransactions.length === 0) {
-                dispatch({ type: "SET_LOADING", payload: false });
-                dispatch({ type: "SET_STAGE", payload: "upload" });
-                return;
-            };
-
-            // Date range
-            const timestamps = updatedTransactions.map(tx => new Date(tx.date).getTime());
-            const [minTime, maxTime] = [Math.min(...timestamps), Math.max(...timestamps)];
-            const transactionsInRange = await db.transactions
-                .where('date')
-                .between(new Date(minTime), new Date(maxTime), true, true)
-                .toArray();
-
-
-            const absDuplicates = findAbsoluteDuplicates(transactionsInRange, updatedTransactions);
-            const filteredTransactions = updatedTransactions.filter(
-                tx => !absDuplicates.some(d => d._id === tx._id)
-            );
-
-            const duplicates = findPossibleDuplicates(transactionsInRange, filteredTransactions);
-            const nonDuplicateTransactions = filteredTransactions.filter(
-                tx => !duplicates.some(d => d._id === tx._id)
-            );
-
-            dispatch({ type: "SET_STAGE", payload: "reviewDuplicates" });
-            dispatch({ type: "SET_ABSOLUTE_DUPLICATE_ROWS", payload: absDuplicates });
-            dispatch({ type: "SET_DUPLICATE_ROWS", payload: duplicates });
-            dispatch({ type: "SET_NON_DUPLICATE_ROWS", payload: nonDuplicateTransactions });
-        };
-
-        findDuplicates(categorisedTransactions);
-    }, [categorisedTransactions]);
 
     const renderContent = (getRootProps, acceptedFile, ProgressBar, getRemoveFileProps, parsedCSV) => {
 
@@ -388,7 +386,6 @@ const Upload = () => {
                 </>                
             );
         };
-
         
         return (
             

@@ -5,6 +5,7 @@ const PageContext = createContext();
 const storedCorrections = localStorage.getItem('corrections');
 const initialState = {
 	corrections: storedCorrections ? parseInt(storedCorrections, 10) : 0,
+	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
 };
 
 const pageReducer = (state, action) => {
@@ -13,6 +14,11 @@ const pageReducer = (state, action) => {
             localStorage.setItem("corrections", action.payload);
             return { ...state, corrections: action.payload }
         };
+		case "SET_ALLOW_CATEGORISATION": {
+			localStorage.setItem('allowCategorisation', action.payload);
+			return { ...state, allowCategorisation: action.payload }
+		};
+
         default: return state;
     };
 };

@@ -3,13 +3,15 @@ import { useUpload } from './UploadContext';
 import CustomProgressBar from '../ProgressBar';
 import EditableGrid from '../EditableGrid';
 import { CATEGORIES, CATEGORY_TO_EMOJI } from '../../utils/constants/constants';
-import { db, addTransactions } from '../../db/db';
+import { db, bulkAddTransactions } from '../../db/db';
 import { useNavigate } from 'react-router-dom';
+import { usePage } from '../../pages/PageContext';
 
 const ReviewDuplicates = ({ getRemoveFileProps }) => {
     const { state, dispatch } = useUpload();
+    const { state: pageState, dispatch: pageDispatch } = usePage();
     const gridRef = useRef(null);
-    const [ duplicates, setDuplicates ] = useState(state.duplicateRows.map(tx => ({ ...tx })));
+    const [ duplicates, setDuplicates ] = useState(state.duplicateRows?.map(tx => ({ ...tx })));
     const [ numSelected, setNumSelected ] = useState(0);
     const [ selectedRows, setSelectedRows ] = useState([]);
     const navigate = useNavigate();
@@ -68,14 +70,8 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
     };
 
     const handleContinue = async () => {
-        // setDuplicateWarning(false);
-        // dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
-        // setDuplicateRows([]);
         dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] });
-        // store the non duplicates and transactions marked as non-duplicate by user
-        // setSaveData([ ...nonDuplicateRows, ...selectedRows ]);
         
-
         // remove duplicate transactions that were not marked as non-duplicate from lowConfTx
         const selectedIdSet = new Set(selectedRows.map(tx => tx._id));
         const nonSelectedIdSet = new Set();
@@ -86,14 +82,14 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
         };
 
         const saveData = [ ...state.nonDuplicateRows, ...selectedRows ];
-        if (state.allowCategorisation) {
+        if (pageState.allowCategorisation) {
             dispatch({ type: "SET_SAVE_DATA", payload: saveData });
             // remove non selected transactions from low conf tx
             dispatch({ type: "FILTER_LOW_CONFIDENCE_TRANSACTIONS", payload: nonSelectedIdSet });
             // dispatch({ type: "SET_PREVIEW_CSV", payload: true });
             dispatch({ type: "SET_STAGE", payload: "review"});
         } else {
-            await addTransactions(saveData, state.csvFilename);
+            await bulkAddTransactions(saveData, state.csvFilename, state.dateFormat);
             navigate('/dashboard');
         }
     };

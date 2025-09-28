@@ -18,7 +18,6 @@ const initialState = {
 	csvFilename: "",
 	// booleans
 	loading: false,
-	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
 };
 
 const uploadReducer = (state, action) => {
@@ -45,10 +44,6 @@ const uploadReducer = (state, action) => {
 		case "SET_CSV_FILENAME": return { ...state, csvFilename: action.payload };
 		// booleans
 		case "SET_LOADING": return { ...state, loading: action.payload };
-		case "SET_ALLOW_CATEGORISATION": {
-			localStorage.setItem('allowCategorisation', action.payload);
-			return { ...state, allowCategorisation: action.payload }
-		};
 		default: return state;
   	};
 };

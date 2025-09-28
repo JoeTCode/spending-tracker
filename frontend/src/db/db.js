@@ -9,7 +9,7 @@ const CATEGORIES_SET = new Set(CATEGORIES);
 const db = new Dexie('transactionsDB');
 
 db.version(1).stores({
-    csvData: '++id, &name, date',
+    csvData: '++id, &name, date, dateFormat',
     // '_id, date, amount, type, category, description, is_trainable, trained'
     transactions: '_id, date, amount, category, is_trainable, trained, csvId', // Primary key and indexed props
     // _id, last_reminder, title, amount, interval
@@ -19,6 +19,11 @@ db.version(1).stores({
 });
 
 function parseDate(dateString, region = "EU") {
+    if (dateString instanceof Date) {
+        console.warn("Date object passed to parseDate. Expected String.")
+        return new Date(dateString); // return a copy
+    };
+    
     const euFormats = [
         "dd/MM/yyyy",
         "dd-MM-yyyy",
@@ -26,6 +31,9 @@ function parseDate(dateString, region = "EU") {
         "dd MMM yyyy",  // 15 Jan 2024
         "dd-MMM-yyyy",  // 15-Jan-2024
         "dd/MMM/yyyy", // 15/Jan/2024
+        "yyyy MM dd",
+        "yyyy-MM-dd",
+        "yyyy/MM/dd",
     ];
 
     const usFormats = [
@@ -35,6 +43,9 @@ function parseDate(dateString, region = "EU") {
         "MMM dd yyyy",  // Jan 15 2024
         "MMM-dd-yyyy",  // Jan-15-2024
         "MMM/dd/yyyy", // Jan/15/2024
+        "yyyy dd MM",
+        "yyyy-dd-MM",
+        "yyyy/dd/MM",
     ];
 
     const formats = region === "US" ? usFormats : euFormats;
@@ -248,14 +259,103 @@ export async function updateTransaction(transaction) {
     };
 };
 
-export async function deleteTransaction(transaction) {
+export async function deleteTransaction(transaction) { // not to be used
     await db.transactions.delete(transaction._id);
 }
 
-export async function addTransactions(transactions, csvFilename) {
-    const csvId = await db.csvData.add({ name: csvFilename, date: new Date().toUTCString() });
+export async function bulkDeleteTransactions(transactions) {
+    const keys = transactions.map(tx => tx._id);
+    await db.transactions.bulkDelete(keys)
+};
+
+// For upload page only
+export async function bulkAddTransactions(transactions, csvFilename, dateFormat) {
+    let filename = csvFilename;
+    if (!csvFilename) filename = new Date().toUTCString();
+    const csvId = await db.csvData.add({ name: csvFilename, date: new Date().toUTCString(), dateFormat: dateFormat });
     const transcationsWithCsvId = transactions.map(tx => ({ ...tx, csvId: csvId }));
     await db.transactions.bulkAdd(transcationsWithCsvId);
+};
+
+// For Transactions page specifically
+export async function removeTransaction(transaction) {
+    const key = transaction._id;
+    await db.transactions.delete(key);
+
+    const remaining = await db.transactions.where("csvId").equals(transaction.csvId).count();
+    if (remaining === 0) await db.csvData.delete(transaction.csvId);
+};
+
+// For Transactions page specifically
+export async function bulkRemoveTransactions(transactions) {
+    const keys = transactions.map(tx => tx._id);
+    await db.transactions.bulkDelete(keys);
+
+    // Create a map of the unique csvIds from the transactions that were removed
+    const transactionsCsvIdMap = new Set(transactions.map(tx => tx.csvId));
+
+    // Determine if the deletion will remove all instances of transactions with their specific csvId, if true, delete csvData with that csvId
+    await Promise.all(
+        [...transactionsCsvIdMap].map(async (csvId) => {
+            const remaining = await db.transactions.where("csvId").equals(csvId).count();
+            if (remaining === 0) {
+                await db.csvData.delete(csvId);
+            };
+        })
+    );
+
+    // for (let csvId of [...transactionsCsvIdMap]) {
+    //     const remaining = await db.transactions.where("csvId").equals(csvId).count();
+    //     if (remaining === 0) {
+    //         await db.csvData.delete(csvId);
+    //     };
+    // };
+};
+
+// For Transactions page specifically
+export async function bulkRestoreTransactions(restoredTransactions, restoredCsvDataArray) {
+    // csvIdToDataMap = { csvId: csvData, csvId: csvData } (mapping of each csvData's id to csvData)
+    const restoredCsvIdToDataMap = {};
+    for (let data of restoredCsvDataArray) {
+        restoredCsvIdToDataMap[data.id] = data;
+    };
+
+    // check if any transaction csv ids were removed from csvData in a previous removeTransaction call - if true restore data
+    const csvDataDbArray = await db.csvData.toArray();
+    const dbCsvIdSet = new Set(csvDataDbArray.map(data => data.id));
+
+    const missingCsvIds = new Set(
+        restoredTransactions
+            .map(tx => tx.csvId)
+            .filter(id => !dbCsvIdSet.has(id))
+    );
+
+    for (let id of missingCsvIds) {
+        await db.csvData.add(restoredCsvIdToDataMap[id]);
+    };
+
+    // reparse date fields according to the original date format (EU/US)
+    const parsedTransactions = restoredTransactions.map(tx => ({ ...tx, date: parseDate(tx.date, restoredCsvIdToDataMap[tx.csvId].dateFormat )}));
+
+    // add parsed transactions to db
+    await db.transactions.bulkAdd(parsedTransactions);
+    return parsedTransactions;
+};
+
+// For Transactions page specifically
+export async function restoreTransaction(transaction, restoredCsvData) {
+    console.log(transaction, restoredCsvData);
+    const csvDataDbArray = await db.csvData.toArray();
+
+    const missingId = csvDataDbArray.map(data => data.id).filter(id => id !== transaction.csvId);
+    console.log(missingId);
+    if (missingId && missingId.length > 0) {
+        await db.csvData.add(restoredCsvData);
+    };
+
+    const parsedTransaction = { ...transaction, date: parseDate(transaction.date, restoredCsvData.dateFormat) };
+    console.log(parsedTransaction);
+    await db.transactions.add(parsedTransaction);
 };
 
 export async function getPayments(rangeType) {
