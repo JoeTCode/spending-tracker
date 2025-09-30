@@ -1,32 +1,28 @@
 import React, { useState } from 'react';
-import { NavLink } from "react-router-dom";
-import { useAuth0 } from '@auth0/auth0-react';
+import { NavLink, useNavigate } from "react-router-dom";
 // import { Menu, X } from 'lucide-react'; // icons
-import Menu from '../assets/icons/menu-svgrepo-com.svg?react';
-import Close from '../assets/icons/close-svgrepo-com.svg?react';
 import Dashboard from '../assets/icons/dashboard-svgrepo-com.svg?react';
 import Home from '../assets/icons/home-03-svgrepo-com.svg?react';
 import Transactions from '../assets/icons/transaction-svgrepo-com.svg?react';
+import { useAuth } from './useAuth';
 
 const Sidebar = () => {
-    const { isAuthenticated, isLoading, logout } = useAuth0();
     const [ open, setOpen ] = useState(true);
+    const navigate = useNavigate();
+    const { logout } = useAuth();
 
-    if (isLoading) return <div />;
+    // const handleLogout = async () => {
+    //     try {
+    //         await logout();
+    //     } catch (err) {
+    //         console.error("An error occurred on logout");
+    //     } finally {
+    //         navigate("/login");
+    //     };
+    // };
 
     return (
-        <div>
-            {/* Toggle button (hamburger)
-            <button
-                className={!open
-                    ? "p-2 fixed top-4 left-4 z-50 text-white rounded"
-                    : "hidden"
-                }
-                onClick={() => setOpen(true)}
-            >
-                {!open && <Menu className="w-5" />}
-            </button> */}
-            
+        <div>  
             <div
                 className={`fixed top-0 w-full bg-[#1a1818] text-white p-2 sm:px-6 sm:py-2 
                 transition-transform duration-300 z-40
@@ -68,18 +64,17 @@ const Sidebar = () => {
                             <span className="flex-1">Transactions</span>
                         </NavLink>
                         
-                        {isAuthenticated && (
-                            <button
-                                onClick={() =>
-                                    logout({
-                                        logoutParams: { returnTo: "http://localhost:5173/login" },
-                                    })
-                                }
-                                className="bg-[#747bff] px-1 sm:px-3 py-1 rounded cursor-pointer hover:bg-[#5055a7]"
-                            >
-                                Log Out
-                            </button>
-                        )}
+                        <button
+                            // onClick={() =>
+                            //     logout({
+                            //         logoutParams: { returnTo: "http://localhost:5173/login" },
+                            //     })
+                            // }
+                            onClick={logout}
+                            className="bg-[#747bff] px-1 sm:px-3 py-1 rounded cursor-pointer hover:bg-[#5055a7]"
+                        >
+                            Log Out
+                        </button>
                     </nav>
                 </div>
             </div>

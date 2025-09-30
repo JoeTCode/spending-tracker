@@ -1,8 +1,33 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import Auth0Icon from "../assets/icons/auth0-svgrepo-com.svg?react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useAuth } from "../components/useAuth";
+
 const Login = () => {
     const { loginWithRedirect } = useAuth0();
+	const [ username, setUsername ] = useState("");
+	const [ password, setPassword ] = useState("");
+	const navigate = useNavigate();
+	const { login } = useAuth();
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		
+		if (!username || !password) {
+			setUsername("");
+			setPassword("");
+			return;
+		};
+
+		try {
+			await login(username, password);
+			navigate("/");
+		} catch (err) {
+			setUsername("");
+			setPassword("");
+		};
+	};
 
     return (
 		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
@@ -12,33 +37,37 @@ const Login = () => {
 					<h2 className="text-neutral-400">Login to your TrackYourTransactions account</h2>
 				</div>
 				<form 
-					action=""
+					onSubmit={handleSubmit}
 					className="flex flex-col justify-between mt-[10%]"
 				>
 					<div className="flex flex-col gap-y-4">
 						<div className="flex flex-col gap-y-2">
-							<label for="first" className="font-bold">
+							<label htmlFor="first" className="font-bold">
 								Username
 							</label>
 							<input type="text" id="first" name="first" 
 								placeholder="name@example.com" required
 								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								onChange={(e) => setUsername(e.target.value)}
+								value={username}
 							/>
 						</div>
 						
 						<div className="flex flex-col gap-y-2">
-							<label for="password" className="font-bold">
+							<label htmlFor="password" className="font-bold">
 								Password
 							</label>
 							<input type="password" id="password" name="password" 
 								placeholder="Your password" required
 								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								onChange={(e) => setPassword(e.target.value)}
+								value={password}
 							/>
 						</div>
 					</div>
 					
-					<div className="text-center w-full bg-[#646cff] py-2 rounded-lg cursor-pointer mt-5">
-						<button type="submit" className="cursor-pointer">
+					<div className="text-center w-full bg-[#646cff] rounded-lg cursor-pointer mt-5">
+						<button type="submit" className="cursor-pointer w-full p-2">
 							Login
 						</button>
 					</div>

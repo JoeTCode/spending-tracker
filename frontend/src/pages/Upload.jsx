@@ -1,9 +1,8 @@
 import { NavBar } from '../components';
 import { ReviewDuplicates, PreviewCSV, MapColumns, UploadProgress } from '../components/upload';
 import { useCSVReader, formatFileSize } from 'react-papaparse';
-import React, { useRef, useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
-import { MIN_CONF_SCORE, CATEGORIES } from '../utils/constants/constants';
+import { useState, useEffect } from 'react';
+import { MIN_CONF_SCORE } from '../utils/constants/constants';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
@@ -12,8 +11,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
-
-const CATEGORIES_SET = new Set(CATEGORIES);
 
 function formatDescription(desc) {
     let formattedDesc = String(desc).split('\t')[0].trim();

@@ -1,5 +1,4 @@
 import { NavBar, EditableGrid } from '../components';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useRef, useState, useEffect } from 'react';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS, MIN_CORRECTIONS } from '../utils/constants/constants';
 import { db, getTransactions, updateTransaction, removeTransaction, bulkRemoveTransactions, bulkRestoreTransactions, restoreTransaction } from '../db/db';
@@ -223,7 +222,6 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
 // flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50
 const Transactions = () => {
     const { state, dispatch } = usePage();
-    const { getAccessTokenSilently } = useAuth0();
     const [ transactions, setTransactions ] = useState([]);
     const [ rowData, setRowData ] = useState([]);
     const [ undos, setUndos ] = useState([]);

@@ -1,10 +1,77 @@
-import { useEffect, useState } from 'react';
-
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 const Register = () => {
+	const [ username, setUsername ] = useState("");
+	const [ password, setPassword ] = useState("");
+	const navigate = useNavigate();
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		if (username && password) {
+			try {
+				await axios.post("http://localhost:5000/register", { username: username, password: password });
+				navigate('/login');
+			} catch (err) {
+				setUsername("");
+				setPassword("");
+			};
+		};
+	};
 
     return (
-        <div>Register</div>
+		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
+			<div className="flex flex-col bg-[#141212] w-120 h-150 pt-16 px-12 rounded-lg">
+				<div className="flex flex-col w-full text-center">
+					<h1 className="text-3xl font-bold">Register</h1>
+					<h2 className="text-neutral-400">Track your spending with TrackYourTransactions</h2>
+				</div>
+				<form 
+					onSubmit={handleSubmit}
+					className="flex flex-col justify-between mt-[10%]"
+				>
+					<div className="flex flex-col gap-y-4">
+                        <div className="flex flex-col gap-y-2">
+							<label htmlFor="first" className="font-bold">
+								Username
+							</label>
+							<input type="text" id="first" name="first" 
+								placeholder="johndoe" required
+								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								onChange={(e) => setUsername(e.target.value)}
+								value={username}
+							/>
+						</div>
+						
+						<div className="flex flex-col gap-y-2">
+							<label htmlFor="password" className="font-bold">
+								Password
+							</label>
+							<input type="password" id="password" name="password" 
+								placeholder="Create password" required
+								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								onChange={(e) => setPassword(e.target.value)}
+								value={password}
+							/>
+						</div>
+					</div>
+					
+					<div className="text-center w-full bg-[#646cff] rounded-lg cursor-pointer mt-5">
+						<button type="submit" className="cursor-pointer w-full py-2">
+							Sign up
+						</button>
+					</div>
+				</form>
+				<div className="w-full text-center">
+					<p className="text-sm text-neutral-400 mt-1">
+						Already have an account? <Link to='/login' className="underline underline-offset-3 decoration-1 text-[#646cff]"> Login </Link>
+					</p>
+				</div>
+
+			</div>
+		</div>
     );
+
 };
 
 export default Register;

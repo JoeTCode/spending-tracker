@@ -7,57 +7,60 @@ import { Login, Upload, Dashboard, Transactions, Register } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UploadProvider } from './components/upload/UploadContext';
 import { PageProvider } from "./pages/PageContext";
+import { AuthProvider } from './components/useAuth';
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <Auth0Provider
-            domain="dev-jco6fy6pebxlsglc.us.auth0.com"
-            clientId="Hp1O9MWjmz4GJ5sNCR26ISBdxzujrhSb"
-            authorizationParams={{
-                redirect_uri: window.location.origin,
-                audience: "http://localhost:5000",
-                scope: "read:current_user"
-            }}
-        >
-            <BrowserRouter>
-            <Routes>
-                <Route path='/login' element={<Login />} />
-                <Route path='/register' element={<Register />} />
-                <Route
-                    path='/'
-                    element={
-                        <ProtectedRoute>
-                            <PageProvider>
-                                <UploadProvider>
-                                    <Upload />
-                                </UploadProvider>
-                            </PageProvider>
-                        </ProtectedRoute>
-                    } 
-                />
-                
-                <Route
-                    path='/dashboard'
-                    element={
-                        <ProtectedRoute>
-                            <PageProvider>
-                                <Dashboard />
-                            </PageProvider>
-                        </ProtectedRoute>
-                    } 
-                />
-                <Route
-                    path='/transactions'
-                    element={
-                        <ProtectedRoute>
-                            <PageProvider>
-                                <Transactions />
-                            </PageProvider>
-                        </ProtectedRoute>
-                    }
-                />
-            </Routes>
-            </BrowserRouter>
-        </Auth0Provider>
+            <Auth0Provider
+                domain="dev-jco6fy6pebxlsglc.us.auth0.com"
+                clientId="Hp1O9MWjmz4GJ5sNCR26ISBdxzujrhSb"
+                authorizationParams={{
+                    redirect_uri: window.location.origin,
+                    audience: "http://localhost:5000",
+                    scope: "read:current_user"
+                }}
+            >
+                <AuthProvider>
+                    <BrowserRouter>
+                    <Routes>
+                        <Route path='/login' element={<Login />} />
+                        <Route path='/register' element={<Register />} />
+                        <Route
+                            path='/'
+                            element={
+                                <ProtectedRoute>
+                                    <PageProvider>
+                                        <UploadProvider>
+                                            <Upload />
+                                        </UploadProvider>
+                                    </PageProvider>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        
+                        <Route
+                            path='/dashboard'
+                            element={
+                                <ProtectedRoute>
+                                    <PageProvider>
+                                        <Dashboard />
+                                    </PageProvider>
+                                </ProtectedRoute>
+                            } 
+                        />
+                        <Route
+                            path='/transactions'
+                            element={
+                                <ProtectedRoute>
+                                    <PageProvider>
+                                        <Transactions />
+                                    </PageProvider>
+                                </ProtectedRoute>
+                            }
+                        />
+                    </Routes>
+                    </BrowserRouter>
+                </AuthProvider>
+            </Auth0Provider>
     </StrictMode>
 )
