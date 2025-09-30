@@ -2,14 +2,15 @@ import { useAuth0 } from "@auth0/auth0-react";
 import Auth0Icon from "../assets/icons/auth0-svgrepo-com.svg?react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../components/useAuth";
+import { useInternalAuth } from "../components/useInternalAuth";
 
 const Login = () => {
     const { loginWithRedirect } = useAuth0();
 	const [ username, setUsername ] = useState("");
 	const [ password, setPassword ] = useState("");
+	const [ invalidLogin, setInvalidLogin ] = useState(false);
 	const navigate = useNavigate();
-	const { login } = useAuth();
+	const { login } = useInternalAuth();
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -26,12 +27,15 @@ const Login = () => {
 		} catch (err) {
 			setUsername("");
 			setPassword("");
+			if (err.response.data === "Invalid username or password") {
+				setInvalidLogin(true);
+			};
 		};
 	};
 
     return (
 		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
-			<div className="flex flex-col bg-[#141212] w-120 h-150 pt-16 px-12 rounded-lg">
+			<div className="flex flex-col bg-[#141212] w-120 h-full pt-16 pb-10 px-12 rounded-lg">
 				<div className="flex flex-col w-full text-center">
 					<h1 className="text-3xl font-bold">Welcome back</h1>
 					<h2 className="text-neutral-400">Login to your TrackYourTransactions account</h2>
@@ -41,12 +45,15 @@ const Login = () => {
 					className="flex flex-col justify-between mt-[10%]"
 				>
 					<div className="flex flex-col gap-y-4">
+						{invalidLogin && (
+							<div className="text-red-300">Invalid username or password</div>
+						)}
 						<div className="flex flex-col gap-y-2">
 							<label htmlFor="first" className="font-bold">
 								Username
 							</label>
 							<input type="text" id="first" name="first" 
-								placeholder="name@example.com" required
+								placeholder="johndoe" required
 								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}
 								value={username}

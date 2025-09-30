@@ -33,5 +33,4 @@ const userSchema = new Schema({
     }
 });
 
-userSchema.index({ username: 1 }, { unique: true });
 export default mongoose.model('User', userSchema);

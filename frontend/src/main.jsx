@@ -7,7 +7,7 @@ import { Login, Upload, Dashboard, Transactions, Register } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UploadProvider } from './components/upload/UploadContext';
 import { PageProvider } from "./pages/PageContext";
-import { AuthProvider } from './components/useAuth';
+import { InternalAuthProvider } from './components/useInternalAuth';
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
@@ -20,7 +20,7 @@ createRoot(document.getElementById('root')).render(
                     scope: "read:current_user"
                 }}
             >
-                <AuthProvider>
+                <InternalAuthProvider>
                     <BrowserRouter>
                     <Routes>
                         <Route path='/login' element={<Login />} />
@@ -60,7 +60,7 @@ createRoot(document.getElementById('root')).render(
                         />
                     </Routes>
                     </BrowserRouter>
-                </AuthProvider>
+                </InternalAuthProvider>
             </Auth0Provider>
     </StrictMode>
 )

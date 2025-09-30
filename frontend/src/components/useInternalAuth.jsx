@@ -3,10 +3,10 @@ import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export const InternalAuthProvider = ({ children }) => {
     const [ user, setUser ] = useState(null);
     const [ loading, setLoading ] = useState(true);
-    const { logout: auth0Logout } = useAuth0();
+    const { isAuthenticated, logout: auth0Logout } = useAuth0();
 
     // Run once on mount
     useEffect(() => {
@@ -37,12 +37,14 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+        // logout via auth0
+        if (isAuthenticated) {
+            await auth0Logout();
+            return;
+        };
+        
         // revokes tokens stored in cookies refresh token in db
         await axios.post("http://localhost:5000/logout", {}, { withCredentials: true });
-
-        // logout via auth0 aswell
-        await auth0Logout();
-
         // clear user immediately
         setUser(null); 
     };
@@ -54,4 +56,4 @@ export const AuthProvider = ({ children }) => {
     );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useInternalAuth = () => useContext(AuthContext);

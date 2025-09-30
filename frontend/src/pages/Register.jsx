@@ -4,6 +4,7 @@ import axios from 'axios';
 const Register = () => {
 	const [ username, setUsername ] = useState("");
 	const [ password, setPassword ] = useState("");
+	const [ invalidRegister, setInvalidRegister ] = useState(false);
 	const navigate = useNavigate();
 
 	const handleSubmit = async (e) => {
@@ -15,13 +16,14 @@ const Register = () => {
 			} catch (err) {
 				setUsername("");
 				setPassword("");
+				if (err.response.data === "Username taken") setInvalidRegister(true);
 			};
 		};
 	};
 
     return (
 		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
-			<div className="flex flex-col bg-[#141212] w-120 h-150 pt-16 px-12 rounded-lg">
+			<div className="flex flex-col bg-[#141212] w-120 pb-30 pt-16 px-12 rounded-lg">
 				<div className="flex flex-col w-full text-center">
 					<h1 className="text-3xl font-bold">Register</h1>
 					<h2 className="text-neutral-400">Track your spending with TrackYourTransactions</h2>
@@ -31,6 +33,9 @@ const Register = () => {
 					className="flex flex-col justify-between mt-[10%]"
 				>
 					<div className="flex flex-col gap-y-4">
+						{invalidRegister && (
+							<div className="text-red-300">Please choose unique username</div>
+						)}
                         <div className="flex flex-col gap-y-2">
 							<label htmlFor="first" className="font-bold">
 								Username

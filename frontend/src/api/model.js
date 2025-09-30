@@ -15,17 +15,20 @@ const createEmbeddingsArray = (embeddings) => {
     return embeddingsArray;
 };
 
-export const getPredictions = async (descriptions) => {
+export const getPredictions = async (descriptions, accessToken) => {
     const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
     const embeddingsArray = createEmbeddingsArray(embeddings);
 
     try {
-        const res = await axios.post("http://127.0.0.1:8000/predict", {
-            predict_data: {
-                embeddings: embeddingsArray,
-                descriptions: descriptions
-            }
-        });
+        const res = await axios.post("http://127.0.0.1:8000/predict", 
+            { predict_data: {
+                    embeddings: embeddingsArray,
+                    descriptions: descriptions
+            }},
+            { headers: {
+                    "authorization": `Bearer ${accessToken}`
+            }}
+        );
 
         return res;
     } 
@@ -35,7 +38,7 @@ export const getPredictions = async (descriptions) => {
     };
 };
 
-export const trainModel = async (descriptions, categories) => {
+export const trainModel = async (descriptions, categories, accessToken) => {
     const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
     const embeddingsArray = createEmbeddingsArray(embeddings);
 

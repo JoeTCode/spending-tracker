@@ -177,6 +177,8 @@ app.post('/login', async (req, res) => {
 
 	const user = await getUser({ username: username });
 
+	if (!user) return res.status(401).send("Invalid username or password"); // Unauthorised
+
 	const match = await bcrypt.compare(password, user.passwordHash);
 
 	if (!match) return res.status(401).send("Invalid username or password"); // Unauthorised
@@ -251,6 +253,14 @@ app.post('/register', async (req, res) => {
 app.get('/api/me', checkAccessToken, (req, res) => {
 	return res.json(req.user);
 });
+
+app.post('/predict', checkAccessToken, (req, res) => {
+
+});
+
+app.post('/train', checkAccessToken, (req ,res) => [
+
+]);
 
 app.listen(port, () => {
     console.log(`App listening on port ${port}`);

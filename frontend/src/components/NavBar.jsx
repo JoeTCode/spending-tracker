@@ -4,12 +4,12 @@ import { NavLink, useNavigate } from "react-router-dom";
 import Dashboard from '../assets/icons/dashboard-svgrepo-com.svg?react';
 import Home from '../assets/icons/home-03-svgrepo-com.svg?react';
 import Transactions from '../assets/icons/transaction-svgrepo-com.svg?react';
-import { useAuth } from './useAuth';
+import { useInternalAuth } from './useInternalAuth';
 
 const Sidebar = () => {
     const [ open, setOpen ] = useState(true);
     const navigate = useNavigate();
-    const { logout } = useAuth();
+    const { logout } = useInternalAuth();
 
     // const handleLogout = async () => {
     //     try {
