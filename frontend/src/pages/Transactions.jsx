@@ -16,6 +16,8 @@ import Edit from '../assets/icons/edit-1-svgrepo-com.svg?react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
+import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const UNDO_REDO_DELAY = 500;
@@ -237,6 +239,7 @@ const Transactions = () => {
     const [ csvNames, setCsvNames ] = useState([]);
     const [ csvNamesToId, setCsvNamesToId ] = useState({});
     const [ selectedCsvName, setSelectedCsvName ] = useState('');
+    const { isAuthenticated, getAccessTokenSilently } = useAuth0();
 
     useEffect(() => {
         const retrieveTransactionData = async () => {
@@ -626,9 +629,21 @@ const Transactions = () => {
                     />
 
                 )}
-            />          
+            /> 
+            <button onClick={async () => {
+                const token = isAuthenticated ? await getAccessTokenSilently() : 'a';
+                const res = await axios.post(
+                    "http://localhost:5000/train",
+                    {}, 
+                    { 
+                        headers: { "authorization": `Bearer ${token}` },
+                        withCredentials: true
+                    },
+                );
+                console.log(res);
+            }}>TEST</button>         
         </>
-    )
-}
+    );
+};
 
 export default Transactions

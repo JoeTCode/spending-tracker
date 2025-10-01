@@ -48,12 +48,15 @@ export const trainModel = async (descriptions, categories, accessToken) => {
     };
 
     try {
-        const res = await axios.post("http://127.0.0.1:8000/train", {
-            train_data: {
+        const res = await axios.post("http://127.0.0.1:8000/train", 
+            {train_data: {
                 embeddings: embeddingsArray,
                 categories: categories
-            }
-        });
+            }},
+            { headers: {
+                    "authorization": `Bearer ${accessToken}`
+            }}
+        );
 
         return res;
     } 

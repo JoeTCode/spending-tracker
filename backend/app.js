@@ -17,8 +17,19 @@ const saltRounds = 10;
 const connectionString = process.env.MONGO_CONNECTION_STRING;
 const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
-const accessTokenExpiryTime = 900000; // 15 minutes
+// const accessTokenExpiryTime = 900000; // 15 minutes
+const accessTokenExpiryTime = 1000;
 const refreshTokenExpiryTime = 2.628e+9; // 1 month
+const accessTokenCookieOptions = {
+	maxAge: accessTokenExpiryTime,
+	httpOnly: true,
+	path: "/",
+};
+const refreshTokenCookieOptions = {
+	maxAge: refreshTokenExpiryTime,
+	httpOnly: true,
+	path: "/",
+};
 
 app.use(express.json());
 app.use(cors({
@@ -52,14 +63,47 @@ const checkAccessToken = async (req, res, next) => {
 		return res.status(401).json({ error: "Access token invalid" }); // Unauthorised
 	};
 
-	try {
-		const payload = jwt.verify(accessToken, accessTokenSecretKey);
-		req.user = payload;
-		next();
+	if (accessToken) {
+		try {
+			const payload = jwt.verify(accessToken, accessTokenSecretKey);
+			req.user = payload;
+			next();
 
+		} catch (err) {
+			if (err.name === 'TokenExpiredError') return res.status(401).json({ error: err.name }); // Unauthorised
+			else return res.status(401).json({ error: err.name });
+		};
+	}
+};
+
+// Checks if internal access token is valid (if accesstoken expired then cookie is auto deleted), if invalid, checks auth0 token is valid, else reject
+// Client will need to automatically call refresh token on reject to check if a new access token can be made
+const checkAuth = async (req, res, next) => {
+	const { accessToken } = req.cookies;
+
+	if (accessToken) {
+		try {
+			const payload = jwt.verify(accessToken, accessTokenSecretKey);
+			req.user = payload;
+			console.log('CheckAuth passed');
+			return next();
+
+		} catch (err) {
+			return res.status(401);
+		};
+	};
+
+	try {
+		await checkAuth0Jwt(req, res, (err) => {
+			if (err) {
+				return res.sendStatus(401);
+			} else {
+				req.user = { ...req.auth.payload }; // req.auth comes from Auth0 middleware
+				return next()
+			};
+		});
 	} catch (err) {
-		if (err.name === 'TokenExpiredError') return res.status(401).json({ error: err.name }); // Unauthorised
-		else return res.status(401).json({ error: err.name });
+		return res.sendStatus(500);
 	};
 };
 
@@ -116,7 +160,7 @@ const rotateRefreshToken = async (oldRefreshTokenId, user) => {
 
 		// Overwrite the old refresh token with the new one
 		await RefreshToken.updateOne(
-			{ tokenId: oldRefreshTokenId, uid: user.uid },
+			{ tokenId: oldRefreshTokenId, uid: user._id },
 			{ tokenId: newTokenId }
 		);
 
@@ -127,6 +171,7 @@ const rotateRefreshToken = async (oldRefreshTokenId, user) => {
 	};
 };
 
+// called clientside if api/me (checkJwt) returns expired token
 app.post('/refresh', async (req, res) => {
 	const { refreshToken } = req.cookies;
 
@@ -138,9 +183,9 @@ app.post('/refresh', async (req, res) => {
 		// Verify that client refresh token is not malformed or expired
 		const clientRefreshToken = jwt.verify(refreshToken, refreshTokenSecretKey);
 		
-		// Get refresh token data from db via helper
+		// Get matching refresh token data from db via helper that is not marked as revoked
 		const refreshTokenData = await getRefreshTokenData(clientRefreshToken.tokenId);
-		
+
 		// If the refresh token invalidated or there was a retrieval error return unauthorised
 		if (!refreshTokenData) return res.sendStatus(401);
 		
@@ -149,24 +194,20 @@ app.post('/refresh', async (req, res) => {
 		const accessToken = createAccessToken(user);
 		
 		// Attach to client as cookie
-		res.cookie("accessToken", accessToken, {
-			maxAge: accessTokenExpiryTime,
-			httpOnly: true,
-		});
+		res.cookie("accessToken", accessToken, accessTokenCookieOptions);
 
 		// Rotate refresh token
 		const oldRefreshTokenId = refreshTokenData.tokenId
-		const refreshToken = await rotateRefreshToken(oldRefreshTokenId, user)
+		const newRefreshToken = await rotateRefreshToken(oldRefreshTokenId, user);
 		
 		// Attach to client as cookie
-		res.cookie("refreshToken", refreshToken, {
-			maxAge: refreshTokenExpiryTime,
-			httpOnly: true,
-		});
+		res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
 
-		return res.status(200).json({ message: "Access token successfully refreshed"});
+		console.log("Access token successfully refreshed");
+		return res.status(200).json({ uid: user._id, username: user.username });
 
 	} catch (err) {
+		console.error(err);
 		// Client refresh token is malformed or has expired
 		return res.sendStatus(401); // Unauthorised
 	};
@@ -187,34 +228,34 @@ app.post('/login', async (req, res) => {
 	const tokenId = uuidv4();
 	const refreshToken = createRefreshToken(tokenId, user);
 	
-	// Store refresh token in DB
-	await RefreshToken.create({ tokenId: tokenId, uid: user._id });
+	try {
+		// Store refresh token in DB
+		await RefreshToken.create({ tokenId: tokenId, uid: user._id });
 
-	// Set refresh token as cookie
-	res.cookie("refreshToken", refreshToken, {
-		maxAge: refreshTokenExpiryTime,
-		httpOnly: true,
-	});
+		// Set refresh token as cookie
+		res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
 
-	// Create access token and set as cookie
-	const accessToken = createAccessToken(user);
+		// Create access token and set as cookie
+		const accessToken = createAccessToken(user);
 
-	res.cookie("accessToken", accessToken, {
-		maxAge: accessTokenExpiryTime,
-		httpOnly: true,
-	});
+		res.cookie("accessToken", accessToken, accessTokenCookieOptions);
 
-	return res.status(200).send("Login successful");
+		return res.status(200).send("Login successful");
+	} catch (err) {
+		console.error(err);
+		return res.sendStatus(500);
+	};
+
 });
 
 app.post("/logout", async (req, res) => {
 	const { refreshToken } = req.cookies;
 
+	// Revoke refresh token in DB if exists
 	if (refreshToken) {
 		try {
-			const decoded = jwt.verify(refreshToken, refreshTokenSecretKey);
-			// Revoke refresh token in DB
-			await RefreshToken.updateOne({ tokenId: decoded.tokenId }, { $set: { revoked: true } });
+			const payload = jwt.verify(refreshToken, refreshTokenSecretKey);
+			await RefreshToken.updateOne({ tokenId: payload.tokenId }, { $set: { revoked: true } });
 
 		} catch (err) {
 			console.error("Error revoking refresh token:", err.message);
@@ -222,8 +263,10 @@ app.post("/logout", async (req, res) => {
 	};
 
 	// Clear cookies regardless
-	res.clearCookie("accessToken");
-	res.clearCookie("refreshToken");
+	// res.clearCookie("accessToken", accessTokenCookieOptions);
+	// res.clearCookie("refreshToken", refreshTokenCookieOptions);
+	res.cookie("accessToken", "", { ...accessTokenCookieOptions, maxAge: 0 });
+	res.cookie("refreshToken", "", { ...refreshTokenCookieOptions, maxAge: 0 });
 
 	return res.sendStatus(200);
 });
@@ -250,17 +293,17 @@ app.post('/register', async (req, res) => {
 	};
 });
 
-app.get('/api/me', checkAccessToken, (req, res) => {
+app.get('/api/me', checkAuth, (req, res) => {
 	return res.json(req.user);
 });
 
-app.post('/predict', checkAccessToken, (req, res) => {
+app.post('/predict', checkAuth, (req, res) => {
 
 });
 
-app.post('/train', checkAccessToken, (req ,res) => [
-
-]);
+app.post('/train', checkAuth, (req, res) => {
+	return res.sendStatus(200);
+});
 
 app.listen(port, () => {
     console.log(`App listening on port ${port}`);

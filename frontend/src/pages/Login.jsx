@@ -1,6 +1,6 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import Auth0Icon from "../assets/icons/auth0-svgrepo-com.svg?react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { useInternalAuth } from "../components/useInternalAuth";
 
@@ -10,7 +10,10 @@ const Login = () => {
 	const [ password, setPassword ] = useState("");
 	const [ invalidLogin, setInvalidLogin ] = useState(false);
 	const navigate = useNavigate();
-	const { login } = useInternalAuth();
+	const { user, login } = useInternalAuth();
+
+	// If user is already logged in deny access to Login page
+	if (user) return <Navigate to="/" replace />;
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();

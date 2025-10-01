@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
 const AuthContext = createContext();
@@ -7,6 +7,7 @@ export const InternalAuthProvider = ({ children }) => {
     const [ user, setUser ] = useState(null);
     const [ loading, setLoading ] = useState(true);
     const { isAuthenticated, logout: auth0Logout } = useAuth0();
+    const refreshingRef = useRef(false);
 
     // Run once on mount
     useEffect(() => {
@@ -14,26 +15,48 @@ export const InternalAuthProvider = ({ children }) => {
     }, []);
 
     const checkAuth = async () => {
+        // for react strict mode
+        if (refreshingRef.current) return; // skip if already running
+        refreshingRef.current = true;
+
         try {
             const res = await axios.get("http://localhost:5000/api/me", {
                 withCredentials: true,
             });
-            console.log(res);
+
             setUser(res.data);
+
         } catch {
-            setUser(null);
+            try {
+                const res = await axios.post(
+                    "http://localhost:5000/refresh",
+                    {},
+                    { withCredentials: true },
+                );
+                setUser(res.data);
+            } catch (err) {
+                console.log('refresh error')
+                setUser(null);
+            };
+
         } finally {
+            refreshingRef.current = false;
             setLoading(false);
         };
     };
 
     const login = async (username, password) => {
-        await axios.post(
-            "http://localhost:5000/login",
-            { username, password },
-            { withCredentials: true }
-        );
-        await checkAuth(); // update user after login
+        try {
+            await axios.post(
+                "http://localhost:5000/login",
+                { username, password },
+                { withCredentials: true }
+            );
+            await checkAuth(); // update user after successful login
+        } catch (err) {
+            setUser(null);
+            return;
+        };
     };
 
     const logout = async () => {

@@ -1,11 +1,17 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Navigate } from "react-router-dom";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useInternalAuth } from "../components/useInternalAuth";
+
 const Register = () => {
 	const [ username, setUsername ] = useState("");
 	const [ password, setPassword ] = useState("");
 	const [ invalidRegister, setInvalidRegister ] = useState(false);
 	const navigate = useNavigate();
+	const { user } = useInternalAuth();
+
+	// If user is already logged in deny access to Register page
+	if (user) return <Navigate to="/" replace />;
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
