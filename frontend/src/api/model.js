@@ -16,13 +16,13 @@ const createEmbeddingsArray = (embeddings) => {
 };
 
 export const getPredictions = async (descriptions, accessToken) => {
-    const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
-    const embeddingsArray = createEmbeddingsArray(embeddings);
+    // const embeddings = await extractor(descriptions, { pooling: 'mean', normalize: true });
+    // const embeddingsArray = createEmbeddingsArray(embeddings);
 
     try {
         const res = await axios.post("http://127.0.0.1:8000/predict", 
             { predict_data: {
-                    embeddings: embeddingsArray,
+                    // embeddings: embeddingsArray,
                     descriptions: descriptions
             }},
             { headers: {
@@ -48,7 +48,11 @@ export const trainModel = async (descriptions, categories, accessToken) => {
     };
 
     try {
-        const res = await axios.post("http://127.0.0.1:8000/train", 
+        const tempRoute = "http://localhost:8000/train";
+        const route = "http://127.0.0.1:8000/train";
+        console.log('TEMP ROUTE', tempRoute);
+        
+        const res = await axios.post(tempRoute, 
             {train_data: {
                 embeddings: embeddingsArray,
                 categories: categories

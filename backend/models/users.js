@@ -2,10 +2,17 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
-    username: {
+    email: {
         type: String,
         required: true,
-        unique: true, // no duplicate usernames
+        unique: true,
+        lowercase: true,
+        trim: true,
+    },
+    username: {
+        type: String,
+        unique: true,
+        sparse: true, // allows multiple nulls if users did not login via auth0, else enforce uniqueness
         lowercase: true,
         trim: true,
     },
@@ -30,6 +37,7 @@ const userSchema = new Schema({
     },
     modelBlob: {
         type: Buffer,
+        default: null,
     }
 });
 

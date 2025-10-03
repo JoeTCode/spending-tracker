@@ -6,6 +6,7 @@ const storedCorrections = localStorage.getItem('corrections');
 const initialState = {
 	corrections: storedCorrections ? parseInt(storedCorrections, 10) : 0,
 	allowCategorisation: localStorage.getItem('allowCategorisation') ? localStorage.getItem('allowCategorisation') === 'true' : true,
+	modelType: localStorage.getItem('modelType') ?? 'globalModel',
 };
 
 const pageReducer = (state, action) => {
@@ -18,6 +19,10 @@ const pageReducer = (state, action) => {
 			localStorage.setItem('allowCategorisation', action.payload);
 			return { ...state, allowCategorisation: action.payload }
 		};
+		case "SET_MODEL_TYPE": {
+			localStorage.setItem('modelType', action.payload);
+			return { ...state, modelType: action.payload }
+		}
 
         default: return state;
     };

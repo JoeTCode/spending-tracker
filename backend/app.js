@@ -9,6 +9,7 @@ import RefreshToken from './models/refreshTokens.js';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
+import axios from 'axios';
 
 dotenv.config();
 const app = express();
@@ -17,8 +18,8 @@ const saltRounds = 10;
 const connectionString = process.env.MONGO_CONNECTION_STRING;
 const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
-// const accessTokenExpiryTime = 900000; // 15 minutes
-const accessTokenExpiryTime = 1000;
+const accessTokenExpiryTime = 900000; // 15 minutes
+// const accessTokenExpiryTime = 1000;
 const refreshTokenExpiryTime = 2.628e+9; // 1 month
 const accessTokenCookieOptions = {
 	maxAge: accessTokenExpiryTime,
@@ -85,7 +86,6 @@ const checkAuth = async (req, res, next) => {
 		try {
 			const payload = jwt.verify(accessToken, accessTokenSecretKey);
 			req.user = payload;
-			console.log('CheckAuth passed');
 			return next();
 
 		} catch (err) {
@@ -293,16 +293,72 @@ app.post('/register', async (req, res) => {
 	};
 });
 
+app.post('/auth0/register', async (req ,res) => {
+	const { sub } = req.body;
+
+	const user = await User.findOne({ sub: sub });
+
+	if (user) return res.status(200).json(user);
+	else {
+		user = await User.create()
+	}
+})
+
 app.get('/api/me', checkAuth, (req, res) => {
 	return res.json(req.user);
 });
 
-app.post('/predict', checkAuth, (req, res) => {
+app.post('/predict', checkAuth, async (req, res) => {
+	const { descriptions, modelType, uid } = req.body;
 
+	if (!uid) {
+		console.warn("No uid found");
+		return res.sendStatus(401);
+	};
+
+	try {
+        const response = await axios.post(
+			"http://127.0.0.1:8000/predict", 
+            { predict_data: { descriptions: descriptions, modelType: modelType, uid: uid }}
+		);
+
+        return res.status(200).json(response.data);
+    }
+
+    catch (err) {
+        console.error(err);
+		res.sendStatus(500)
+    };
 });
 
-app.post('/train', checkAuth, (req, res) => {
-	return res.sendStatus(200);
+app.post('/train', checkAuth, async (req, res) => {
+	const { descriptions, categories, modelType, uid } = req.body;
+
+	if (!uid) {
+		console.warn("No uid found");
+		return res.sendStatus(401);
+	};
+	
+	try {
+		await axios.post(
+			"http://127.0.0.1:8000/train",
+			{ 
+				train_data: { 
+					descriptions: descriptions, 
+					categories: categories,
+					modelType: modelType,
+					uid: uid
+				}
+			}
+		);
+
+		return res.sendStatus(200);
+	}
+	
+	catch (err) {
+		console.error(err);
+		res.sendStatus(500);
+	};
 });
 
 app.listen(port, () => {

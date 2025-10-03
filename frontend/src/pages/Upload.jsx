@@ -6,11 +6,14 @@ import { MIN_CONF_SCORE } from '../utils/constants/constants';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
-import { getPredictions } from '../api/model';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
+import { useAuth0 } from '@auth0/auth0-react';
+import api from '../axios/api';
+import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
+import { useInternalAuth } from '../components/useInternalAuth';
 
 function formatDescription(desc) {
     let formattedDesc = String(desc).split('\t')[0].trim();
@@ -118,6 +121,8 @@ const logModelAccuracy = (targetCategories, predictedCategories) => {
 
 const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps, isLoading, parsedCSV, dispatch }) => {
     const [ filename, setFilename ] = useState(new Date().toUTCString());
+    const [ selectedModel, setSelectedModel ] = useState("globalModel");
+    const { state: pageState, dispatch: pageDispatch } = usePage();
 
     useEffect(() => {
         if (acceptedFile) setFilename(acceptedFile.name);
@@ -167,7 +172,33 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
 
     return (
         <div>
-            <div className='flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
+                            <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <h4 className='font-medium text-purple-900 dark:text-purple-100'>AI Model Selection</h4>
+                            <p className='text-sm text-purple-700 dark:text-purple-300'>Choose your model</p>
+                        </div>
+                    </div>
+                    <div>
+                        <select 
+                            defaultValue={pageState.modelType}
+                            onChange={(e) => {
+                                pageDispatch({ type: "SET_MODEL_TYPE", payload: e.target.value });
+                            }}
+                            className='bg-purple-100 dark:bg-purple-600/10 rounded-lg p-2 text-purple-700 dark:text-purple-100'
+                        >
+                            <option value="globalModel">Global</option>
+                            <option value="clientModel">Personalised</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className='mt-5 flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
                 <div>
                     <p className='text-white'>Auto-Categorisation</p>
                     <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
@@ -233,10 +264,14 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
 const Upload = () => {
     const { state, dispatch } = useUpload();
     const { state: pageState, dispatch: pageDispatch } = usePage();
+    
+    const { user: internalUser } = useInternalAuth(); 
+    const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
 
     const { CSVReader } = useCSVReader();
     const [ isLoading, setIsLoading ] = useState(true);
     const [ parsedCSV, setParsedCSV ] = useState([]);
+    
 
     const getLowConfTransactions = (transactions, confScores, MIN_CONF_SCORE) => {
         const res = [];
@@ -323,7 +358,23 @@ const Upload = () => {
             try {
                 const descriptions = validatedTransactions.map(tx => tx.description);
 
-                const res = await getPredictions(descriptions);
+                // const res = await getPredictions(descriptions);
+                const token = isAuthenticated ? await getAccessTokenSilently() : '';
+
+                const res = await api.post(
+                    "/predict",
+                    { 
+                        descriptions: descriptions,
+                        modelType: pageState.modelType,
+                        uid: isAuthenticated ? null : internalUser.uid 
+                    }, 
+                    { 
+                        headers: { "authorization": `Bearer ${token}` },
+                        withCredentials: true
+                    },
+                );
+                console.log(res);
+
                 if (!res || !res.data || res.data.length === 0) { // api call failed
                     dispatch({ type: "SET_TRANSACTIONS", payload: [] });
                     dispatch({ type: "SET_STAGE", payload: "upload" });

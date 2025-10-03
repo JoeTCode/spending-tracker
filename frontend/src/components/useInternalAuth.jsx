@@ -9,12 +9,20 @@ export const InternalAuthProvider = ({ children }) => {
     const { isAuthenticated, logout: auth0Logout } = useAuth0();
     const refreshingRef = useRef(false);
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            
+        }
+    }, [isAuthenticated])
+
     // Run once on mount
     useEffect(() => {
         checkAuth();
     }, []);
 
     const checkAuth = async () => {
+        if (isAuthenticated) return;
+
         // for react strict mode
         if (refreshingRef.current) return; // skip if already running
         refreshingRef.current = true;

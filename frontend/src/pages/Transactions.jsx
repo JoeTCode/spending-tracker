@@ -18,6 +18,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useInternalAuth } from '../components/useInternalAuth.jsx';
+import api from '../axios/api.js';
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const UNDO_REDO_DELAY = 500;
@@ -87,7 +89,10 @@ const createHeaders = (setUndos, setTransactions) => ([
             };
             
             return (
-                <Trash onClick={deleteRow} className='cursor-pointer w-5 h-5 mt-2 ml-3 hover:text-gray-300' />
+                <div className='hover:bg-[#dd90908a] text-neutral-800 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 mt-1 ml-3 justify-center items-center flex cursor-pointer'>
+                    <Trash onClick={deleteRow} className='w-5 h-5' />
+                </div>
+                
             );
         }
     }
@@ -224,6 +229,9 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
 // flex items-center gap-1 bg-gray-600 rounded-lg m-1 p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50
 const Transactions = () => {
     const { state, dispatch } = usePage();
+
+    const { user: internalUser } = useInternalAuth(); 
+
     const [ transactions, setTransactions ] = useState([]);
     const [ rowData, setRowData ] = useState([]);
     const [ undos, setUndos ] = useState([]);
@@ -235,7 +243,7 @@ const Transactions = () => {
     const [ transactionsDateRange, setTransactionsDateRange ] = useState({ min: null, max:null });
     const [ latestTransaction, setLatestTransaction ] = useState(null);
     const [ isTraining, setIsTraining ] = useState(false);
-    const canTrain = state.corrections >= MIN_CORRECTIONS && transactions.length > 0;
+    const canTrain = state.corrections >= MIN_CORRECTIONS && transactions.length > 0 && state.modelType !== 'globalModel';
     const [ csvNames, setCsvNames ] = useState([]);
     const [ csvNamesToId, setCsvNamesToId ] = useState({});
     const [ selectedCsvName, setSelectedCsvName ] = useState('');
@@ -426,7 +434,21 @@ const Transactions = () => {
         
         else {
             try {
-                await trainModel(descriptions, targets);
+                const token = isAuthenticated ? await getAccessTokenSilently() : '';    
+                await api.post(
+                    "/train",
+                    { 
+                        descriptions: descriptions, 
+                        categories: targets, 
+                        modelType: state.modelType, 
+                        uid: isAuthenticated ? null : internalUser.uid 
+                    },
+                    { 
+                        headers: { "authorization": `Bearer ${token}` },
+                        withCredentials: true
+                    },
+                );
+                // await trainModel(descriptions, targets);
 
                 setTransactions(prev =>
                     prev.map(tx => 
@@ -458,65 +480,68 @@ const Transactions = () => {
             <div className='flex w-full justify-center'>            
                 <div className='flex flex-col justify-center mt-40 mb-10 max-w-[1000px]'>
                     
-                    <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
-                                    <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                                </div>
-                                <div>
-                                    <h4 className="font-medium text-purple-900 dark:text-purple-100">AI Model Training</h4>
-                                    <p className="text-sm text-purple-700 dark:text-purple-300">
-                                        Train the AI with your re-categorisations and transaction descriptions
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-right">
-                                    <div className="flex items-center gap-1">
-                                        <Edit className="relative top-[1px] h-4 w-4 text-purple-600 dark:text-purple-400" />
-                                        <span className="text-sm font-medium">{state.corrections > MIN_CORRECTIONS ? MIN_CORRECTIONS : state.corrections}/{MIN_CORRECTIONS}</span>
+                    {state.modelType !== 'globalModel' && (
+                        <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
+                                        <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Edits made</p>
+                                    <div>
+                                        <h4 className="font-medium text-purple-900 dark:text-purple-100">AI Model Training</h4>
+                                        <p className="text-sm text-purple-700 dark:text-purple-300">
+                                            Train your personal AI with your re-categorisations and transaction descriptions
+                                        </p>
+                                    </div>
                                 </div>
-                                <button
-                                    onClick={canTrain || isTraining ? 
-                                        (async () => {
-                                            setIsTraining(true);
-                                            const res = await handleTrain();
-                                            if (res) toast.success("Training successfully completed!");
-                                            else toast.error("Something went wrong!");
-                                        })
-                                        : undefined 
-                                    }
-                                    disabled={!canTrain || isTraining}
-                                    className={
-                                        isTraining ? "flex items-center gap-2 bg-[#1a1818] rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
-                                        "flex items-center gap-1 bg-[#1a1818] hover:bg-black rounded-lg py-1 px-2 cursor-pointer" :
-                                        "flex items-center gap-1 cursor-not-allowed bg-neutral-700 opacity-60 rounded-lg py-1 px-2"
-                                    }
-                                >
-                                    {isTraining ? (
-                                        <>
-                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                            <span className='relative top-[-1px] text-sm'>Training...</span>                                            
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Brain className="h-5 w-5 text-sm" />
-                                            <span className='relative top-[-2px]'>Train AI</span>
-                                        </>
-                                    )}
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <div className="flex items-center gap-1">
+                                            <Edit className="relative top-[1px] h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            <span className="text-sm font-medium">{state.corrections > MIN_CORRECTIONS ? MIN_CORRECTIONS : state.corrections}/{MIN_CORRECTIONS}</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Edits made</p>
+                                    </div>
+                                    <button
+                                        onClick={canTrain || isTraining ? 
+                                            (async () => {
+                                                setIsTraining(true);
+                                                const res = await handleTrain();
+                                                if (res) toast.success("Training successfully completed!");
+                                                else toast.error("Something went wrong!");
+                                            })
+                                            : undefined 
+                                        }
+                                        disabled={!canTrain || isTraining}
+                                        className={
+                                            isTraining ? "flex items-center gap-2 bg-[#1a1818] rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
+                                            "flex items-center gap-1 bg-[#1a1818] hover:bg-black rounded-lg py-1 px-2 cursor-pointer" :
+                                            "flex items-center gap-1 cursor-not-allowed bg-neutral-700 opacity-60 rounded-lg py-1 px-2"
+                                        }
+                                    >
+                                        {isTraining ? (
+                                            <>
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                <span className='relative top-[-1px] text-sm'>Training...</span>                                            
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Brain className="h-5 w-5 text-sm" />
+                                                <span className='relative top-[-2px]'>Train AI</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
+                            {!canTrain && transactions.length > 0 && (MIN_CORRECTIONS > state.corrections) && (
+                                <div className="mt-3 flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400">
+                                    <Warning className="h-4 w-4 relative top-[1px]" />
+                                    <span>Re-categorise {MIN_CORRECTIONS - state.corrections} more transaction{MIN_CORRECTIONS - state.corrections !== 1 ? 's' : ''} to enable training</span>
+                                </div>
+                            )}
                         </div>
-                        {!canTrain && transactions.length > 0 && (MIN_CORRECTIONS > state.corrections) && (
-                            <div className="mt-3 flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400">
-                                <Warning className="h-4 w-4 relative top-[1px]" />
-                                <span>Re-categorise {MIN_CORRECTIONS - state.corrections} more transaction{MIN_CORRECTIONS - state.corrections !== 1 ? 's' : ''} to enable training</span>
-                            </div>
-                        )}
-                    </div>
+                    )}
+                    
 
                     <div className='bg-[#1a1818] min-w-[905px]  shadow-lg rounded-lg p-10 pt-10 mt-4'>
                         <div className='flex justify-between'>
@@ -560,8 +585,8 @@ const Transactions = () => {
                                     }
                                 }
                             >
-                                <Trash className="relative top-[1px] w-5 h-5" />
-                                Delete filtered
+                                <Trash className="relative top-[1px] w-5 h-5 text-red-700" />
+                                <p className='text-red-600'>Delete filtered</p>
                             </button>
                         </div>
                         
@@ -630,10 +655,11 @@ const Transactions = () => {
 
                 )}
             /> 
-            <button onClick={async () => {
-                const token = isAuthenticated ? await getAccessTokenSilently() : 'a';
-                const res = await axios.post(
-                    "http://localhost:5000/train",
+
+            {/* <button onClick={async () => {
+                const token = isAuthenticated ? await getAccessTokenSilently() : '';
+                const res = await api.post(
+                    "/train",
                     {}, 
                     { 
                         headers: { "authorization": `Bearer ${token}` },
@@ -641,7 +667,7 @@ const Transactions = () => {
                     },
                 );
                 console.log(res);
-            }}>TEST</button>         
+            }}>TEST</button>          */}
         </>
     );
 };
