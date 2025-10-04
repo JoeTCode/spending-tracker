@@ -251,6 +251,21 @@ export async function getTransactions(
     return response;
 };
 
+export async function getCsvData() {
+    const transactions = await db.transactions
+                    .orderBy("date")
+                    .reverse()   // latest first
+                    .toArray();
+
+    return transactions.map(tx => ({
+        account: tx.account,
+        date: tx.date.toLocaleString(),
+        amount: tx.amount,
+        category: tx.category,
+        description: tx.description,
+    }));
+};
+
 export async function updateTransaction(transaction) {
     if (CATEGORIES_SET.has(transaction["Category"])) {
         await db.transactions.put({ ...transaction, trained: false }, transaction._id);

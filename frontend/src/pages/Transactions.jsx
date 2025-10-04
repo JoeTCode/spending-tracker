@@ -1,8 +1,7 @@
 import { NavBar, EditableGrid } from '../components';
 import { useRef, useState, useEffect } from 'react';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS, MIN_CORRECTIONS } from '../utils/constants/constants';
-import { db, getTransactions, updateTransaction, removeTransaction, bulkRemoveTransactions, bulkRestoreTransactions, restoreTransaction } from '../db/db';
-import { trainModel } from '../api/model';
+import { db, getTransactions, updateTransaction, removeTransaction, bulkRemoveTransactions, bulkRestoreTransactions, restoreTransaction, getCsvData } from '../db/db';
 import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
 import UndoLeft from '../assets/icons/undo-left-round-svgrepo-com.svg?react'
 import UndoRight from '../assets/icons/undo-right-round-svgrepo-com.svg?react';
@@ -20,6 +19,7 @@ import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useInternalAuth } from '../components/useInternalAuth.jsx';
 import api from '../axios/api.js';
+import { mkConfig, generateCsv, download } from "export-to-csv";
 
 const CATEGORIES_SET = new Set(CATEGORIES);
 const UNDO_REDO_DELAY = 500;
@@ -440,8 +440,8 @@ const Transactions = () => {
                     { 
                         descriptions: descriptions, 
                         categories: targets, 
-                        modelType: state.modelType, 
-                        uid: isAuthenticated ? null : internalUser.uid 
+                        modelType: state.modelType,
+                        isAuth0User: isAuthenticated,
                     },
                     { 
                         headers: { "authorization": `Bearer ${token}` },
@@ -633,6 +633,20 @@ const Transactions = () => {
                             <EditableGrid gridRef={gridRef} rowData={rowData} colNames={createHeaders(setUndos, setTransactions)} onCellChange={handleCellChange} />
                             </div>) : <div>No data</div>
                         }
+
+                        <button 
+                            onClick={
+                                async () => {
+                                    const csvData = await getCsvData();
+                                    const csvConfig = mkConfig({ useKeysAsHeaders: true, filename: "trackyourtransactions-csv-export" });
+                                    const csv = generateCsv(csvConfig)(csvData);
+                                    download(csvConfig)(csv);
+                                }
+                            }
+                            className='mt-5 bg-[#141212] hover:bg-black rounded-lg p-2 cursor-pointer'
+                        >
+                            Export as CSV
+                        </button>   
                     </div>
                 </div>
             </div>
@@ -654,20 +668,7 @@ const Transactions = () => {
                     />
 
                 )}
-            /> 
-
-            {/* <button onClick={async () => {
-                const token = isAuthenticated ? await getAccessTokenSilently() : '';
-                const res = await api.post(
-                    "/train",
-                    {}, 
-                    { 
-                        headers: { "authorization": `Bearer ${token}` },
-                        withCredentials: true
-                    },
-                );
-                console.log(res);
-            }}>TEST</button>          */}
+            />       
         </>
     );
 };

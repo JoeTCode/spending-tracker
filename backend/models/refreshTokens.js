@@ -8,7 +8,7 @@ const refreshTokenSchema = new Schema({
         unique: true,
     },
     uid: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
         required: true,
     },
     revoked: {

@@ -6,6 +6,7 @@ import { useInternalAuth } from "../components/useInternalAuth";
 const Register = () => {
 	const [ username, setUsername ] = useState("");
 	const [ password, setPassword ] = useState("");
+	const [ email, setEmail ] = useState("");
 	const [ invalidRegister, setInvalidRegister ] = useState(false);
 	const navigate = useNavigate();
 	const { user } = useInternalAuth();
@@ -15,14 +16,21 @@ const Register = () => {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (username && password) {
+		if (email && username && password) {
 			try {
-				await axios.post("http://localhost:5000/register", { username: username, password: password });
+				await axios.post("http://localhost:5000/register", 
+					{ 
+						email: email, 
+						username: username, 
+						password: password 
+					}
+				);
 				navigate('/login');
 			} catch (err) {
 				setUsername("");
 				setPassword("");
-				if (err.response.data === "Username taken") setInvalidRegister(true);
+				setEmail("");
+				if (err.response.status === 409) setInvalidRegister(true);
 			};
 		};
 	};
@@ -40,13 +48,26 @@ const Register = () => {
 				>
 					<div className="flex flex-col gap-y-4">
 						{invalidRegister && (
-							<div className="text-red-300">Please choose unique username</div>
+							<div className="text-red-300">Please choose unique email or username</div>
 						)}
+
+						<div className="flex flex-col gap-y-2">
+							<label htmlFor="email" className="font-bold">
+								Email
+							</label>
+							<input type="email" id="email" name="email" 
+								placeholder="johndoe@example.com" required
+								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								onChange={(e) => setEmail(e.target.value)}
+								value={email}
+							/>
+						</div>
+
                         <div className="flex flex-col gap-y-2">
-							<label htmlFor="first" className="font-bold">
+							<label htmlFor="username" className="font-bold">
 								Username
 							</label>
-							<input type="text" id="first" name="first" 
+							<input type="text" id="username" name="username" 
 								placeholder="johndoe" required
 								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}

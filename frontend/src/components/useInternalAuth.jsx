@@ -1,18 +1,40 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useAuth0 } from "@auth0/auth0-react";
+
 const AuthContext = createContext();
 
 export const InternalAuthProvider = ({ children }) => {
     const [ user, setUser ] = useState(null);
     const [ loading, setLoading ] = useState(true);
-    const { isAuthenticated, logout: auth0Logout } = useAuth0();
+    const { getAccessTokenSilently, isAuthenticated, logout: auth0Logout } = useAuth0();
     const refreshingRef = useRef(false);
 
     useEffect(() => {
-        if (isAuthenticated) {
-            
-        }
+        const registerAuth0User = async () => {
+            if (isAuthenticated) {
+                const token = await getAccessTokenSilently();
+
+                try {
+                    await axios.post(
+                        "http://localhost:5000/auth0/register",
+                        {},
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+
+                } catch (err) {
+                    console.error(err);
+                };
+            };
+        };
+
+        registerAuth0User();
+
     }, [isAuthenticated])
 
     // Run once on mount
@@ -22,7 +44,7 @@ export const InternalAuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         if (isAuthenticated) return;
-
+        
         // for react strict mode
         if (refreshingRef.current) return; // skip if already running
         refreshingRef.current = true;

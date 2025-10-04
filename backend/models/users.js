@@ -12,17 +12,13 @@ const userSchema = new Schema({
     username: {
         type: String,
         unique: true,
-        sparse: true, // allows multiple nulls if users did not login via auth0, else enforce uniqueness
         lowercase: true,
         trim: true,
+        required: true,
     },
     passwordHash: {
         type: String,
-    },
-    auth0Id: {
-        type: String,
-        unique: true,
-        sparse: true, // allows multiple nulls if users did not login via auth0, else enforce uniqueness
+        required: true,
     },
     createdAt: {
         type: Date,
@@ -31,14 +27,6 @@ const userSchema = new Schema({
     lastLoginAt: {
         type: Date,
     },
-    isAdmin: {
-        type: Boolean,
-        default: false,
-    },
-    modelBlob: {
-        type: Buffer,
-        default: null,
-    }
 });
 
 export default mongoose.model('User', userSchema);

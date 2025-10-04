@@ -366,7 +366,7 @@ const Upload = () => {
                     { 
                         descriptions: descriptions,
                         modelType: pageState.modelType,
-                        uid: isAuthenticated ? null : internalUser.uid 
+                        isAuth0User: isAuthenticated,
                     }, 
                     { 
                         headers: { "authorization": `Bearer ${token}` },

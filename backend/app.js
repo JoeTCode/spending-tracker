@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from './models/users.js';
+import Auth0User from './models/auth0Users.js';
 import RefreshToken from './models/refreshTokens.js';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
@@ -82,6 +83,7 @@ const checkAccessToken = async (req, res, next) => {
 const checkAuth = async (req, res, next) => {
 	const { accessToken } = req.cookies;
 
+	// If internally logged in user
 	if (accessToken) {
 		try {
 			const payload = jwt.verify(accessToken, accessTokenSecretKey);
@@ -93,11 +95,13 @@ const checkAuth = async (req, res, next) => {
 		};
 	};
 
+	// If user logged in via auth0
 	try {
 		await checkAuth0Jwt(req, res, (err) => {
 			if (err) {
 				return res.sendStatus(401);
 			} else {
+				console.log("Auth0 login request successful")
 				req.user = { ...req.auth.payload }; // req.auth comes from Auth0 middleware
 				return next()
 			};
@@ -224,6 +228,9 @@ app.post('/login', async (req, res) => {
 
 	if (!match) return res.status(401).send("Invalid username or password"); // Unauthorised
 
+	// Update last login time
+	await User.updateOne({ _id: user._id }, { lastLoginAt: new Date() })
+
 	// Create refresh token
 	const tokenId = uuidv4();
 	const refreshToken = createRefreshToken(tokenId, user);
@@ -272,16 +279,17 @@ app.post("/logout", async (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-	const { username, password } = req.body;
+	const { email, username, password } = req.body;
 
 	const user = await getUser({ username: username });
 
-	if (user) return res.status(409).send('Username taken'); // conflict
+	if (user) return res.sendStatus(409) // conflict
 	
 	const passwordHash = await bcrypt.hash(password, saltRounds);
 
 	try {
 		await User.create({ 
+			email: email,
 			username: username,
 			passwordHash: passwordHash, 
 		});
@@ -293,33 +301,55 @@ app.post('/register', async (req, res) => {
 	};
 });
 
-app.post('/auth0/register', async (req ,res) => {
-	const { sub } = req.body;
+// Registers auth0 user to db on first login
+app.post('/auth0/register', checkAuth, async (req, res) => {
+	// attached from checkAuth
+	const authUser = req.user;
 
-	const user = await User.findOne({ sub: sub });
+	try {
+		const user = await Auth0User.findOne({ auth0Uid: authUser.sub });
 
-	if (user) return res.status(200).json(user);
-	else {
-		user = await User.create()
-	}
-})
+		if (user) return res.status(200);
+
+		else {
+			await Auth0User.create({ auth0Uid: authUser.sub });
+			return res.status(200);
+		};
+
+	} catch (err) {
+		console.error(err);
+		res.sendStatus(500);
+	};
+});
 
 app.get('/api/me', checkAuth, (req, res) => {
 	return res.json(req.user);
 });
 
 app.post('/predict', checkAuth, async (req, res) => {
-	const { descriptions, modelType, uid } = req.body;
+	const { descriptions, modelType, isAuth0User } = req.body;
+	let uid;
 
+	if (isAuth0User) uid = req.user.sub;
+	else uid = req.user.uid;
+
+	// uid can be either internal _id or auth0 user sub
 	if (!uid) {
-		console.warn("No uid found");
+		console.warn("No user id found");
 		return res.sendStatus(401);
 	};
 
 	try {
         const response = await axios.post(
 			"http://127.0.0.1:8000/predict", 
-            { predict_data: { descriptions: descriptions, modelType: modelType, uid: uid }}
+            { 
+				predict_data: { 
+					descriptions: descriptions, 
+					modelType: modelType, 
+					isAuth0User: isAuth0User, 
+					uid: uid,
+				}
+			}
 		);
 
         return res.status(200).json(response.data);
@@ -332,7 +362,11 @@ app.post('/predict', checkAuth, async (req, res) => {
 });
 
 app.post('/train', checkAuth, async (req, res) => {
-	const { descriptions, categories, modelType, uid } = req.body;
+	const { descriptions, categories, modelType, isAuth0User } = req.body;
+	let uid;
+
+	if (isAuth0User) uid = req.user.sub;
+	else uid = req.user.uid;
 
 	if (!uid) {
 		console.warn("No uid found");
@@ -347,6 +381,7 @@ app.post('/train', checkAuth, async (req, res) => {
 					descriptions: descriptions, 
 					categories: categories,
 					modelType: modelType,
+					isAuth0User: isAuth0User,
 					uid: uid
 				}
 			}
