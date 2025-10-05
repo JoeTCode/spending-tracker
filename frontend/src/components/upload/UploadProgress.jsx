@@ -12,11 +12,11 @@ const UploadProgress = ({ stage }) => {
                 <div className='flex w-24'>
                     <div className='text-center'> 
                         <span className={ uploadActive ?
-                            'border-3 border-[#747bff] rounded-full py-1 px-[11px] font-extrabold text-white' :
+                            'border-3 border-purple rounded-full py-1 px-[11px] font-extrabold dark:text-white' :
                             'border-2 rounded-full py-1 px-[10px] text-gray-400 font-bold'
                         }> 1 </span> 
                         <div className={ uploadActive ?
-                            'mt-2 font-semibold text-white' :
+                            'mt-2 font-semibold dark:text-white' :
                             'mt-2 text-gray-400'
                         }> Upload </div>
                     </div> 
@@ -27,11 +27,11 @@ const UploadProgress = ({ stage }) => {
                 <div className='flex w-32'>
                     <div className='text-center'> 
                         <span className={ mapColumnsActive ?
-                            'border-3 border-[#747bff] rounded-full py-1 px-[10px] font-extrabold text-white' :
+                            'border-3 border-purple rounded-full py-1 px-[10px] font-extrabold dark:text-white' :
                             'border-2 rounded-full py-1 px-[10px] text-gray-400 font-bold'
                         }> 2 </span> 
                         <div className={ mapColumnsActive ?
-                            'mt-2 font-semibold text-white' :
+                            'mt-2 font-semibold dark:text-white' :
                             'mt-2 text-gray-400'
                         }> Map Columns </div>
                     </div> 
@@ -42,11 +42,11 @@ const UploadProgress = ({ stage }) => {
                 <div className='flex w-40'>
                     <div className='text-center'> 
                         <span className={ checkDuplicatesActive ?
-                            'border-3 border-[#747bff] rounded-full py-1 px-[11px] font-extrabold text-white' :
+                            'border-3 border-purple rounded-full py-1 px-[11px] font-extrabold dark:text-white' :
                             'border-2 rounded-full py-1 px-[10px] text-gray-400 font-bold'
                         }> 3 </span> 
                         <div className={ checkDuplicatesActive ?
-                            'mt-2 font-semibold text-white' :
+                            'mt-2 font-semibold dark:text-white' :
                             'mt-2 text-gray-400'
                         }> Check Duplicates </div>
                     </div> 
@@ -57,11 +57,11 @@ const UploadProgress = ({ stage }) => {
                 <div className='flex w-24'>
                     <div className='text-center'> 
                         <span className={ reviewActive ?
-                            'border-3 border-[#747bff] rounded-full py-1 px-[10px] font-extrabold text-white' :
+                            'border-3 border-purple rounded-full py-1 px-[10px] font-extrabold dark:text-white' :
                             'border-2 rounded-full py-1 px-[10px] text-gray-400'
                         }> 4 </span>
                         <div className={ reviewActive ?
-                            'mt-2 font-semibold text-white' :
+                            'mt-2 font-semibold dark:text-white' :
                             'mt-2 text-gray-400'
                         }> Review </div>
                     </div>

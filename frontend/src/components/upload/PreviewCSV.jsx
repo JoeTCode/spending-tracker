@@ -41,7 +41,7 @@ const PreviewCSV = () => {
                 headerClass: "font-bold",
                 width: 170,
                 cellRenderer: params => {
-                    return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                    return <span className='bg-stone-300 dark:bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
                 }
             },
             {
@@ -161,7 +161,7 @@ const PreviewCSV = () => {
     
     return (
         <div className='w-full'>
-            <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+            <div className='h-[700px] border border-neutral-300 shadow-sm dark:shadow-none dark:border-none dark:bg-dark rounded-lg pt-10 pb-10 px-10 flex flex-col'>
                 <div className='flex-1'>
                     <p>Review Transactions</p>
                     <p className='mb-6 text-sm text-neutral-400'>Please review and recategorise the auto-categorised records.</p>
@@ -203,12 +203,12 @@ const PreviewCSV = () => {
                         dispatch({ type: "SET_TRANSACTIONS", payload: [] });
                         dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
-                    className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                    className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >
                     Cancel
                 </button>
-                <button onClick={sendData} className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
-                    Done - Upload transactions
+                <button onClick={sendData} className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
+                    Upload transactions
                 </button>
             </div>
         </div>

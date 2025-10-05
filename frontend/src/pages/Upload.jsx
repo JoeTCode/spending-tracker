@@ -42,7 +42,7 @@ const Switch = ()  => {
                     pageDispatch({ type: "SET_ALLOW_CATEGORISATION", payload: e.target.checked });
                 }}
             />
-            <div className="w-9 h-5 bg-gray-400 rounded-full peer-checked:bg-[#646cff] transition-colors duration-200 ease-in">
+            <div className="w-9 h-5 bg-gray-400 rounded-full peer-checked:bg-dark-purple transition-colors duration-200 ease-in">
                 <div
                 className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in
                 ${pageState.allowCategorisation ? "translate-x-4" : "translate-x-0"}`}
@@ -189,7 +189,7 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                             onChange={(e) => {
                                 pageDispatch({ type: "SET_MODEL_TYPE", payload: e.target.value });
                             }}
-                            className='bg-purple-100 dark:bg-purple-600/10 rounded-lg p-2 text-purple-700 dark:text-purple-100'
+                            className='bg-purple-100/30 dark:bg-purple-600/10 rounded-lg p-2 text-purple-500 dark:text-purple-100'
                         >
                             <option value="globalModel">Global</option>
                             <option value="clientModel">Personalised</option>
@@ -198,15 +198,15 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                 </div>
             </div>
 
-            <div className='mt-5 flex bg-[#1a1818] w-full p-10 rounded-lg mb-5 justify-between'>
+            <div className='mt-5 flex border border-neutral-300 shadow-sm dark:shadow-none dark:border-none dark:bg-dark w-full p-10 rounded-lg mb-5 justify-between'>
                 <div>
-                    <p className='text-white'>Auto-Categorisation</p>
+                    <p className='dark:text-white'>Auto-Categorisation</p>
                     <p className='text-neutral-400 text-sm'>Automatically categorise transactions based on description content</p>
                 </div>
                 <Switch />
             </div>
 
-            <div className='bg-[#1a1818] p-8 rounded-lg min-h-[500px]'>
+            <div className='border border-neutral-300 bg-neutral-100 shadow-sm dark:shadow-none dark:border-none dark:bg-dark p-8 rounded-lg min-h-[500px]'>
 
                         <div 
                             className='
@@ -219,10 +219,10 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                         >
                             {acceptedFile ? (
                                 <div className='justify-center'>
-                                    <div className='flex flex-col border-1 border-neutral-600 rounded-lg p-4'>
+                                    <div className='flex flex-col border-1 border-neutral-400 dark:border-neutral-600 rounded-lg p-4'>
                                         <div className='flex justify-between gap-x-10'>
                                             <input onChange={(e) => onFileNameChange(e.target.value)} defaultValue={acceptedFile.name} type='text' id='filename' name='filename' className='text-sm w-60 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-400' />
-                                            <Close className="h-5 w-5 m-2 cursor-pointer hover:bg-neutral-600 rounded-lg" {...getRemoveFileProps()} />
+                                            <Close className="h-5 w-5 m-2 cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg" {...getRemoveFileProps()} />
                                         </div>
                                         <span className='px-2 text-sm text-neutral-600 self-start'>{formatFileSize(acceptedFile.size)}</span>
                                         <div className='h-1 mt-1'>
@@ -232,8 +232,8 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                                         <button 
                                             className={
                                                 isLoading ? 
-                                                'text-sm bg-black opacity-20 rounded-lg py-1 mt-1 cursor-not-allowed' :
-                                                'text-sm bg-black rounded-lg py-1 mt-1 cursor-pointer'
+                                                'text-sm border border-neutral-300 dark:border-none dark:bg-black dark:text-white opacity-20 rounded-lg py-1 mt-1 cursor-not-allowed' :
+                                                'text-sm border border-neutral-300 hover:bg-neutral-100! dark:border-none dark:bg-black dark:text-white rounded-lg py-1 mt-1 cursor-pointer'
                                             }
                                             onClick={isLoading ? undefined : handleFileUpload}
                                         >
@@ -247,11 +247,11 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                             (
                                 <>
                                     <UploadIcon className='w-13 h-13 p-2 bg-neutral-300 rounded-full text-black mb-6' />
-                                    <p className='mb-2 text-white'>Drag and drop your CSV file here</p>
+                                    <p className='mb-2 dark:text-white'>Drag and drop your CSV file here</p>
                                     <p className='mb-2 text-neutral-400 text-sm'>or click to browse your files</p>
                                     
                                     <div {...getRootProps()}>
-                                        <button className='border-1 border-gray-500 rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
+                                        <button className='border-1 border-gray-500 hover:border-purple rounded-lg py-2 px-4 text-sm cursor-pointer'>Choose CSV file</button>
                                     </div>
                                 </>
                             )}

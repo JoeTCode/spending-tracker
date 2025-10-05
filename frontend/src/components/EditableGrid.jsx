@@ -1,14 +1,14 @@
 import { AllCommunityModule, ModuleRegistry, colorSchemeDark, themeQuartz } from 'ag-grid-community'; 
 import { AgGridReact } from 'ag-grid-react'; // React Data Grid Component
-import React, { useState } from 'react';
 
-const myTheme = themeQuartz.withPart(colorSchemeDark);
+const darkMode = themeQuartz.withPart(colorSchemeDark);
+const lightMode = themeQuartz;
 // Register all Community features
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 
 const EditableGrid = ({ gridRef, rowData, colNames, onCellChange, rowSelection=undefined, onSelectionChanged=undefined }) => {
-    // Column Definitions: Defines the columns to be displayed.
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     // Save edited cells to state
     
@@ -24,7 +24,7 @@ const EditableGrid = ({ gridRef, rowData, colNames, onCellChange, rowSelection=u
         <>
             {/* Data Grid will fill the size of the parent container */}
             <AgGridReact
-                theme={myTheme}
+                theme={isDarkMode ? darkMode : lightMode}
                 ref={gridRef}
                 rowData={rowData}
                 columnDefs={colNames}

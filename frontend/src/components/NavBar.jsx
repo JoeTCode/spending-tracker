@@ -24,7 +24,7 @@ const Sidebar = () => {
     return (
         <div>  
             <div
-                className={`fixed top-0 w-full bg-[#1a1818] text-white p-2 sm:px-6 sm:py-2 
+                className={`fixed top-0 w-full border-b-1 border-neutral-300/80 backdrop-blur-lg bg-white/70 dark:border-none dark:backdrop-blur-none dark:bg-[#1a1818] dark:text-white p-2 sm:px-6 sm:py-2 
                 transition-transform duration-300 z-40
                 ${open ? "translate-x-0" : "-translate-x-full"}`}
             >
@@ -35,7 +35,7 @@ const Sidebar = () => {
                             to="/" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Home className="w-5 h-5" />
@@ -46,7 +46,7 @@ const Sidebar = () => {
                             to="/dashboard" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Dashboard className="w-5 h-5" />
@@ -57,7 +57,7 @@ const Sidebar = () => {
                             to="/transactions" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-black text-white" : "sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Transactions className="w-5 h-5" />
@@ -65,13 +65,8 @@ const Sidebar = () => {
                         </NavLink>
                         
                         <button
-                            // onClick={() =>
-                            //     logout({
-                            //         logoutParams: { returnTo: "http://localhost:5173/login" },
-                            //     })
-                            // }
                             onClick={logout}
-                            className="bg-[#747bff] px-1 sm:px-3 py-1 rounded cursor-pointer hover:bg-[#5055a7]"
+                            className="bg-black! py-1 px-1 sm:py-0 sm:px-3 rounded cursor-pointer text-white dark:hover:bg-[#5055a7]"
                         >
                             Log Out
                         </button>

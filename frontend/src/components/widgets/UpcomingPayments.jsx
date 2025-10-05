@@ -31,18 +31,18 @@ const AddPaymentButton = ({ setShowForm }) => {
     return (
         <div
             className="
-                mt-2 py-1 w-full 
-                bg-[#1f1d22] rounded-lg 
+                mt-2 py-1 w-full bg-neutral-200 hover:bg-neutral-300
+                dark:bg-darker rounded-lg 
                 text-white flex justify-center 
                 cursor-pointer 
                 transition-all duration-200 ease-in-out 
-                hover:bg-[#2a272e] hover:scale-105 hover:shadow-lg
+                dark:hover:bg-black hover:scale-105 hover:shadow-lg
             "
             onClick={() => {
                 setShowForm(true);
             }}
             >
-            <Plus className="w-10 h-10 text-gray-200" />
+            <Plus className="w-10 h-10 text-neutral-800 dark:text-neutral-200" />
         </div>
     );
 };
@@ -57,7 +57,7 @@ const PaymentRow = ({ paymentData, handleDeletePayment, onUpdate }) => {
     });
 
     return (
-        <div className='bg-[#1a1818] w-[450px] sm:w-[500px] rounded-lg h-32 p-1' onClick={(e) => e.stopPropagation()}>
+        <div className='mt-2 border border-neutral-300 dark:border-none dark:bg-dark w-[450px] sm:w-[500px] rounded-lg h-32 p-1' onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-1 items-center justify-between">
                 <div className='flex flex-1 w-full'>
                     
@@ -76,7 +76,7 @@ const PaymentRow = ({ paymentData, handleDeletePayment, onUpdate }) => {
                         {/* Interval selector */}
                         <select
                             value={localPaymentData.interval}
-                            className="w-20 ml-2 py-2 px-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            className="w-20 ml-2 py-2 px-1 cursor-pointer rounded-lg dark:bg-dark dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                             onChange={(e) => {
                                 setlocalPaymentData(prev => ({ ...prev, interval: e.target.value }));
                                 onUpdate(localPaymentData._id, { interval: e.target.value });
@@ -119,8 +119,8 @@ const PaymentRow = ({ paymentData, handleDeletePayment, onUpdate }) => {
                 <div>
                     <Trash 
                         className="
-                            h-30 w-10 bg-[#141212] text-white rounded-lg font-bold cursor-pointer p-2
-                            hover:bg-black hover:scale-110 hover:shadow-lg transition-transform duration-200"
+                            h-30 w-10 bg-neutral-200 hover:bg-neutral-300 dark:bg-darker dark:text-white rounded-lg font-bold cursor-pointer p-2
+                            dark:hover:bg-black hover:scale-110 hover:shadow-lg transition-transform duration-200"
                         onClick={async () => {
                             handleDeletePayment(localPaymentData);
                         }}
@@ -171,8 +171,8 @@ const PaymentsList = ({ setShowAllPayments }) => {
                         <div>
                             No payments found
                         </div>) : (
-                            <div className='bg-[#1a1818] rounded-lg p-2 text-center'>
-                                <p>All payments</p>
+                            <div className='bg-white dark:bg-dark rounded-lg p-2 text-center'>
+                                <p className='mb-2'>All payments</p>
                                 {allPayments.map(payment => {
                                     return (
                                         <PaymentRow 
@@ -214,7 +214,7 @@ const CreatePayment = ({ setShowForm }) => {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-999">
-             <div className='bg-[#1a1818] w-[450px] sm:w-[500px] rounded-lg p-1' onClick={(e) => e.stopPropagation()}>
+             <div className='bg-white dark:bg-dark w-[450px] sm:w-[500px] rounded-lg p-1' onClick={(e) => e.stopPropagation()}>
                 <div className="flex flex-1 items-center justify-between">
                     <div className='flex flex-1 w-full'>
                         <div className='grid grid-cols-1 w-30 mr-5'>
@@ -230,7 +230,7 @@ const CreatePayment = ({ setShowForm }) => {
                                 onChange={(e) => {
                                     setNewPayment(prev => ({ ...prev, interval: e.target.value}))
                                 }}
-                                className="w-20 ml-2 py-2 px-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                className="w-20 ml-2 py-2 px-1 cursor-pointer rounded-lg dark:bg-dark dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                             >
                                 {options.map((opt, idx) => (
                                     <option key={idx} value={opt} className='text-sm'>
@@ -300,8 +300,7 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
     }, [showAllPayments]);
 
     return (
-        // <div className='rounded-lg bg-[#1a1818] shadow-lg m-15 p-5  max-w-100'>
-        <div className='rounded-lg bg-[#1a1818] shadow-lg p-5 h-full sm:h-[200px]'>
+        <div className='rounded-lg border border-neutral-300 dark:border-none dark:bg-dark shadow-sm p-5 h-full sm:h-[200px]'>
             {showForm && (
                 <div className='' onClick={() => setShowForm(false)}>
                     <div className='fixed inset-0 backdrop-blur-md z-998'></div>
@@ -324,7 +323,7 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
                                 <div key={i} className='relative group'>
                                     <div className="
                                         flex flex-1 gap-x-10 lg:gap-x-5 xl:gap-x-10 items-center mx-1 p-1
-                                        cursor-pointer hover:bg-[#2a2730] hover:rounded-lg hover:select-none transition-colors duration-200"
+                                        cursor-pointer dark:hover:bg-dark hover:rounded-lg hover:select-none transition-colors duration-200"
                                         onClick={async () => { 
                                             payment.last_reminder = new Date();
                                             await updatePayment(payment);
@@ -339,11 +338,11 @@ const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments
                                         </div>
                                         <div className='flex justify-between items-center w-full group-hover:blur-xs'>
                                             <div className=''> {payment.title} </div>
-                                            <div className='text-xl font-bold'> {payment.amount.toFixed(2)} </div>
+                                            <div className='text-xl font-bold'> {parseFloat(payment.amount) ? parseFloat(payment.amount).toFixed(2) : payment.amount} </div>
                                         </div>
 
                                         <div className="hidden group-hover:flex absolute inset-0 items-center justify-center pointer-events-none">
-                                            <MarkAsRead className="h-8 w-8 text-white" />
+                                            <MarkAsRead className="h-8 w-8 text-black dark:text-white" />
                                         </div>
                                     </div>
                                 </div>

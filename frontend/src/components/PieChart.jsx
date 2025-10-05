@@ -122,7 +122,7 @@ export default function CategoryPieChart({ range }) {
 		// <div style={{ width: 1000, height: 800 }}>
 		<div className="
 			w-full h-[350px] xl:h-[400px] 2xl:h-[400px] p-2
-			rounded-lg bg-[#1a1818] shadow-lg
+			rounded-lg border border-neutral-300 dark:border-none dark:bg-dark shadow-sm
 		">
 			{spendingPerCategory.length > 0 ? (
 				<ResponsiveContainer width="100%" height="100%">

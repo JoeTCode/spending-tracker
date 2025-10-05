@@ -23,7 +23,7 @@ const YearDropdown = ({ startYearOffset = 10, onChange }) => {
         <select 
             value={selectedYear}
             onChange={handleChange}
-            className="p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="p-2 cursor-pointer rounded-lg  dark:bg-dark dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
             {years.map((year) => (
                 <option key={year} value={year}>
@@ -123,7 +123,7 @@ const Dashboard = () => {
                                 <select
                                     value={selected}
                                     onChange={(e) => setSelected(e.target.value)}
-                                    className="p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    className="p-2 cursor-pointer rounded-lg dark:bg-dark dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                                 >
                                     {options.map((opt, idx) => (
                                         <option key={idx} value={opt} className='text-sm'>

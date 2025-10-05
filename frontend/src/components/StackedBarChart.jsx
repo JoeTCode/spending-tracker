@@ -205,7 +205,7 @@ const StackedBarChart = ({ selectedYear }) => {
         <>
             <div className="
                 w-full h-full
-                rounded-lg bg-[#1a1818] shadow-lg
+                rounded-lg border border-neutral-300 dark:border-none dark:bg-dark shadow-sm
             ">
                 <ResponsiveContainer>
                     <BarChart

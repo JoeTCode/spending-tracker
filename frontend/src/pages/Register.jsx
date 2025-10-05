@@ -37,7 +37,7 @@ const Register = () => {
 
     return (
 		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
-			<div className="flex flex-col bg-[#141212] w-120 pb-30 pt-16 px-12 rounded-lg">
+			<div className="flex flex-col border border-neutral-300 dark:border-none dark:bg-darker w-120 pb-30 pt-16 px-12 rounded-lg">
 				<div className="flex flex-col w-full text-center">
 					<h1 className="text-3xl font-bold">Register</h1>
 					<h2 className="text-neutral-400">Track your spending with TrackYourTransactions</h2>
@@ -57,7 +57,7 @@ const Register = () => {
 							</label>
 							<input type="email" id="email" name="email" 
 								placeholder="johndoe@example.com" required
-								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
 								onChange={(e) => setEmail(e.target.value)}
 								value={email}
 							/>
@@ -69,7 +69,7 @@ const Register = () => {
 							</label>
 							<input type="text" id="username" name="username" 
 								placeholder="johndoe" required
-								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}
 								value={username}
 							/>
@@ -81,14 +81,14 @@ const Register = () => {
 							</label>
 							<input type="password" id="password" name="password" 
 								placeholder="Create password" required
-								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
 								onChange={(e) => setPassword(e.target.value)}
 								value={password}
 							/>
 						</div>
 					</div>
 					
-					<div className="text-center w-full bg-[#646cff] rounded-lg cursor-pointer mt-5">
+					<div className="text-center w-full bg-purple hover:bg-dark-purple rounded-lg cursor-pointer mt-5">
 						<button type="submit" className="cursor-pointer w-full py-2">
 							Sign up
 						</button>
@@ -96,7 +96,7 @@ const Register = () => {
 				</form>
 				<div className="w-full text-center">
 					<p className="text-sm text-neutral-400 mt-1">
-						Already have an account? <Link to='/login' className="underline underline-offset-3 decoration-1 text-[#646cff]"> Login </Link>
+						Already have an account? <Link to='/login' className="underline underline-offset-3 decoration-1 text-dark-purple"> Login </Link>
 					</p>
 				</div>
 

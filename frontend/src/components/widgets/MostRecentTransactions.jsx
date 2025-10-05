@@ -47,7 +47,7 @@ const MostRecentTransactions = () => {
 
     return (
         <div className='
-                h-[610px] shadow-lg sm:h-[746px] rounded-lg bg-[#1a1818] cursor-pointer
+                h-[610px] shadow-sm sm:h-[746px] rounded-lg border border-neutral-300 dark:border-none dark:bg-dark cursor-pointer
             '
             onClick={() => navigate('/transactions')}
         >
@@ -59,17 +59,10 @@ const MostRecentTransactions = () => {
                             return (
                                 <div
                                     key={i}
-                                    className="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center p-3 rounded-2xl shadow"
+                                    className="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center p-3 rounded-2xl border border-neutral-200 dark:border-none"
                                 >
-                                    {/* Icon spanning two rows */}
-                                    {/* <img
-                                        src="/placeholder-icon.png"
-                                        alt="icon"
-                                        className="row-span-2 w-10 h-10 object-contain"
-                                    /> */}
                                     
-                                    <Icon className="row-span-2 w-11 h-11 p-1 bg-stone-300 rounded-xl text-gray-800" aria-label={'Icon'} />
-                                    {/* <GroceriesIcon /> */}
+                                    <Icon className="row-span-2 w-11 h-11 p-1 bg-stone-300 rounded-xl text-neutral-800" aria-label={'Icon'} />
 
                                     {/* First row: Description + Amount */}
                                     <p className="font-medium">{tx.description}</p>

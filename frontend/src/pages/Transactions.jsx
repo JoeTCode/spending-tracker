@@ -49,7 +49,7 @@ const createHeaders = (setUndos, setTransactions) => ([
         headerClass: "font-bold",
         width: 170,
         cellRenderer: params => {
-            return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+            return <span className='bg-stone-300 dark:bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
         }
     },
     {
@@ -89,7 +89,7 @@ const createHeaders = (setUndos, setTransactions) => ([
             };
             
             return (
-                <div className='hover:bg-[#dd90908a] text-neutral-800 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 mt-1 ml-3 justify-center items-center flex cursor-pointer'>
+                <div className='hover:bg-[#dd90908a] text-neutral-500 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 mt-1 ml-3 justify-center items-center flex cursor-pointer'>
                     <Trash onClick={deleteRow} className='w-5 h-5' />
                 </div>
                 
@@ -104,7 +104,7 @@ const Undo = ({ undos, undo }) => (
     disabled={undos.length === 0} 
     className={undos.length === 0 ? 
         "w-20 flex items-center bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
-        'w-20 flex items-center bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+        'w-20 flex items-center dark:bg-darker rounded-lg p-1 cursor-pointer border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:hover:bg-black text-sm gap-2 h-8'}
   >
     <UndoLeft className='w-5 h-5 relative top-[1px]' />
     <span>Undo</span>
@@ -116,8 +116,8 @@ const Redo = ({ redos, redo }) => (
     onClick={redos.length > 0 ? redo : undefined} 
     disabled={redos.length === 0} 
     className={redos.length === 0 ? 
-        "w-20 flex items-center bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
-        'w-20 flex items-center bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm gap-2 h-8'}
+        "w-20 flex items-center bg-gray-600 rounded-lg p-1 cursor-not-allowed text-sm gap-2 h-8 opacity-50" : 
+        'w-20 flex items-center dark:bg-darker rounded-lg p-1 cursor-pointer border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:hover:bg-black text-sm gap-2 h-8'}
   >
     <UndoRight className='w-5 h-5 relative top-[1px]' />
     Redo
@@ -130,7 +130,7 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
     if (noTransactions || prevMonth.getTime() < new Date(transactionsDateRange.min).getTime()) {
         return (
             <button
-                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 pr-3 cursor-not-allowed text-sm h-8 opacity-50"
                 disabled={true}
             >
                 <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
@@ -155,7 +155,7 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 });
                 setIsFilteredByAll(false);
             }}
-            className='flex items-center gap-1 bg-[#141212] rounded-lg p-1 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+            className='flex items-center gap-1 dark:bg-darker rounded-lg p-1 cursor-pointer border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:hover:bg-black text-sm h-8'
         >
             <ChevronLeft className='h-5 w-5 relative top-[1px]'/>
             <span>Previous</span>
@@ -170,7 +170,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
     if (noTransactions || nextMonth.getTime() > new Date(transactionsDateRange.max).getTime()) {
         return (
             <button
-                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 shadow-lg cursor-not-allowed text-sm h-8 opacity-50"
+                className="flex items-center gap-1 bg-gray-600 rounded-lg p-1 cursor-not-allowed text-sm h-8 opacity-50"
                 disabled={true}
             >
                 <span>Next</span>
@@ -194,7 +194,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                     });
                     setIsFilteredByAll(false);
                 }}
-                className='flex items-center gap-1 bg-[#141212] rounded-lg p-1 shadow-lg cursor-pointer hover:bg-black text-sm h-8'
+                className='flex items-center gap-1 dark:bg-darker rounded-lg p-1 cursor-pointer border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:hover:bg-black text-sm h-8'
             >
                 <span className=''>Next</span>
                 <ChevronRight className='h-5 w-5 relative top-[1px]'/>
@@ -220,8 +220,8 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
             })
         }
         disabled={isFilteredByAll}
-        className={isFilteredByAll ? 'bg-gray-600 rounded-lg p-1 pl-3 pr-3 shadow-lg cursor-not-allowed text-sm h-8 opacity-50' :
-            'bg-[#141212] rounded-lg p-1 pl-3 pr-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8'}
+        className={isFilteredByAll ? 'bg-gray-600 rounded-lg p-1 pl-3 pr-3 cursor-not-allowed text-sm h-8 opacity-50' :
+            'dark:bg-darker rounded-lg p-1 pl-3 pr-3 cursor-pointer hover:bg-neutral-200 border border-neutral-300 dark:border-none dark:hover:bg-black text-sm h-8'}
     >
         All
     </button>
@@ -481,7 +481,7 @@ const Transactions = () => {
                 <div className='flex flex-col justify-center mt-40 mb-10 max-w-[1000px]'>
                     
                     {state.modelType !== 'globalModel' && (
-                        <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div className="shadow-sm mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
@@ -514,9 +514,9 @@ const Transactions = () => {
                                         }
                                         disabled={!canTrain || isTraining}
                                         className={
-                                            isTraining ? "flex items-center gap-2 bg-[#1a1818] rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
-                                            "flex items-center gap-1 bg-[#1a1818] hover:bg-black rounded-lg py-1 px-2 cursor-pointer" :
-                                            "flex items-center gap-1 cursor-not-allowed bg-neutral-700 opacity-60 rounded-lg py-1 px-2"
+                                            isTraining ? "flex items-center gap-2 dark:bg-dark rounded-lg py-1 px-2 opacity-50 cursor-text" : canTrain ?
+                                            "flex items-center gap-1 text-purple-600 bg-purple-400/30 hover:bg-purple-500/30 dark:bg-dark dark:hover:bg-black rounded-lg py-1 px-2 cursor-pointer" :
+                                            "text-purple-300 dark:text-purple-400 flex items-center gap-1 cursor-not-allowed bg-neutral-700 opacity-60 rounded-lg py-1 px-2"
                                         }
                                     >
                                         {isTraining ? (
@@ -543,28 +543,28 @@ const Transactions = () => {
                     )}
                     
 
-                    <div className='bg-[#1a1818] min-w-[905px]  shadow-lg rounded-lg p-10 pt-10 mt-4'>
+                    <div className='min-w-[905px] shadow-sm border border-neutral-300 dark:border-none dark:shadow-lg dark:bg-dark rounded-lg p-10 pt-10 mt-4'>
                         <div className='flex justify-between'>
                             {
                                 selectedCsvName && selectedCsvName !== SELECT_CSV_DEFAULT ? <div></div>:
                                 isFilteredByAll ?
                                 <div className='flex ml-2 items-center mb-5'>
                                     <DateRange className='h-5 w-5' />
-                                    <h2 className='text-gray-300 ml-2'>
+                                    <h2 className='dark:text-gray-300 ml-2'>
                                         All Transactions
                                     </h2>
                                 </div> : 
                                 <div className='flex ml-2 items-center mb-5'>
                                     <DateRange className='h-5 w-5' />
-                                    <h2 className='text-gray-300 ml-2'>
+                                    <h2 className='dark:text-gray-300 ml-2'>
                                         {MONTHS[new Date(selectedTimeframe).getMonth()]} {new Date(selectedTimeframe).getFullYear()}
                                     </h2>
                                 </div>
                             }
                             <button
                                 className={rowData.length === 0 ? 
-                                    'flex gap-x-2 mb-5 bg-gray-600 rounded-lg py-2 px-3 shadow-lg cursor-not-allowed text-sm opacity-50' :
-                                    'flex gap-x-2 mb-5 bg-[#141212] rounded-lg py-2 px-3 shadow-lg cursor-pointer hover:bg-black text-sm'
+                                    'flex gap-x-2 mb-5 bg-gray-600 rounded-lg py-2 px-3 cursor-not-allowed text-sm opacity-50' :
+                                    'flex gap-x-2 mb-5 dark:bg-darker rounded-lg py-2 px-3 cursor-pointer hover:bg-neutral-100 border border-neutral-300! dark:border-none dark:hover:bg-black text-sm'
                                 }
                                 onClick={rowData.length === 0 ? undefined :
                                     async () => {
@@ -608,10 +608,7 @@ const Transactions = () => {
                                     latestTransaction={latestTransaction} setSelectedCsvName={setSelectedCsvName}
                                 />
                                 <select
-                                    className={rowData.length === 0 ? 
-                                        'flex gap-x-2 items-center bg-gray-600 rounded-lg py-2 px-3 shadow-lg cursor-not-allowed text-sm opacity-50 h-8 max-w-40' :
-                                        'flex gap-x-2 items-center bg-[#141212] rounded-lg py-2 px-3 shadow-lg cursor-pointer hover:bg-black text-sm h-8 max-w-40'
-                                    }
+                                    className='flex gap-x-2 items-center border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:bg-darker rounded-lg py-2 px-3 cursor-pointer dark:hover:bg-black text-sm h-8 max-w-40'
                                     value={selectedCsvName}
                                     onChange={(e) => setSelectedCsvName(e.target.value)}
                                 >
@@ -634,16 +631,21 @@ const Transactions = () => {
                             </div>) : <div>No data</div>
                         }
 
+                        
                         <button 
-                            onClick={
+                            onClick={ transactions.length > 0 ? (
                                 async () => {
                                     const csvData = await getCsvData();
                                     const csvConfig = mkConfig({ useKeysAsHeaders: true, filename: "trackyourtransactions-csv-export" });
                                     const csv = generateCsv(csvConfig)(csvData);
                                     download(csvConfig)(csv);
-                                }
+                                }) : undefined
                             }
-                            className='mt-5 bg-[#141212] hover:bg-black rounded-lg p-2 cursor-pointer'
+                                
+                            className={ transactions.length > 0 ?
+                                'border border-neutral-300 hover:bg-neutral-200 dark:border-none dark:text-white mt-5 dark:bg-darker dark:hover:bg-black rounded-lg p-2 cursor-pointer' :
+                                'opacity-40 border border-neutral-300 dark:border-none dark:text-white mt-5 dark:bg-darker rounded-lg p-2 cursor-not-allowed'                           
+                            }
                         >
                             Export as CSV
                         </button>   

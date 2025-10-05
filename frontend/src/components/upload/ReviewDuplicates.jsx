@@ -37,7 +37,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                 headerClass: "font-bold",
                 width: 170,
                 cellRenderer: params => {
-                    return <span className='bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
+                    return <span className='bg-stone-300 dark:bg-stone-700 rounded-lg py-1 px-2'>{CATEGORY_TO_EMOJI[params.value] || params.value}</span>
                 }
             },
             {
@@ -103,26 +103,26 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
     return (
         <div className='w-full'>
             {state.absoluteDuplicateRows.length > 0 && (
-                <div className='w-full bg-red-400 py-10 opacity-80 border-2 border-[#ca32328f] shadow-md rounded-lg text-center mb-5'>
+                <div className='text-white w-full bg-red-600/60 py-10 dark:border-2 dark:border-[#ca32328f] shadow-md rounded-lg text-center mb-5'>
                     <span className='font-bold'>{state.absoluteDuplicateRows.length}</span> <p>Absolute duplicates skipped</p>
                 </div>)}
             
             <div>
-                <div className='h-[700px] bg-[#1a1818] rounded-lg pt-10 pb-10 px-10 flex flex-col'>
+                <div className='h-[700px] border shadow-sm border-neutral-300 dark:border-none dark:bg-dark rounded-lg pt-10 pb-10 px-10 flex flex-col'>
                     <div className='flex-1'>
                         <p>Possible duplicate transactions identified</p>
                         <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
                         <div className='w-full grid grid-cols-3'>
                             <div className='flex flex-col items-center'>
-                                <span className='text-lg font-bold'>{state.nonDuplicateRows.length + duplicates.length + state.absoluteDuplicateRows.length}</span>
+                                <span className='text-black text-lg font-bold'>{state.nonDuplicateRows.length + duplicates.length + state.absoluteDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
-                                <span className='text-lg font-bold'>{duplicates.length}</span>
+                                <span className='text-black text-lg font-bold'>{duplicates.length}</span>
                                 <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
-                                <span className='text-lg font-bold'>{state.nonDuplicateRows.length}</span>
+                                <span className='text-black text-lg font-bold'>{state.nonDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
                             </div>
                         </div>
@@ -130,11 +130,13 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                             <CustomProgressBar current={numSelected} total={duplicates.length} label={"Transactions selected to save"} />
                         </div>)}
                         
-                        <div className='h-[420px] mt-4'>
-                            <EditableGrid
-                                gridRef={gridRef} rowData={duplicates} colNames={headers} onCellChange={handleCellChange}
-                                rowSelection={{ mode: 'multiRow' }} onSelectionChanged={handleSelectionChanged}
-                            />
+                        <div className='flex h-[420px] w-full mt-4 justify-center'>
+                            <div className='w-195 h-full'>
+                                <EditableGrid
+                                    gridRef={gridRef} rowData={duplicates} colNames={headers} onCellChange={handleCellChange}
+                                    rowSelection={{ mode: 'multiRow' }} onSelectionChanged={handleSelectionChanged}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -146,7 +148,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                             dispatch({ type: "SET_STAGE", payload: "upload"});
                             dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] })
                         }}
-                        className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                        className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                     >
                         Cancel
                     </button>
@@ -156,8 +158,8 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                         }}
                         disabled={state.nonDuplicateRows.length === 0}
                         className={
-                                state.nonDuplicateRows.length > 0 ? "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
-                                "bg-[#1a1818] py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
+                                state.nonDuplicateRows.length > 0 ? "text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                                "text-white bg-dark py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
                         }
                     >
                         Continue

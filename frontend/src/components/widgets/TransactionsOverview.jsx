@@ -99,17 +99,17 @@ const TransactionsOverviewCard = () => {
         setCurrentIndex((i) => (i === summaryItems.length - 1 ? 0 : i + 1));
 
     return (
-        <div className="rounded-lg bg-[#1a1818] h-full shadow-lg sm:h-[200px] p-5">
+        <div className="rounded-lg border border-neutral-300 dark:border-none dark:bg-dark h-full shadow-sm sm:h-[200px] p-5">
             <div className='flex flex-col'>
                 <div className="flex items-center justify-between mb-5">
-                    <span className="text-gray-400 font-semibold text-md">
+                    <span className="dark:text-gray-400 font-semibold text-md">
                         {summaryItems[currentIndex].label}
                     </span>
 
                     <select
                         value={selected}
                         onChange={handleChange}
-                        className="p-1 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        className="p-1 cursor-pointer rounded-lg border border-neutral-200 hover:bg-neutral-200 dark:border-none dark:bg-dark dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
                     >
                         {options.map((opt, idx) => (
                             <option key={idx} value={opt} className='text-sm'>
@@ -119,7 +119,7 @@ const TransactionsOverviewCard = () => {
                     </select>
                 </div>
                 
-                <span className="text-gray-200 font-semibold text-2xl mb-15">
+                <span className="dark:text-gray-200 font-semibold text-2xl mb-15">
                     {summaryItems[currentIndex].value}
                 </span>
                 <div className='flex justify-between'>
@@ -136,7 +136,7 @@ const TransactionsOverviewCard = () => {
                                 onClick={() => setCurrentIndex(idx)}
                                 className={
                                     `w-3 h-3 cursor-pointer rounded-full transition-colors focus:outline-none 
-                                    ${idx === currentIndex ? "bg-gray-200" : "bg-gray-600"}`
+                                    ${idx === currentIndex ? "bg-gray-600 dark:bg-gray-200" : "bg-gray-200 dark:bg-gray-600"}`
                                 }
                             />
                         ))}

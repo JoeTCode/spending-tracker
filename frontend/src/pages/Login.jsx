@@ -38,7 +38,7 @@ const Login = () => {
 
     return (
 		<div className="flex w-full justify-center mt-[20%] xl:mt-[5%]">
-			<div className="flex flex-col bg-[#141212] w-120 h-full pt-16 pb-10 px-12 rounded-lg">
+			<div className="flex flex-col border border-neutral-300 shadow-sm dark:shadow-none dark:border-none dark:bg-darker w-120 h-full pt-16 pb-10 px-12 rounded-lg">
 				<div className="flex flex-col w-full text-center">
 					<h1 className="text-3xl font-bold">Welcome back</h1>
 					<h2 className="text-neutral-400">Login to your TrackYourTransactions account</h2>
@@ -57,7 +57,7 @@ const Login = () => {
 							</label>
 							<input type="text" id="first" name="first" 
 								placeholder="johndoe" required
-								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:border-darker rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}
 								value={username}
 							/>
@@ -69,14 +69,14 @@ const Login = () => {
 							</label>
 							<input type="password" id="password" name="password" 
 								placeholder="Your password" required
-								className="p-2 border-2 border-[#221f1f] rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:border-darker rounded-lg placeholder-neutral-500"
 								onChange={(e) => setPassword(e.target.value)}
 								value={password}
 							/>
 						</div>
 					</div>
 					
-					<div className="text-center w-full bg-[#646cff] rounded-lg cursor-pointer mt-5">
+					<div className="text-center w-full bg-purple hover:bg-dark-purple rounded-lg cursor-pointer mt-5">
 						<button type="submit" className="cursor-pointer w-full p-2">
 							Login
 						</button>
@@ -84,7 +84,7 @@ const Login = () => {
 				</form>
 				<div className="w-full text-center">
 					<p className="text-sm text-neutral-400 mt-1">
-						Don't have an account? <Link to='/register' className="underline underline-offset-3 decoration-1 text-[#646cff]"> Sign up </Link>
+						Don't have an account? <Link to='/register' className="underline underline-offset-3 decoration-1 text-dark-purple"> Sign up </Link>
 					</p>
 				</div>
 				<div className="flex flex-col text-center mt-20">
@@ -95,8 +95,8 @@ const Login = () => {
 						onClick={() => loginWithRedirect()}
 						className="flex gap-x-2 justify-center items-center text-center bg-black py-2 rounded-lg cursor-pointer mt-5"
 					>
-						<Auth0Icon className="h-5 w-5 dark:bg-white rounded-sm" />
-						<span className="">Auth0</span>
+						<Auth0Icon className="h-5 w-5 bg-white rounded-sm" />
+						<span className="text-white">Auth0</span>
 					</button>
 				</div>
 

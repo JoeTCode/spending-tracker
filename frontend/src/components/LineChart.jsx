@@ -73,7 +73,7 @@ export default function IncomeLineChart({ selectedYear }) {
     return (
         <div className="
         w-full h-[350px] xl:h-[400px] p-5 pt-10
-        rounded-lg bg-[#1a1818] shadow-lg
+        rounded-lg border border-neutral-300 dark:border-none dark:bg-dark shadow-sm
         ">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart

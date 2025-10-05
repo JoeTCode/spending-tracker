@@ -33,6 +33,8 @@ const MapColumns = () => {
     const [ savedMappings, setSavedMappings ] = useState([]);
     const [ mappingTitle, setMappingTitle ] = useState("");
 
+    let selectorStyle = "cursor-pointer rounded-lg border border-neutral-200 dark:border-none dark:bg-black dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400";
+    
     const saveButtonDisabled = 
         errorObject.field ||
         !dateColName ||
@@ -192,7 +194,7 @@ const MapColumns = () => {
                     <label htmlFor='descriptor-col-select' className='mb-2'>Descriptor column</label>
                     <select
                         id="descriptor-col-select"
-                        className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                        className={selectorStyle += ' p-2'}
                         onChange={(e) => {
                             setSelectedDescriptorCol(e.target.value);
                         }}
@@ -271,7 +273,7 @@ const MapColumns = () => {
     
     return (
         <div className='w-full'>
-            <div className='bg-[#1a1818] w-full p-10'>
+            <div className='border border-neutral-300 rounded-lg dark:border-none dark:bg-dark w-full p-10'>
                 <div className=''>
                     <p>Map CSV columns</p>
                     <p className='mb-6 text-sm text-neutral-400'>Map your CSV columns to the required transaction fields</p>
@@ -291,9 +293,9 @@ const MapColumns = () => {
                     >
                         <p>Saved mappings</p>
                         {showMoreSavedMappings ? ( 
-                            <ShowMore className='w-5 h-5 text-white' />
+                            <ShowMore className='w-5 h-5 text-neutral-500 dark:text-white' />
                         ) : (
-                            <ShowLess className='w-5 h-5 text-white' />
+                            <ShowLess className='w-5 h-5 text-neutral-500 dark:text-white' />
                         )}
                     </div>
 
@@ -303,7 +305,7 @@ const MapColumns = () => {
                                 return (
                                     <div 
                                         key={mapping._id}
-                                        className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-black rounded-lg'
+                                        className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-black rounded-lg'
                                         onClick={async () => {
                                             dispatch({ type: "SET_LOADING", payload: true });
                                             
@@ -343,9 +345,9 @@ const MapColumns = () => {
                     >
                         <p>Set mappings</p>
                         {showMoreMappings ? (
-                            <ShowMore className='w-5 h-5 text-white' />
+                            <ShowMore className='w-5 h-5 text-neutral-500 dark:text-white' />
                         ): (
-                            <ShowLess className='w-5 h-5 text-white' />
+                            <ShowLess className='w-5 h-5 text-neutral-500 dark:text-white' />
                         )}                        
                     </div>
                     
@@ -366,7 +368,7 @@ const MapColumns = () => {
                                     id="mappingTitle" 
                                     name="mappingTitle" 
                                     onChange={(e) => setMappingTitle(e.target.value)}
-                                    className='p-1 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    className={selectorStyle += ' p-1'}
                                 />
                             </div>
                             {/* account selector */}
@@ -374,7 +376,7 @@ const MapColumns = () => {
                                 <label htmlFor="account-col-select" className='mb-2'>Transaction account</label>
                                 <select 
                                     id="account-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    className={selectorStyle += ' p-2'}
                                     onChange={(e) => {
                                         setAccountColName(e.target.value);
                                         if (errorObject.type === 'account') setErrorObject({ field: '', message: '' });
@@ -393,7 +395,7 @@ const MapColumns = () => {
                                         <label htmlFor="date-col-select" className='mb-2'>Transaction date</label>
                                         <select 
                                             id="date-col-select"
-                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            className={selectorStyle += ' p-2'}
                                             onChange={(e) => {
                                                 setDateColName(e.target.value);
                                                 if (errorObject.type === 'date') setErrorObject({ field: '', message: '' });
@@ -409,7 +411,7 @@ const MapColumns = () => {
                                         <label htmlFor="date-format-select" className='mb-2'>Date format</label>
                                         <select
                                             id="date-format-select"
-                                            className='flex-1 w-full p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            className={selectorStyle += ' flex-1 w-full p-2'}
                                             onChange={(e) => {
                                                 setDateFormat(e.target.value);
                                             }}
@@ -446,7 +448,7 @@ const MapColumns = () => {
                                     <div>
                                         <select
                                             id="amount-col-select"
-                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            className={selectorStyle += ' p-2'}
                                             onChange={(e) => {
                                                 setAmountColNames(prev => ({...prev, col1: e.target.value}));
                                                 if (errorObject.field === 'amount') setErrorObject({ field: '', message: '' });
@@ -491,7 +493,7 @@ const MapColumns = () => {
                                     <div className='flex flex-col gap-y-3'>
                                         <select
                                             id="amount-col-select"
-                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            className={selectorStyle += ' p-2'}
                                             onChange={(e) => setAmountColNames(prev => ({...prev, col1: e.target.value}))}
                                         >
                                             <option value={""}>Select income column</option>
@@ -501,7 +503,7 @@ const MapColumns = () => {
                                         </select>
                                         <select
                                             id="amount-col-select"
-                                            className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                            className={selectorStyle += ' p-2'}
                                             onChange={(e) => setAmountColNames(prev => ({...prev, col2: e.target.value}))}
                                         >
                                             <option value={""}>Select expense column</option>
@@ -518,7 +520,7 @@ const MapColumns = () => {
                                 <label htmlFor="description-col-select" className='mb-2'>Transaction description</label>
                                 <select
                                     id="description-col-select"
-                                    className='p-2 cursor-pointer rounded-lg bg-black text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                    className={selectorStyle += ' p-2'}
                                     onChange={(e) => {
                                         setDescriptionColName(e.target.value);
                                         if (errorObject.type === 'description') setErrorObject({ field: '', message: '' });
@@ -537,7 +539,7 @@ const MapColumns = () => {
                                     <label htmlFor="category-col-select">Transaction category</label>
                                     <select
                                         id="category-col-select"
-                                        className='p-2 cursor-pointer rounded-lg bg-[#1a1818] text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400'
+                                        className={selectorStyle += ' p-2'}
                                         onChange={(e) => {
                                             setCategoryColName(e.target.value);
                                             if (errorObject.type === 'category') setErrorObject({ field: '', message: '' });
@@ -553,8 +555,8 @@ const MapColumns = () => {
 
                             <button
                                 className={saveMappingDisabled ? 
-                                    "bg-[#1a1818] opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
-                                    "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                                    "bg-dark text-white opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
+                                    "bg-dark text-white py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                                 }
                                 onClick={saveMappingDisabled ? undefined : (async () => {
                                     // create popup with input element for mapping name
@@ -603,7 +605,7 @@ const MapColumns = () => {
                         // dispatch({ type: "SET_MAP_COLUMNS", payload: false });
                         dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
-                    className="bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                    className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                 >
                     Cancel
                 </button>
@@ -632,8 +634,8 @@ const MapColumns = () => {
                     disabled={saveButtonDisabled}
                     className={
                         saveButtonDisabled ? 
-                        "bg-[#1a1818] opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
-                        "bg-[#1a1818] py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                        "text-white bg-dark opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
+                        "text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
                     }
                 >
                     Continue
