@@ -8,6 +8,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { UploadProvider } from './components/upload/UploadContext';
 import { PageProvider } from "./pages/PageContext";
 import { InternalAuthProvider } from './components/useInternalAuth';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Close from './assets/icons/close-svgrepo-com.svg?react';
+
+const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
@@ -21,6 +26,29 @@ createRoot(document.getElementById('root')).render(
                 }}
             >
                 <InternalAuthProvider>
+                    {isDarkMode ? (
+                            <ToastContainer
+                                position="bottom-right"
+                                autoClose={3000}
+                                toastClassName={() =>
+                                    "p-4 bg-white dark:bg-gray-900 text-black dark:text-white rounded-lg shadow-lg flex"
+                                }
+                                bodyClassName="text-sm font-medium"
+                                progressClassName="bg-purple-500 dark:bg-purple-300"
+                                closeButton={({ closeToast }) => (
+                                    <Close 
+                                        onClick={closeToast}
+                                        className='
+                                            relative bottom-[9px] left-[10px] h-4 w-4 text-gray-500 dark:text-gray-300 hover:text-gray-700
+                                            dark:hover:text-gray-500 cursor-pointer duration-300 ease-out
+                                        '
+                                    />
+
+                                )}
+                            />       
+                        ) :
+                        <ToastContainer position='bottom-right autoClose={3000}'/>
+                    }
                     <BrowserRouter>
                     <Routes>
                         <Route path='/login' element={<Login />} />

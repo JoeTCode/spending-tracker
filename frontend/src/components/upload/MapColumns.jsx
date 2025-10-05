@@ -6,6 +6,7 @@ import ShowLess from '../../assets/icons/expand-less-alt-svgrepo-com.svg?react';
 import { db } from '../../db/db';
 import { v4 as uuidv4 } from 'uuid';
 import Trash from '../../assets/icons/trash-svgrepo-com.svg?react';
+import { toast } from 'react-toastify';
 
 const MapColumns = () => {
     const { state, dispatch } = useUpload();
@@ -32,6 +33,7 @@ const MapColumns = () => {
     });
     const [ savedMappings, setSavedMappings ] = useState([]);
     const [ mappingTitle, setMappingTitle ] = useState("");
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     let selectorStyle = "cursor-pointer rounded-lg border border-neutral-200 dark:border-none dark:bg-black dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400";
     
@@ -307,22 +309,26 @@ const MapColumns = () => {
                                         key={mapping._id}
                                         className='w-full flex flex-1 justify-between items-center py-2 px-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-black rounded-lg'
                                         onClick={async () => {
-                                            dispatch({ type: "SET_LOADING", payload: true });
-                                            
-                                            await new Promise(resolve => setTimeout(resolve, 0));
+                                            try {
+                                                await new Promise(resolve => setTimeout(resolve, 0));
 
-                                            const data = getCSVDataFromMappings(
-                                                mapping.account,
-                                                mapping.amount, 
-                                                mapping.amountDescriptor, 
-                                                mapping.amountMappings,
-                                                mapping.description, 
-                                                mapping.date, 
-                                                mapping.category
-                                            );
-
-                                            dispatch({ type: "SET_DATE_FORMAT", payload: mapping.dateFormat });
-                                            dispatch({ type: "SET_TRANSACTIONS", payload: data });
+                                                const data = getCSVDataFromMappings(
+                                                    mapping.account,
+                                                    mapping.amount, 
+                                                    mapping.amountDescriptor, 
+                                                    mapping.amountMappings,
+                                                    mapping.description, 
+                                                    mapping.date, 
+                                                    mapping.category
+                                                );
+                                                
+                                                dispatch({ type: "SET_LOADING", payload: true });
+                                                dispatch({ type: "SET_DATE_FORMAT", payload: mapping.dateFormat });
+                                                dispatch({ type: "SET_TRANSACTIONS", payload: data });
+                                            } catch (err) {
+                                                toast.error("Something went wrong!");
+                                                dispatch({ type: "SET_STAGE", payload: "upload" });
+                                            }
                                         }}
                                     >
                                         <span>{mapping.mappingTitle}</span>
@@ -602,7 +608,6 @@ const MapColumns = () => {
                 <button 
                     onClick={() => {
                         dispatch({ type: "SET_PARSED_CSV", payload: [] });
-                        // dispatch({ type: "SET_MAP_COLUMNS", payload: false });
                         dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
                     className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
@@ -612,24 +617,30 @@ const MapColumns = () => {
                 <button 
                     onClick={
                         saveButtonDisabled ? undefined : 
-                        (async () => {
-                            dispatch({ type: "SET_LOADING", payload: true });
+                        (
+                            async () => {
+                                try {
+                                    await new Promise(resolve => setTimeout(resolve, 0));
+                                    const data = getCSVDataFromMappings(
+                                        accountColName, 
+                                        amountColNames,
+                                        descriptorColName, 
+                                        amountDescriptorMappings, 
+                                        descriptionColName, 
+                                        dateColName, 
+                                        categoryColName
+                                    );
 
-                            await new Promise(resolve => setTimeout(resolve, 0));
-
-                            const data = getCSVDataFromMappings(
-                                accountColName, 
-                                amountColNames,
-                                descriptorColName, 
-                                amountDescriptorMappings, 
-                                descriptionColName, 
-                                dateColName, 
-                                categoryColName
-                            );
-                            
-                            dispatch({ type: "SET_DATE_FORMAT", payload: dateFormat });
-                            dispatch({ type: "SET_TRANSACTIONS", payload: data });
-                        })
+                                    dispatch({ type: "SET_LOADING", payload: true });
+                                    
+                                    dispatch({ type: "SET_DATE_FORMAT", payload: dateFormat });
+                                    dispatch({ type: "SET_TRANSACTIONS", payload: data });
+                                } catch (err) {
+                                    toast.error("Something went wrong!");
+                                    dispatch({ type: "SET_STAGE", payload: "upload" });
+                                }
+                            }
+                        )
                     }
                     disabled={saveButtonDisabled}
                     className={

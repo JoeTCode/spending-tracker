@@ -82,6 +82,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
         };
 
         const saveData = [ ...state.nonDuplicateRows, ...selectedRows ];
+
         if (pageState.allowCategorisation) {
             dispatch({ type: "SET_SAVE_DATA", payload: saveData });
             // remove non selected transactions from low conf tx

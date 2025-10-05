@@ -6,8 +6,8 @@ import { MIN_CONF_SCORE } from '../utils/constants/constants';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
 import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
+
 import Close from '../assets/icons/close-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -166,8 +166,11 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
             dispatch({ type: "SET_PARSED_CSV", payload: parsedCSV });
             dispatch({ type: "SET_STAGE", payload: "mapColumns"})
         }
-        // toast here
-        else console.warn("CSV failed to parse");
+
+        else {
+            console.warn("CSV failed to parse");
+            toast.error("Failed to parse CSV");
+        };
     };
 
     return (
@@ -263,10 +266,9 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
 
 const Upload = () => {
     const { state, dispatch } = useUpload();
-    const { state: pageState, dispatch: pageDispatch } = usePage();
+    const { state: pageState } = usePage();
     
-    const { user: internalUser } = useInternalAuth(); 
-    const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
+    const { isAuthenticated, getAccessTokenSilently } = useAuth0();
 
     const { CSVReader } = useCSVReader();
     const [ isLoading, setIsLoading ] = useState(true);
@@ -284,33 +286,32 @@ const Upload = () => {
         return res;
     };
 
-    const findDuplicates = async (updatedTransactions) => {
+    const findDuplicates = async (uploadedTransactions) => {
 
         const findAbsoluteDuplicates = (dbTxs, newTxs) => {
             const dbIdSet = new Set(dbTxs.map(tx => tx._id));
             return newTxs.filter((tx, i) =>
-                dbIdSet.has(makeTransactionId({ row: i, ...tx }))
+                dbIdSet.has(tx._id)
             );
         };
 
         const findPossibleDuplicates = (dbTxs, newTxs) => {
-            const dbFieldHashes = new Set(dbTxs.map(tx =>
-                makeTransactionId({ ...tx })
-            ));
-            return newTxs.filter(tx => dbFieldHashes.has(makeTransactionId({ ...tx })));
+            const dbFieldHashes = new Set(dbTxs.map(tx => tx._id));
+            return newTxs.filter(tx => dbFieldHashes.has(tx._id));
         };
 
         // Date range
-        const timestamps = updatedTransactions.map(tx => new Date(tx.date).getTime());
+        const timestamps = uploadedTransactions.map(tx => new Date(tx.date).getTime());
         const [minTime, maxTime] = [Math.min(...timestamps), Math.max(...timestamps)];
+        const oneDay = 8.64e+7;
         const transactionsInRange = await db.transactions
             .where('date')
-            .between(new Date(minTime), new Date(maxTime), true, true)
+            .between(new Date(minTime - oneDay), new Date(maxTime + oneDay), true, true)
             .toArray();
+        
+        const absDuplicates = findAbsoluteDuplicates(transactionsInRange, uploadedTransactions);
 
-
-        const absDuplicates = findAbsoluteDuplicates(transactionsInRange, updatedTransactions);
-        const filteredTransactions = updatedTransactions.filter(
+        const filteredTransactions = uploadedTransactions.filter(
             tx => !absDuplicates.some(d => d._id === tx._id)
         );
 
@@ -476,25 +477,6 @@ const Upload = () => {
                     </CSVReader>
                 </div>
             </div>
-            <ToastContainer
-                position="bottom-right"
-                autoClose={3000}
-                toastClassName={() =>
-                    "p-4 bg-white dark:bg-gray-900 text-black dark:text-white rounded-lg shadow-lg flex"
-                }
-                bodyClassName="text-sm font-medium"
-                progressClassName="bg-purple-500 dark:bg-purple-300"
-                closeButton={({ closeToast }) => (
-                    <Close 
-                        onClick={closeToast}
-                        className='
-                            relative bottom-[9px] left-[10px] h-4 w-4 text-gray-500 dark:text-gray-300 hover:text-gray-700
-                            dark:hover:text-gray-500 cursor-pointer duration-300 ease-out
-                        '
-                    />
-
-                )}
-            />
         </>
     )
 }

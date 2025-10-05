@@ -12,10 +12,7 @@ import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
 import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
 import Edit from '../assets/icons/edit-1-svgrepo-com.svg?react';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import Close from '../assets/icons/close-svgrepo-com.svg?react';
-import axios from 'axios';
+import { toast } from 'react-toastify';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useInternalAuth } from '../components/useInternalAuth.jsx';
 import api from '../axios/api.js';
@@ -248,6 +245,7 @@ const Transactions = () => {
     const [ csvNamesToId, setCsvNamesToId ] = useState({});
     const [ selectedCsvName, setSelectedCsvName ] = useState('');
     const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+
 
     useEffect(() => {
         const retrieveTransactionData = async () => {
@@ -652,25 +650,6 @@ const Transactions = () => {
                     </div>
                 </div>
             </div>
-            <ToastContainer
-                position="bottom-right"
-                autoClose={3000}
-                toastClassName={() =>
-                    "p-4 bg-white dark:bg-gray-900 text-black dark:text-white rounded-lg shadow-lg flex"
-                }
-                bodyClassName="text-sm font-medium"
-                progressClassName="bg-purple-500 dark:bg-purple-300"
-                closeButton={({ closeToast }) => (
-                    <Close 
-                        onClick={closeToast}
-                        className='
-                            relative bottom-[9px] left-[10px] h-4 w-4 text-gray-500 dark:text-gray-300 hover:text-gray-700
-                            dark:hover:text-gray-500 cursor-pointer duration-300 ease-out
-                        '
-                    />
-
-                )}
-            />       
         </>
     );
 };

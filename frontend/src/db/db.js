@@ -267,10 +267,12 @@ export async function getCsvData() {
 };
 
 export async function updateTransaction(transaction) {
-    if (CATEGORIES_SET.has(transaction["Category"])) {
-        await db.transactions.put({ ...transaction, trained: false }, transaction._id);
+    const csvDataArray = await db.csvData.toArray();
+    const dateFormat = csvDataArray.filter(csvData => csvData.id === transaction.csvId).dateFormat;
+    if (CATEGORIES_SET.has(transaction["category"])) {
+        await db.transactions.put({ ...transaction, date: parseDate(transaction.date, dateFormat), trained: false }, transaction._id);
     } else {
-        await db.transactions.put(transaction, transaction._id);
+        await db.transactions.put({ ...transaction, date: parseDate(transaction.date, dateFormat) }, transaction._id);
     };
 };
 
