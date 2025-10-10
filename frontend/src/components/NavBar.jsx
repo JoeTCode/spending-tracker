@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink } from "react-router-dom";
 import Dashboard from '../assets/icons/dashboard-svgrepo-com.svg?react';
 import Home from '../assets/icons/home-03-svgrepo-com.svg?react';
@@ -14,6 +14,24 @@ const Sidebar = () => {
     const [ openModal, setOpenModal ] = useState(false);
     const { logout, user } = useInternalAuth();
     const { isAuthenticated, user: auth0User, getAccessTokenSilently } = useAuth0();
+    const profileRef = useRef();
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        }
+
+        if (open) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [open]);
+
     return (
         <div>  
             <div
@@ -64,13 +82,16 @@ const Sidebar = () => {
                                 Profile
                             </div>
                             {open && (
-                                <div className='flex flex-col absolute top-11 sm:top-15 right-1 rounded-sm w-60 sm:w-80 h-40 p-4 bg-neutral-100 dark:bg-dark'>
+                                <div ref={profileRef} className='flex flex-col absolute top-11 sm:top-15 right-1 rounded-sm w-60 sm:w-80 h-40 p-4 bg-neutral-100 dark:bg-dark'>
                                     <div className='mb-4'>Hello, {isAuthenticated ? auth0User.name.slice(0, 30) : user.username.slice(0, 30)}</div>
                                     <hr className='dark:text-neutral-100'></hr>
                                     <div>
                                         <p 
                                             className='my-1 text-neutral-400 hover:text-red-500 text-sm cursor-pointer'
-                                            onClick={() => setOpenModal(true)}
+                                            onClick={() => {
+                                                setOpenModal(true);
+                                                setOpen(false);
+                                            }}
                                         >Delete Account</p>
                                     </div>
                                     <hr className='dark:text-neutral-100'></hr>
@@ -90,7 +111,7 @@ const Sidebar = () => {
                 <div className='flex flex-col justify-between z-999 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2  bg-neutral-100 dark:bg-dark w-80 h-40 p-4 rounded-sm border border-neutral-300 dark:border-neutral-700 border-offset-2'>
                     <div>
                         <h2>Confirm account deletion</h2>
-                        <h3 className='text-sm text-neutral-400'>Your account and its associated data will be deleted.</h3>
+                        <h3 className='text-sm text-neutral-400'>Your account and all of its associated data will be deleted.</h3>
                     </div>
 
                     <div className='flex justify-between'>

@@ -57,7 +57,7 @@ const Login = () => {
 							</label>
 							<input type="text" id="first" name="first" 
 								placeholder="johndoe" required
-								className="p-2 border border-neutral-300 dark:border-2 dark:border-darker rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:border-neutral-800 rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}
 								value={username}
 							/>
@@ -69,7 +69,7 @@ const Login = () => {
 							</label>
 							<input type="password" id="password" name="password" 
 								placeholder="Your password" required
-								className="p-2 border border-neutral-300 dark:border-2 dark:border-darker rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-2 dark:border-neutral-800 rounded-lg placeholder-neutral-500"
 								onChange={(e) => setPassword(e.target.value)}
 								value={password}
 							/>
@@ -93,7 +93,7 @@ const Login = () => {
 					
 					<button 
 						onClick={() => loginWithRedirect()}
-						className="flex gap-x-2 justify-center items-center text-center bg-black py-2 rounded-lg cursor-pointer mt-5"
+						className="flex gap-x-2 justify-center items-center text-center bg-dark dark:bg-black hover:bg-dark-light py-2 rounded-lg cursor-pointer mt-5"
 					>
 						<Auth0Icon className="h-5 w-5 bg-white rounded-sm" />
 						<span className="text-white">Auth0</span>

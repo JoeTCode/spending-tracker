@@ -57,7 +57,7 @@ const Register = () => {
 							</label>
 							<input type="email" id="email" name="email" 
 								placeholder="johndoe@example.com" required
-								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-neutral-800 rounded-lg placeholder-neutral-500"
 								onChange={(e) => setEmail(e.target.value)}
 								value={email}
 							/>
@@ -69,7 +69,7 @@ const Register = () => {
 							</label>
 							<input type="text" id="username" name="username" 
 								placeholder="johndoe" required
-								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-neutral-800 rounded-lg placeholder-neutral-500"
 								onChange={(e) => setUsername(e.target.value)}
 								value={username}
 							/>
@@ -81,7 +81,7 @@ const Register = () => {
 							</label>
 							<input type="password" id="password" name="password" 
 								placeholder="Create password" required
-								className="p-2 border border-neutral-300 dark:border-2 dark:order-darker rounded-lg placeholder-neutral-500"
+								className="p-2 border border-neutral-300 dark:border-neutral-800 rounded-lg placeholder-neutral-500"
 								onChange={(e) => setPassword(e.target.value)}
 								value={password}
 							/>
