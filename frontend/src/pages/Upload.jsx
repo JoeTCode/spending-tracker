@@ -4,15 +4,15 @@ import { useCSVReader, formatFileSize } from 'react-papaparse';
 import { useState, useEffect } from 'react';
 import { MIN_CONF_SCORE } from '../utils/constants/constants';
 import { db, validateTransaction, makeTransactionId } from '../db/db';
-import UploadIcon from '../assets/icons/upload-01-svgrepo-com.svg?react';
+import UploadIcon from '../assets/icons/upload-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
 import { toast } from 'react-toastify';
 
-import Close from '../assets/icons/close-svgrepo-com.svg?react';
+import Close from '../assets/icons/close-x-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
 import { useAuth0 } from '@auth0/auth0-react';
 import api from '../axios/api';
-import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
+import Brain from '../assets/icons/brain-svgrepo-com.svg?react';
 import { useInternalAuth } from '../components/useInternalAuth';
 
 function formatDescription(desc) {
@@ -223,9 +223,9 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                             {acceptedFile ? (
                                 <div className='justify-center'>
                                     <div className='flex flex-col border-1 border-neutral-400 dark:border-neutral-600 rounded-lg p-4'>
-                                        <div className='flex justify-between gap-x-10'>
+                                        <div className='flex justify-between gap-x-10 mb-2'>
                                             <input onChange={(e) => onFileNameChange(e.target.value)} defaultValue={acceptedFile.name} type='text' id='filename' name='filename' className='text-sm w-60 px-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-400' />
-                                            <Close className="h-5 w-5 m-2 cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-lg" {...getRemoveFileProps()} />
+                                            <Close className="h-5 w-5 cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-full" {...getRemoveFileProps()} />
                                         </div>
                                         <span className='px-2 text-sm text-neutral-600 self-start'>{formatFileSize(acceptedFile.size)}</span>
                                         <div className='h-1 mt-1'>
@@ -235,8 +235,8 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                                         <button 
                                             className={
                                                 isLoading ? 
-                                                'text-sm border border-neutral-300 dark:border-none dark:bg-black dark:text-white opacity-20 rounded-lg py-1 mt-1 cursor-not-allowed' :
-                                                'text-sm border border-neutral-300 hover:bg-neutral-100! dark:border-none dark:bg-black dark:text-white rounded-lg py-1 mt-1 cursor-pointer'
+                                                'text-white text-sm border border-neutral-300 bg-dark dark:border-none dark:bg-purple dark:text-white opacity-20 rounded-lg py-1 mt-2 cursor-not-allowed' :
+                                                'text-white text-sm border border-neutral-300 bg-dark hover:bg-dark-light dark:border-none dark:bg-purple hover:dark:bg-dark-purple dark:text-white rounded-lg py-1 mt-2 cursor-pointer'
                                             }
                                             onClick={isLoading ? undefined : handleFileUpload}
                                         >

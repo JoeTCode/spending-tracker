@@ -115,15 +115,15 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                         <p className='mb-6 text-sm text-neutral-400'>Please review records found in your CSV that match previously uploaded transactions.</p>
                         <div className='w-full grid grid-cols-3'>
                             <div className='flex flex-col items-center'>
-                                <span className='text-black text-lg font-bold'>{state.nonDuplicateRows.length + duplicates.length + state.absoluteDuplicateRows.length}</span>
+                                <span className='text-black dark:text-white text-lg font-bold'>{state.nonDuplicateRows.length + duplicates.length + state.absoluteDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Total uploaded transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
-                                <span className='text-black text-lg font-bold'>{duplicates.length}</span>
+                                <span className='text-black dark:text-white text-lg font-bold'>{duplicates.length}</span>
                                 <p className='text-sm text-neutral-400'>Possible duplicate transactions</p>
                             </div>
                             <div className='flex flex-col items-center'>
-                                <span className='text-black text-lg font-bold'>{state.nonDuplicateRows.length}</span>
+                                <span className='text-black dark:text-white text-lg font-bold'>{state.nonDuplicateRows.length}</span>
                                 <p className='text-sm text-neutral-400'>Non-duplicate transactions</p>
                             </div>
                         </div>

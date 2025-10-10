@@ -10,7 +10,7 @@ import { PageProvider } from "./pages/PageContext";
 import { InternalAuthProvider } from './components/useInternalAuth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Close from './assets/icons/close-svgrepo-com.svg?react';
+import Close from './assets/icons/close-x-svgrepo-com.svg?react';
 
 const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -22,7 +22,7 @@ createRoot(document.getElementById('root')).render(
                 authorizationParams={{
                     redirect_uri: window.location.origin,
                     audience: "http://localhost:5000",
-                    scope: ""
+                    scope: "profile"
                 }}
             >
                 <InternalAuthProvider>

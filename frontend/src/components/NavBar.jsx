@@ -1,32 +1,24 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from "react-router-dom";
-// import { Menu, X } from 'lucide-react'; // icons
+import { useState } from 'react';
+import { NavLink } from "react-router-dom";
 import Dashboard from '../assets/icons/dashboard-svgrepo-com.svg?react';
 import Home from '../assets/icons/home-03-svgrepo-com.svg?react';
 import Transactions from '../assets/icons/transaction-svgrepo-com.svg?react';
 import { useInternalAuth } from './useInternalAuth';
+import { useAuth0 } from '@auth0/auth0-react';
+import api from '../axios/api';
+import { db } from '../db/db';
+import Profile from '../assets/icons/profile-round-1342-svgrepo-com.svg?react';
 
 const Sidebar = () => {
-    const [ open, setOpen ] = useState(true);
-    const navigate = useNavigate();
-    const { logout } = useInternalAuth();
-
-    // const handleLogout = async () => {
-    //     try {
-    //         await logout();
-    //     } catch (err) {
-    //         console.error("An error occurred on logout");
-    //     } finally {
-    //         navigate("/login");
-    //     };
-    // };
-
+    const [ open, setOpen ] = useState(false);
+    const [ openModal, setOpenModal ] = useState(false);
+    const { logout, user } = useInternalAuth();
+    const { isAuthenticated, user: auth0User, getAccessTokenSilently } = useAuth0();
     return (
         <div>  
             <div
-                className={`fixed top-0 w-full border-b-1 border-neutral-300/80 backdrop-blur-lg bg-white/70 dark:border-none dark:backdrop-blur-none dark:bg-[#1a1818] dark:text-white p-2 sm:px-6 sm:py-2 
-                transition-transform duration-300 z-40
-                ${open ? "translate-x-0" : "-translate-x-full"}`}
+                className="fixed top-0 w-full border-b-1 border-neutral-300/80 backdrop-blur-lg bg-white/70 dark:border-none dark:backdrop-blur-none dark:bg-dark dark:text-white p-2 sm:pl-6 sm:pl-2 
+                transition-transform duration-300 z-40"
             >
                 <div className='flex items-center justify-center sm:justify-between'>
                     <div className='hidden font-semibold sm:block'>Track your transactions</div>
@@ -35,7 +27,7 @@ const Sidebar = () => {
                             to="/" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-dark-purple decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Home className="w-5 h-5" />
@@ -46,7 +38,7 @@ const Sidebar = () => {
                             to="/dashboard" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-dark-purple decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Dashboard className="w-5 h-5" />
@@ -57,22 +49,86 @@ const Sidebar = () => {
                             to="/transactions" 
                             className={({ isActive }) =>
                                 `flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 
-                                ${isActive ? "underline underline-offset-5 dark:decoration-[#5055a7] decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
+                                ${isActive ? "underline underline-offset-5 dark:decoration-dark-purple decoration-[2px] sm:no-underline sm:bg-neutral-200/80 dark:sm:bg-black text-black dark:text-white" : "sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black"}`
                             }
                         >
                             <Transactions className="w-5 h-5" />
                             <span className="flex-1">Transactions</span>
                         </NavLink>
-                        
-                        <button
-                            onClick={logout}
-                            className="bg-black! py-1 px-1 sm:py-0 sm:px-3 rounded cursor-pointer text-white dark:hover:bg-[#5055a7]"
-                        >
-                            Log Out
-                        </button>
+                        <div className='flex justify-center items-center align-center content-center'>
+                            <div 
+                                className='cursor-pointer flex gap-x-2 items-center sm:rounded-lg sm:py-2 sm:px-4 sm:hover:bg-neutral-200/80 dark:sm:hover:bg-black'
+                                onClick={() => setOpen(!open)}
+                            >
+                                <Profile className='w-5 h-5' />
+                                Profile
+                            </div>
+                            {open && (
+                                <div className='flex flex-col absolute top-11 sm:top-15 right-1 rounded-sm w-60 sm:w-80 h-40 p-4 bg-neutral-100 dark:bg-dark'>
+                                    <div className='mb-4'>Hello, {isAuthenticated ? auth0User.name.slice(0, 30) : user.username.slice(0, 30)}</div>
+                                    <hr className='dark:text-neutral-100'></hr>
+                                    <div>
+                                        <p 
+                                            className='my-1 text-neutral-400 hover:text-red-500 text-sm cursor-pointer'
+                                            onClick={() => setOpenModal(true)}
+                                        >Delete Account</p>
+                                    </div>
+                                    <hr className='dark:text-neutral-100'></hr>
+                                    <button
+                                        onClick={logout}
+                                        className="mt-6 mx-10 bg-dark hover:bg-dark-light h-8 sm:py-0 sm:px-3 rounded cursor-pointer text-white dark:bg-purple dark:hover:bg-dark-purple"
+                                    >
+                                        Log Out
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </nav>
                 </div>
             </div>
+            {openModal && (
+                <div className='flex flex-col justify-between z-999 fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2  bg-neutral-100 dark:bg-dark w-80 h-40 p-4 rounded-sm border border-neutral-300 dark:border-neutral-700 border-offset-2'>
+                    <div>
+                        <h2>Confirm account deletion</h2>
+                        <h3 className='text-sm text-neutral-400'>Your account and its associated data will be deleted.</h3>
+                    </div>
+
+                    <div className='flex justify-between'>
+                        <button
+                            className='px-2 py-1 rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-darker dark:hover:bg-black cursor-pointer'
+                            onClick={() => setOpenModal(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className='text-red-500 px-2 py-1 rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-darker dark:hover:bg-black cursor-pointer'
+                            onClick={async () => {
+                                const token = isAuthenticated ? await getAccessTokenSilently() : '';
+
+                                try {
+                                    await api.delete('/delete', {
+                                        headers: {
+                                            "Authorization": `Bearer: ${token}`
+                                        }
+                                    });
+                                    await db.delete();
+                                    localStorage.clear()
+                                    logout();
+                                } 
+                                
+                                catch (err) {
+                                    console.error(err);
+                                    localStorage.clear()
+                                    logout();
+                                }
+                            }}
+                        >
+                            Confirm
+                        </button>
+                    </div>
+
+                </div>
+            )}
         </div>
     );
 };

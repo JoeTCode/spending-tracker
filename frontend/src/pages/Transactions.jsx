@@ -2,15 +2,15 @@ import { NavBar, EditableGrid } from '../components';
 import { useRef, useState, useEffect } from 'react';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MONTHS, MIN_CORRECTIONS } from '../utils/constants/constants';
 import { db, getTransactions, updateTransaction, removeTransaction, bulkRemoveTransactions, bulkRestoreTransactions, restoreTransaction, getCsvData } from '../db/db';
-import Trash from '../assets/icons/trash-svgrepo-com.svg?react';
+import Trash from '../assets/icons/trash-01-svgrepo-com.svg?react';
 import UndoLeft from '../assets/icons/undo-left-round-svgrepo-com.svg?react'
 import UndoRight from '../assets/icons/undo-right-round-svgrepo-com.svg?react';
 import ChevronLeft from '../assets/icons/chevron-left-svgrepo-com.svg?react';
 import ChevronRight from '../assets/icons/chevron-right-svgrepo-com.svg?react';
 import DateRange from '../assets/icons/date-range-svgrepo-com.svg?react';
-import Brain from '../assets/icons/brain-solid-svgrepo-com.svg?react';
+import Brain from '../assets/icons/brain-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
-import Warning from '../assets/icons/warning-circle-svgrepo-com.svg?react';
+import Warning from '../assets/icons/warning-svgrepo-com.svg?react';
 import Edit from '../assets/icons/edit-1-svgrepo-com.svg?react';
 import { toast } from 'react-toastify';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -86,7 +86,7 @@ const createHeaders = (setUndos, setTransactions) => ([
             };
             
             return (
-                <div className='hover:bg-[#dd90908a] text-neutral-500 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 mt-1 ml-3 justify-center items-center flex cursor-pointer'>
+                <div className='hover:bg-red-300/50 text-neutral-500 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 mt-1 ml-3 justify-center items-center flex cursor-pointer'>
                     <Trash onClick={deleteRow} className='w-5 h-5' />
                 </div>
                 
@@ -227,8 +227,6 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
 const Transactions = () => {
     const { state, dispatch } = usePage();
 
-    const { user: internalUser } = useInternalAuth(); 
-
     const [ transactions, setTransactions ] = useState([]);
     const [ rowData, setRowData ] = useState([]);
     const [ undos, setUndos ] = useState([]);
@@ -251,7 +249,11 @@ const Transactions = () => {
         const retrieveTransactionData = async () => {
             const data = await getTransactions({ rangeType: 'a', sorted: 'desc' });
 
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                dispatch({ type: "SET_CORRECTIONS", payload: 0 });
+                await db.csvData.clear();
+                return;
+            };
 
             setTransactions(data);
 

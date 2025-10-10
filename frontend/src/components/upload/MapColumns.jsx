@@ -5,7 +5,7 @@ import ShowMore from '../../assets/icons/expand-more-alt-svgrepo-com.svg?react';
 import ShowLess from '../../assets/icons/expand-less-alt-svgrepo-com.svg?react';
 import { db } from '../../db/db';
 import { v4 as uuidv4 } from 'uuid';
-import Trash from '../../assets/icons/trash-svgrepo-com.svg?react';
+import Trash from '../../assets/icons/trash-01-svgrepo-com.svg?react';
 import { toast } from 'react-toastify';
 
 const MapColumns = () => {
@@ -332,7 +332,10 @@ const MapColumns = () => {
                                         }}
                                     >
                                         <span>{mapping.mappingTitle}</span>
-                                        <Trash className='w-5 h-5 cursor-pointer hover:text-neutral-400'/>
+                                        {/* <Trash className='w-5 h-5 cursor-pointer hover:text-neutral-400'/> */}
+                                        <div className='hover:bg-red-300/50 text-neutral-500 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 justify-center items-center flex cursor-pointer'>
+                                            <Trash className='w-5 h-5' />
+                                        </div>
                                     </div>
                                 )
                             })}
@@ -562,7 +565,7 @@ const MapColumns = () => {
                             <button
                                 className={saveMappingDisabled ? 
                                     "bg-dark text-white opacity-55 py-2 px-4 rounded cursor-not-allowed text-sm" : 
-                                    "bg-dark text-white py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                                    "bg-dark text-white py-2 px-4 rounded hover:bg-dark-light dark:bg-purple dark:hover:bg-dark-purple cursor-pointer text-sm"
                                 }
                                 onClick={saveMappingDisabled ? undefined : (async () => {
                                     // create popup with input element for mapping name

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import Plus from '../../assets/icons/plus.svg?react';
+import Plus from '../../assets/icons/add-svgrepo-com.svg?react';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { MONTHS } from '../../utils/constants/constants.js';
 import Tick from '../../assets/icons/tick-svgrepo-com.svg?react';
 import { db, getPayments, updatePayment, deletePayment } from '../../db/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import MarkAsRead from "../../assets/icons/approved-check-mark-svgrepo-com.svg?react";
-import Trash from "../../assets/icons/trash-svgrepo-com.svg?react";
+import MarkAsRead from "../../assets/icons/checked-files-svgrepo-com.svg?react";
+import Trash from "../../assets/icons/trash-01-svgrepo-com.svg?react";
 
 const options = ["Weekly", "Bi-Weekly", "Monthly", "Bi-Monthly",  "Quarterly", "Yearly"];
 

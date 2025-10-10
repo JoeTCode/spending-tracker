@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { getTransactions } from '../../db/db.js';
-import GroceriesIcon from "../../assets/icons/groceries.svg?react";
-import HousingAndBills from "../../assets/icons/housing-and-bills.svg?react";
-import FinanceAndFees from "../../assets/icons/finance-and-fees.svg?react";
-import Income from "../../assets/icons/income.svg?react";
-import Shopping from "../../assets/icons/shopping.svg?react";
-import EatingOut from "../../assets/icons/eating-out.svg?react";
-import Entertainment from "../../assets/icons/entertainment.svg?react";
-import HealthAndFitness from "../../assets/icons/health-and-fitness.svg?react";
-import Transfer from "../../assets/icons/transfer.svg?react";
-import OtherMisc from "../../assets/icons/other-misc.svg?react";
-import Transport from "../../assets/icons/transport.svg?react";
-import SmallArrowDown from "../../assets/icons/arrow-sm-down.svg?react";
-import SmallArrowUp from "../../assets/icons/arrow-sm-up.svg?react";
-import Hyphen from "../../assets/icons/hyphen.svg?react";
+import GroceriesIcon from "../../assets/icons/shopping-basket-basket-svgrepo-com.svg?react";
+import HousingAndBills from "../../assets/icons/budget-cost-svgrepo-com.svg?react";
+import FinanceAndFees from "../../assets/icons/finance-symbol-of-four-currencies-on-a-hand-svgrepo-com.svg?react";
+import Income from "../../assets/icons/wallet-svgrepo-com.svg?react";
+import Shopping from "../../assets/icons/shopping-bags-svgrepo-com.svg?react";
+import EatingOut from "../../assets/icons/restaurant-interface-symbol-of-fork-and-knife-couple-svgrepo-com.svg?react";
+import Entertainment from "../../assets/icons/gamepad-video-game-svgrepo-com.svg?react";
+import HealthAndFitness from "../../assets/icons/health-svgrepo-com.svg?react";
+import Transfer from "../../assets/icons/card-transfer-svgrepo-com.svg?react";
+import OtherMisc from "../../assets/icons/folder-svgrepo-com.svg?react";
+import Transport from "../../assets/icons/automobile-car-transport-svgrepo-com.svg?react";
+import SmallArrowDown from "../../assets/icons/arrow-down-360-svgrepo-com.svg?react";
+import SmallArrowUp from "../../assets/icons/arrow-up-362-svgrepo-com.svg?react";
+import Hyphen from "../../assets/icons/dash-svgrepo-com.svg?react";
 
 const CATEGORY_TO_ICON = {
     "Groceries": GroceriesIcon,

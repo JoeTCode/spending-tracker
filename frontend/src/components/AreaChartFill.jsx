@@ -1,7 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import React, { useState, useEffect } from 'react';
 import { MONTHS, DAYS } from '../utils/constants/constants.js';
-// import { getTransactions } from '../api/transactions';
 import { getTransactions } from '../db/db.js';
 
 const AreaFillChart = () => {

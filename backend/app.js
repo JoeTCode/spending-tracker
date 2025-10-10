@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import User from './models/users.js';
 import Auth0User from './models/auth0Users.js';
 import RefreshToken from './models/refreshTokens.js';
+import UserModels from './models/userModels.js'
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
@@ -19,6 +20,8 @@ const saltRounds = 10;
 const connectionString = process.env.MONGO_CONNECTION_STRING;
 const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
+const mlApiSecret = process.env.ML_API_SECRET;
+console.log(mlApiSecret);
 const accessTokenExpiryTime = 900000; // 15 minutes
 // const accessTokenExpiryTime = 1000;
 const refreshTokenExpiryTime = 2.628e+9; // 1 month
@@ -322,6 +325,38 @@ app.post('/auth0/register', checkAuth, async (req, res) => {
 	};
 });
 
+app.delete('/delete', checkAuth, async (req, res) => {
+	let uid;
+	let isAuth0User = false;
+
+	if (req.user.sub) {
+		uid = req.user.sub;
+		isAuth0User = true;
+	}
+	else if (req.user.uid) uid = req.user.uid;
+	else return res.sendStatus(401);
+
+	try {
+		if (isAuth0User) {
+			await UserModels.deleteOne({ auth0Uid: uid });
+			await Auth0User.deleteOne({ auth0Uid: uid });
+		}
+
+		else {
+			await UserModels.deleteOne({ uid: uid });
+			await User.deleteOne({ _id: uid });
+			await RefreshToken.deleteMany({ uid: uid });
+		}
+
+		return res.sendStatus(200);
+	}
+
+	catch (err) {
+		console.error(err);
+		return res.sendStatus(500);
+	};
+});
+
 app.get('/api/me', checkAuth, (req, res) => {
 	return res.json(req.user);
 });
@@ -339,15 +374,22 @@ app.post('/predict', checkAuth, async (req, res) => {
 		return res.sendStatus(401);
 	};
 
+	const predictRoute = "https://du4s79j55i.execute-api.eu-north-1.amazonaws.com/predict";
+	// const predictRoute = "http://127.0.0.1:8000/predict";
 	try {
         const response = await axios.post(
-			"http://127.0.0.1:8000/predict", 
+			predictRoute, 
             { 
 				predict_data: { 
 					descriptions: descriptions, 
 					modelType: modelType, 
 					isAuth0User: isAuth0User, 
 					uid: uid,
+				}
+			},
+			{
+				headers: {
+					"ml_api_secret": mlApiSecret
 				}
 			}
 		);
@@ -372,10 +414,12 @@ app.post('/train', checkAuth, async (req, res) => {
 		console.warn("No uid found");
 		return res.sendStatus(401);
 	};
-	
+	const trainRoute = "https://du4s79j55i.execute-api.eu-north-1.amazonaws.com/train";
+	// const trainRoute = "http://127.0.0.1:8000/train"
+
 	try {
 		await axios.post(
-			"http://127.0.0.1:8000/train",
+			trainRoute,
 			{ 
 				train_data: { 
 					descriptions: descriptions, 
@@ -383,6 +427,11 @@ app.post('/train', checkAuth, async (req, res) => {
 					modelType: modelType,
 					isAuth0User: isAuth0User,
 					uid: uid
+				}
+			},
+			{
+				headers: {
+					"ml_api_secret": mlApiSecret
 				}
 			}
 		);

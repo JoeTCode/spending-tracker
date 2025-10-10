@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import CustomProgressBar from '../ProgressBar';
 import EditableGrid from '../EditableGrid';
 import { CATEGORIES, CATEGORY_TO_EMOJI, MIN_CONF_SCORE } from '../../utils/constants/constants';
-import Warning from '../../assets/icons/warning-circle-svgrepo-com.svg?react';
-import Tick from '../../assets/icons/tick-hollow-circle-svgrepo-com.svg?react';
+import Warning from '../../assets/icons/warning-svgrepo-com.svg?react';
+import Tick from '../../assets/icons/success-tick-svgrepo-com.svg?react';
 import { bulkAddTransactions } from '../../db/db';
 import { usePage } from '../../pages/PageContext'
 
