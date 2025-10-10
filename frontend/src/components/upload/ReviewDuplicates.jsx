@@ -85,9 +85,9 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
 
         if (pageState.allowCategorisation) {
             dispatch({ type: "SET_SAVE_DATA", payload: saveData });
+            
             // remove non selected transactions from low conf tx
             dispatch({ type: "FILTER_LOW_CONFIDENCE_TRANSACTIONS", payload: nonSelectedIdSet });
-            // dispatch({ type: "SET_PREVIEW_CSV", payload: true });
             dispatch({ type: "SET_STAGE", payload: "review"});
         } else {
             await bulkAddTransactions(saveData, state.csvFilename, state.dateFormat);
@@ -145,11 +145,10 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                     <button 
                         {...getRemoveFileProps()}
                         onClick={() => {
-                            // dispatch({ type: "SET_DUPLICATE_WARNING", payload: false });
                             dispatch({ type: "SET_STAGE", payload: "upload"});
                             dispatch({ type: "SET_DUPLICATE_ROWS", payload: [] })
                         }}
-                        className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                        className="text-white bg-dark py-2 px-4 rounded hover:bg-dark-light cursor-pointer text-sm"
                     >
                         Cancel
                     </button>
@@ -159,7 +158,7 @@ const ReviewDuplicates = ({ getRemoveFileProps }) => {
                         }}
                         disabled={state.nonDuplicateRows.length === 0}
                         className={
-                                state.nonDuplicateRows.length > 0 ? "text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm" :
+                                state.nonDuplicateRows.length > 0 ? "text-white bg-dark py-2 px-4 rounded hover:bg-dark-light cursor-pointer text-sm" :
                                 "text-white bg-dark py-2 px-4 rounded text-sm cursor-not-allowed opacity-50"
                         }
                     >

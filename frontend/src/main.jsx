@@ -11,6 +11,7 @@ import { InternalAuthProvider } from './components/useInternalAuth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Close from './assets/icons/close-x-svgrepo-com.svg?react';
+import { Footer } from './components';
 
 const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -60,6 +61,7 @@ createRoot(document.getElementById('root')).render(
                                     <PageProvider>
                                         <UploadProvider>
                                             <Upload />
+                                            <Footer />
                                         </UploadProvider>
                                     </PageProvider>
                                 </ProtectedRoute>
@@ -72,6 +74,7 @@ createRoot(document.getElementById('root')).render(
                                 <ProtectedRoute>
                                     <PageProvider>
                                         <Dashboard />
+                                        <Footer />
                                     </PageProvider>
                                 </ProtectedRoute>
                             } 
@@ -82,6 +85,7 @@ createRoot(document.getElementById('root')).render(
                                 <ProtectedRoute>
                                     <PageProvider>
                                         <Transactions />
+                                        <Footer />
                                     </PageProvider>
                                 </ProtectedRoute>
                             }

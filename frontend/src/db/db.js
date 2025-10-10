@@ -361,17 +361,14 @@ export async function bulkRestoreTransactions(restoredTransactions, restoredCsvD
 
 // For Transactions page specifically
 export async function restoreTransaction(transaction, restoredCsvData) {
-    console.log(transaction, restoredCsvData);
     const csvDataDbArray = await db.csvData.toArray();
 
     const missingId = csvDataDbArray.map(data => data.id).filter(id => id !== transaction.csvId);
-    console.log(missingId);
     if (missingId && missingId.length > 0) {
         await db.csvData.add(restoredCsvData);
     };
 
     const parsedTransaction = { ...transaction, date: parseDate(transaction.date, restoredCsvData.dateFormat) };
-    console.log(parsedTransaction);
     await db.transactions.add(parsedTransaction);
 };
 

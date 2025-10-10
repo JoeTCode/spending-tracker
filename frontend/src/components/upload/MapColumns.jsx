@@ -91,14 +91,12 @@ const MapColumns = () => {
             
             else if (amountColNames.col1 && !amountColNames.col2 && isDescriptorValid) { // 1 amount col with mappings
                 if (amountDescriptorMappings.income.has(type)) {
-                    // data.push({ date: date, amount: firstAmountColValue, description: desc })
                     obj.date = date;
                     obj.amount = firstAmountColValue;
                     obj.description = desc;
                     obj.account = account;
                 }
                 else if (amountDescriptorMappings.expense.has(type)) {
-                    // data.push({ date: date, amount: firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue, description: desc })
                     obj.date = date;
                     obj.amount = firstAmountColValue < 0 ? firstAmountColValue : -firstAmountColValue;
                     obj.description = desc;
@@ -108,14 +106,12 @@ const MapColumns = () => {
             
             else if (amountColNames.col1 && amountColNames.col2) { // 2 amount columns (e.g. credit/debit for income and expense)
                 if (tx[amountColNames.col1]) {
-                    // data.push({ date: date, amount: firstAmountColValue, description: desc });
                     obj.date = date;
                     obj.amount = firstAmountColValue;
                     obj.description = desc;
                     obj.account = account;
                     
                 } else {
-                    // data.push({ date: date, amount: secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue, description: desc });
                     obj.date = date;
                     obj.amount = secondAmountColValue < 0 ? secondAmountColValue : -secondAmountColValue;
                     obj.description = desc;
@@ -148,7 +144,6 @@ const MapColumns = () => {
                     return false;
                 };
                 if (number < 0) return false;
-                // if (number < 0) return true; // temp
             };
             return true;
         };
@@ -165,7 +160,6 @@ const MapColumns = () => {
 
     const FindAmountDescriptor = ({ parsedCSV, parsedColumnNames, setAmountDescriptorMappings, setRenderFindAmountDescriptor, setDescriptorColName }) => {
         const [ selectedDescriptorCol, setSelectedDescriptorCol ] = useState('');
-        // const [ uniqueDescriptorValues, setUniqueDescriptorValues ] = useState(new Set([]));
         const uniqueDescriptorValues = selectedDescriptorCol
         ? new Set(parsedCSV.map(tx => tx[selectedDescriptorCol]))
         : new Set();
@@ -250,7 +244,6 @@ const MapColumns = () => {
                     onClick={uniqueDescriptorValues.size > 0 ? 
                         () => { 
                             setAmountDescriptorMappings(values);
-                            console.log(values);
                             setDescriptorColName(selectedDescriptorCol);
                             setRenderFindAmountDescriptor(false);
                         } 
@@ -332,7 +325,6 @@ const MapColumns = () => {
                                         }}
                                     >
                                         <span>{mapping.mappingTitle}</span>
-                                        {/* <Trash className='w-5 h-5 cursor-pointer hover:text-neutral-400'/> */}
                                         <div className='hover:bg-red-300/50 text-neutral-500 dark:text-neutral-400 hover:text-red-700 rounded-full w-7 h-7 justify-center items-center flex cursor-pointer'>
                                             <Trash className='w-5 h-5' />
                                         </div>
@@ -568,22 +560,6 @@ const MapColumns = () => {
                                     "bg-dark text-white py-2 px-4 rounded hover:bg-dark-light dark:bg-purple dark:hover:bg-dark-purple cursor-pointer text-sm"
                                 }
                                 onClick={saveMappingDisabled ? undefined : (async () => {
-                                    // create popup with input element for mapping name
-                                    // optionally provide image icon input?
-                                    // save mapping name and columns to localstorage
-                                    // retrieve all saved mappings from localstorage on opening saved mappings div
-                                    console.log('mappingTitle', mappingTitle);
-                                    console.log(
-                                        `Columns:
-                                            date: ${dateColName},
-                                            account: ${accountColName},
-                                            amount: ${amountColNames},
-                                            amount descriptor: ${descriptorColName}
-                                            amount mappings: ${amountDescriptorMappings}
-                                            description: ${descriptionColName},
-                                            category: ${categoryColName}
-                                        `
-                                    );
 
                                     await db.savedMappings.add({ 
                                         _id: uuidv4(), 

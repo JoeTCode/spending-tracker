@@ -37,7 +37,6 @@ const PreviewCSV = () => {
                 cellEditor: "agSelectCellEditor",
                 cellEditorParams: { values: CATEGORIES },
                 singleClickEdit: true,
-                // valueFormatter: params => CATEGORY_TO_EMOJI[params.value] || params.value,
                 headerClass: "font-bold",
                 width: 170,
                 cellRenderer: params => {
@@ -126,7 +125,6 @@ const PreviewCSV = () => {
         };
 
         await bulkAddTransactions(updatedTransactions, state.csvFilename, state.dateFormat);
-        console.log('Data saved successfully');
 
         navigate("/dashboard");
     };
@@ -196,18 +194,14 @@ const PreviewCSV = () => {
             <div className="mt-4 flex justify-end gap-2">
                 <button 
                     onClick={() => {
-                        // setFileParsed(false);
-                        // dispatch({ type: "SET_FILE_PARSED", payload: false });
-                        // setPreviewCSV(false);
-                        // dispatch({ type: "SET_PREVIEW_CSV", payload: false });
                         dispatch({ type: "SET_TRANSACTIONS", payload: [] });
                         dispatch({ type: "SET_STAGE", payload: "upload"});
                     }}
-                    className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm"
+                    className="text-white bg-dark py-2 px-4 rounded hover:bg-dark-light cursor-pointer text-sm"
                 >
                     Cancel
                 </button>
-                <button onClick={sendData} className="text-white bg-dark py-2 px-4 rounded hover:bg-black cursor-pointer text-sm">
+                <button onClick={sendData} className="text-white bg-dark py-2 px-4 rounded hover:bg-dark-light cursor-pointer text-sm">
                     Upload transactions
                 </button>
             </div>

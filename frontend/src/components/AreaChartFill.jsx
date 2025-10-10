@@ -69,7 +69,6 @@ const AreaFillChart = () => {
         let profit = 0;
         
         for (let tx of transactions) {
-            console.log(tx);
             if (tx.amount < 0) {
                 expenses += tx.amount;
             }  
@@ -78,7 +77,6 @@ const AreaFillChart = () => {
 
         for (let tx of transactions) {
             if (tx.amount > 0) {
-                console.log(tx);
                 profit += tx.amount;
             }  
         }

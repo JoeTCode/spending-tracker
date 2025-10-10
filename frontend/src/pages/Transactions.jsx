@@ -142,9 +142,9 @@ const Prev = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                 setUndos([]);
                 setRedos([]);
                 setSelectedCsvName(SELECT_CSV_DEFAULT);
-                console.log('PREV', prevMonth);
+
                 const prevTransactions = await getTransactions({ rangeType: 'vm', selectedMonth: prevMonth.getMonth(), selectedYear: prevMonth.getFullYear() });
-                console.log('prev', prevTransactions);
+
                 setRowData(prevTransactions);
                 setSelectedTimeframe(prev => {
                     const dateObj = new Date(prev);
@@ -182,7 +182,7 @@ const Next = ({ noTransactions, setUndos, setRedos, selectedTimeframe, getTransa
                     setUndos([]);
                     setRedos([]);
                     setSelectedCsvName(SELECT_CSV_DEFAULT);
-                    console.log('NEXT', nextMonth);
+
                     const nextTransactions = await getTransactions({ rangeType:'vm', selectedMonth: nextMonth.getMonth(), selectedYear: nextMonth.getFullYear() });
                     setRowData(nextTransactions);
                     setSelectedTimeframe(prev => {
@@ -211,7 +211,6 @@ const All = ({ setUndos, setRedos, getTransactions, setRowData, isFilteredByAll,
                 setSelectedCsvName(SELECT_CSV_DEFAULT);
                 setSelectedTimeframe(new Date(latestTransaction));
                 const allTransactions = await getTransactions({ rangeType: 'a' });
-                console.log(latestTransaction);
                 setRowData(allTransactions);
                 setIsFilteredByAll(true);
             })
@@ -277,7 +276,6 @@ const Transactions = () => {
 
         const queryCsvDb = async () => {
             const csvData = await db.csvData.toArray();
-            console.log(csvData);
             setCsvNames(csvData.map(data => data.name));
 
             const obj = {};
@@ -448,7 +446,6 @@ const Transactions = () => {
                         withCredentials: true
                     },
                 );
-                // await trainModel(descriptions, targets);
 
                 setTransactions(prev =>
                     prev.map(tx => 
@@ -485,7 +482,7 @@ const Transactions = () => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
-                                        <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                                        <Brain className="h-8 w-8 text-purple-600 dark:text-purple-500" />
                                     </div>
                                     <div>
                                         <h4 className="font-medium text-purple-900 dark:text-purple-100">AI Model Training</h4>

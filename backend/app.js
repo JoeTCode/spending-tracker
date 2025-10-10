@@ -21,7 +21,7 @@ const connectionString = process.env.MONGO_CONNECTION_STRING;
 const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
 const mlApiSecret = process.env.ML_API_SECRET;
-console.log(mlApiSecret);
+
 const accessTokenExpiryTime = 900000; // 15 minutes
 // const accessTokenExpiryTime = 1000;
 const refreshTokenExpiryTime = 2.628e+9; // 1 month
@@ -104,7 +104,6 @@ const checkAuth = async (req, res, next) => {
 			if (err) {
 				return res.sendStatus(401);
 			} else {
-				console.log("Auth0 login request successful")
 				req.user = { ...req.auth.payload }; // req.auth comes from Auth0 middleware
 				return next()
 			};
@@ -210,7 +209,6 @@ app.post('/refresh', async (req, res) => {
 		// Attach to client as cookie
 		res.cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions);
 
-		console.log("Access token successfully refreshed");
 		return res.status(200).json({ uid: user._id, username: user.username });
 
 	} catch (err) {

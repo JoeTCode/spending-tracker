@@ -275,7 +275,6 @@ const CreatePayment = ({ setShowForm }) => {
 const UpcomingPayments = ({ setPaymentCount, showAllPayments, setShowAllPayments }) => {
     const [ upcomingPayments, setUpcomingPayments ] = useState([]);
     const [ showForm, setShowForm ] = useState(false);
-    // const [ allPayments, setAllPayments ] = useState([]);
 
     useEffect(() => {
         const getUpcomingPayments = async () => {

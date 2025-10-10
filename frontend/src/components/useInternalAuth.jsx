@@ -65,7 +65,6 @@ export const InternalAuthProvider = ({ children }) => {
                 );
                 setUser(res.data);
             } catch (err) {
-                console.log('refresh error')
                 setUser(null);
             };
 

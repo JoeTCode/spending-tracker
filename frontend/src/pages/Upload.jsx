@@ -3,31 +3,15 @@ import { ReviewDuplicates, PreviewCSV, MapColumns, UploadProgress } from '../com
 import { useCSVReader, formatFileSize } from 'react-papaparse';
 import { useState, useEffect } from 'react';
 import { MIN_CONF_SCORE } from '../utils/constants/constants';
-import { db, validateTransaction, makeTransactionId } from '../db/db';
+import { db, validateTransaction } from '../db/db';
 import UploadIcon from '../assets/icons/upload-svgrepo-com.svg?react';
 import { useUpload } from '../components/upload/UploadContext';
 import { toast } from 'react-toastify';
-
 import Close from '../assets/icons/close-x-svgrepo-com.svg?react';
 import { usePage } from './PageContext';
 import { useAuth0 } from '@auth0/auth0-react';
 import api from '../axios/api';
 import Brain from '../assets/icons/brain-svgrepo-com.svg?react';
-import { useInternalAuth } from '../components/useInternalAuth';
-
-function formatDescription(desc) {
-    let formattedDesc = String(desc).split('\t')[0].trim();
-    formattedDesc = formattedDesc.replace(/\s+/g, ' ').trim();
-    return formattedDesc;
-};
-
-function formatDate(date) {
-    // input format (String) DD/MM/YYYY
-    // convert to ISO YYYY-MM-DD
-    const [ day, month, year ] = date.split("/");
-    const dateString = `${year}-${month}-${day}`;
-    return new Date(dateString);
-}
 
 const Switch = ()  => {
     const { state: pageState, dispatch: pageDispatch } = usePage();
@@ -73,40 +57,6 @@ const removeErrorRows = (parsedCSV) => {
     return parsedCSV.data.filter((_, idx) => !invalidRows.has(idx));
 };
 
-const formatBarclaysCSV = (parsedCSV, allowCategorisation) => {
-    console.log(parsedCSV);
-    let invalidRows = new Set([]);
-    if (parsedCSV.errors.length > 0) {
-        for (let tx of parsedCSV.errors[0]) {
-            invalidRows.add(tx.row);
-        };
-    };
-    const validData = parsedCSV.data.filter((_, idx) => !invalidRows.has(idx));
-    console.log(invalidRows, validData);
-    return validData.map(tx => {
-        const amount = parseFloat(tx['Amount']) ? parseFloat(tx['Amount']) : 0;
-        if (allowCategorisation) {
-            return {
-                'account': tx['Account'],
-                'amount': amount,
-                'date': formatDate(tx['Date']),
-                'description': formatDescription(tx['Memo']),
-                'type': tx['Subcategory']                        
-            };
-        } else {
-            return {
-                'account': tx['Account'],
-                'amount': amount,
-                'date': formatDate(tx['Date']),
-                'category': tx['Category'],
-                'description': formatDescription(tx['Memo']),
-                'type': tx['Subcategory']                        
-            };
-        };
-    })
-    .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
-};
-
 const logModelAccuracy = (targetCategories, predictedCategories) => {
     let numMatches = 0;
     const targets = Object.values(targetCategories);
@@ -139,12 +89,12 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
 
         // get all CSV names already in the database
         const existingNames = (await db.csvData.toArray()).map(tx => tx.name);
-        console.log(existingNames);
+
         while (existingNames.includes(uniqueName)) {
             uniqueName = `${baseName} (${counter})`;
             counter++;
         };
-        console.log('filename', uniqueName);
+
         return uniqueName;
     };
     
@@ -179,7 +129,7 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full">
-                            <Brain className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                            <Brain className="h-8 w-8 text-purple-600 dark:text-purple-500" />
                         </div>
                         <div>
                             <h4 className='font-medium text-purple-900 dark:text-purple-100'>AI Model Selection</h4>
@@ -192,7 +142,7 @@ const UploadCSV = ({ getRootProps, acceptedFile, ProgressBar, getRemoveFileProps
                             onChange={(e) => {
                                 pageDispatch({ type: "SET_MODEL_TYPE", payload: e.target.value });
                             }}
-                            className='bg-purple-100/30 dark:bg-purple-600/10 rounded-lg p-2 text-purple-500 dark:text-purple-100'
+                            className='bg-purple-100/30 dark:bg-purple-500/7 hover:text-purple-600 rounded-lg p-2 text-purple-500 dark:text-purple-100 hover:dark:text-purple-200 cursor-pointer'
                         >
                             <option value="globalModel">Global</option>
                             <option value="clientModel">Personalised</option>
@@ -359,7 +309,6 @@ const Upload = () => {
             try {
                 const descriptions = validatedTransactions.map(tx => tx.description);
 
-                // const res = await getPredictions(descriptions);
                 const token = isAuthenticated ? await getAccessTokenSilently() : '';
 
                 const res = await api.post(
@@ -374,7 +323,6 @@ const Upload = () => {
                         withCredentials: true
                     },
                 );
-                console.log(res);
 
                 if (!res || !res.data || res.data.length === 0) { // api call failed
                     dispatch({ type: "SET_TRANSACTIONS", payload: [] });
@@ -456,10 +404,7 @@ const Upload = () => {
                         onUploadAccepted={(results) => {
                             setIsLoading(false);
                             const cleaned = removeErrorRows(results)
-                            // .filter(tx => tx['description'] && tx['description'] !== "undefined" && !isNaN(tx['amount']));
                             setParsedCSV(cleaned);
-                            // dispatch({ type: "SET_PARSED_CSV", payload: cleaned });
-                            // dispatch({ type: "SET_STAGE", payload: "mapColumns"})
                         }}
                         config={{ header: true, skipEmptyLines: true }}
                     >

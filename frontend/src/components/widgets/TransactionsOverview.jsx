@@ -65,7 +65,6 @@ const TransactionsOverviewCard = () => {
                     const last3Months = new Date(today);
                     last3Months.setMonth(last3Months.getMonth() - 3);
                     transactions = await getTransactions({ rangeType: 'custom', customStart: last3Months, customEnd: today });
-                    console.log(transactions);
                     break;
                 case "Past Year":
                     transactions = await getTransactions({ rangeType: 'y' });
