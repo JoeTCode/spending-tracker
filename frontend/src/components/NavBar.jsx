@@ -35,7 +35,7 @@ const Sidebar = () => {
     return (
         <div>  
             <div
-                className="fixed top-0 w-full border-b-1 border-neutral-300/80 backdrop-blur-lg bg-white/70 dark:border-none dark:backdrop-blur-none dark:bg-dark dark:text-white p-2 sm:pl-6 sm:pl-2 
+                className="fixed top-0 w-full border-b-1 border-neutral-300/80 backdrop-blur-lg bg-white/70 dark:border-none dark:backdrop-blur-none dark:bg-dark dark:text-white p-2 sm:pl-6 pl-2 
                 transition-transform duration-300 z-40"
             >
                 <div className='flex items-center justify-center sm:justify-between'>
