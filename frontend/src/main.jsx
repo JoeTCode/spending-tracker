@@ -22,7 +22,7 @@ createRoot(document.getElementById('root')).render(
                 clientId="Hp1O9MWjmz4GJ5sNCR26ISBdxzujrhSb"
                 authorizationParams={{
                     redirect_uri: window.location.origin,
-                    audience: "http://localhost:5000",
+                    audience: import.meta.env.VITE_API_URL,
                     scope: "profile"
                 }}
             >

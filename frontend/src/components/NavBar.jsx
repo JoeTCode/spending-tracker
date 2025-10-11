@@ -8,7 +8,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import api from '../axios/api';
 import { db } from '../db/db';
 import Profile from '../assets/icons/profile-round-1342-svgrepo-com.svg?react';
-import Logo from '../../public/track-your-transactions-logo.svg?react';
+import Logo from '../assets/icons/track-your-transactions-logo.svg?react';
 
 const Sidebar = () => {
     const [ open, setOpen ] = useState(false);

@@ -12,7 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import axios from 'axios';
+import path from "path";
 
+const __dirname = path.resolve();
 dotenv.config();
 const app = express();
 const port = 5000;
@@ -21,26 +23,34 @@ const connectionString = process.env.MONGO_CONNECTION_STRING;
 const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
 const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
 const mlApiSecret = process.env.ML_API_SECRET;
+const isProduction = process.env.NODE_ENV === "production";
 
 const accessTokenExpiryTime = 900000; // 15 minutes
-// const accessTokenExpiryTime = 1000;
 const refreshTokenExpiryTime = 2.628e+9; // 1 month
 const accessTokenCookieOptions = {
 	maxAge: accessTokenExpiryTime,
 	httpOnly: true,
 	path: "/",
+	sameSite: 'Lax',
+	secure: false
 };
 const refreshTokenCookieOptions = {
 	maxAge: refreshTokenExpiryTime,
 	httpOnly: true,
 	path: "/",
+	sameSite: 'Lax',
+	secure: false
 };
 
 app.use(express.json());
-app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials: true
-}));
+
+if (!isProduction) {
+	app.use(cors({
+		origin: 'http://localhost:5173',
+		credentials: true
+	}));
+};
+
 app.use(cookieParser());
 
 mongoose.connect(connectionString)
@@ -53,32 +63,18 @@ mongoose.connect(connectionString)
 
 // Middleware
 const checkAuth0Jwt = auth({
-	audience: 'http://localhost:5000',
+	audience: process.env.API_URL,
 	issuerBaseURL: 'https://dev-jco6fy6pebxlsglc.us.auth0.com/',
 	tokenSigningAlg: 'RS256'
 });
 
-// Middleware
-// Denies access to requests with invalid/expired access tokens
-// If access token is expired, a token expired error is sent to the client, which will then call the /refresh route
-const checkAccessToken = async (req, res, next) => {
-	const { accessToken } = req.cookies;
+if (isProduction) {
+	// Serve React frontend
+	app.use(express.static(path.join(__dirname, "../frontend/build")));
 
-	if (!accessToken) {
-		return res.status(401).json({ error: "Access token invalid" }); // Unauthorised
-	};
-
-	if (accessToken) {
-		try {
-			const payload = jwt.verify(accessToken, accessTokenSecretKey);
-			req.user = payload;
-			next();
-
-		} catch (err) {
-			if (err.name === 'TokenExpiredError') return res.status(401).json({ error: err.name }); // Unauthorised
-			else return res.status(401).json({ error: err.name });
-		};
-	}
+	app.get("*", (req, res) => {
+		res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
+	});
 };
 
 // Checks if internal access token is valid (if accesstoken expired then cookie is auto deleted), if invalid, checks auth0 token is valid, else reject

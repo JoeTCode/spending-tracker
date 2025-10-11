@@ -17,7 +17,7 @@ export const InternalAuthProvider = ({ children }) => {
 
                 try {
                     await axios.post(
-                        "http://localhost:5000/auth0/register",
+                        import.meta.env.VITE_API_URL + "/auth0/register",
                         {},
                         {
                             headers: {
@@ -50,7 +50,7 @@ export const InternalAuthProvider = ({ children }) => {
         refreshingRef.current = true;
 
         try {
-            const res = await axios.get("http://localhost:5000/api/me", {
+            const res = await axios.get(import.meta.env.VITE_API_URL + "/api/me", {
                 withCredentials: true,
             });
 
@@ -59,7 +59,7 @@ export const InternalAuthProvider = ({ children }) => {
         } catch {
             try {
                 const res = await axios.post(
-                    "http://localhost:5000/refresh",
+                    import.meta.env.VITE_API_URL + "/refresh",
                     {},
                     { withCredentials: true },
                 );
@@ -77,7 +77,7 @@ export const InternalAuthProvider = ({ children }) => {
     const login = async (username, password) => {
         try {
             await axios.post(
-                "http://localhost:5000/login",
+                import.meta.env.VITE_API_URL + "/login",
                 { username, password },
                 { withCredentials: true }
             );
@@ -96,7 +96,7 @@ export const InternalAuthProvider = ({ children }) => {
         };
         
         // revokes tokens stored in cookies refresh token in db
-        await axios.post("http://localhost:5000/logout", {}, { withCredentials: true });
+        await axios.post(import.meta.env.VITE_API_URL + "/logout", {}, { withCredentials: true });
         // clear user immediately
         setUser(null); 
     };
