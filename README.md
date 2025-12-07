@@ -13,6 +13,7 @@ Simply upload a CSV file exported from your bank, and the app automatically cate
 - React + TailwindCSS.
 - CSV parsing with with react-papaparse
 - Data visualisation with Recharts and AG-Grid.
+- Data persistence implemented with DexieDB.
   
 ## Backend (Javascript)
 - Node.js + Express.
