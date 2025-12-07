@@ -10,20 +10,20 @@ Simply upload a CSV file exported from your bank, and the app automatically cate
 - Backend (and fronted) hosted with AWS EC2 and Nginx.
   
 ## Frontend (Javascript)
-- React + TailwindCSS.
-- CSV parsing with with react-papaparse
-- Data visualisation with Recharts and AG-Grid.
-- Data persistence implemented with DexieDB.
+- **React + TailwindCSS**.
+- CSV parsing with with **react-papaparse**
+- Data visualisation with **Recharts** and **AG-Grid**.
+- Data persistence implemented with **DexieDB**.
   
 ## Backend (Javascript)
-- Node.js + Express.
-- MongoDB for login information and metadata storage.
+- **Node.js + Express**.
+- **MongoDB** for login information and metadata storage.
   
 ## AI Endpoint (Python)
-- Classification model(s) trained, evaluated, and implemented using Tensorflow + Pandas + NumPy.
-- Text embedding handled using OpenAI's text-embedding-3-small.
-- Endpoint containerised using Docker.
-- Endpoint hosted using AWS Lambda + AWS API Gateway.
+- Classification model(s) trained, evaluated, and implemented using **Tensorflow + Pandas + NumPy**.
+- Text embedding handled using OpenAI's **text-embedding-3-small**.
+- Endpoint containerised using **Docker**.
+- Endpoint hosted using **AWS Lambda + AWS API Gateway**.
   
 # 💻 Model/Dataset statistics
 
@@ -56,7 +56,8 @@ model.compile(
 ```
 
 ## 📊 Datasets - Category Distribution
-**Test dataset - Unique values category distribution:**
+
+### Test Dataset - Category Distribution (Unique values):
 ```
 Number of uniques values in each category:
 Category
@@ -71,7 +72,8 @@ Transport           56
 Groceries           69
 Eating Out          93
 ```
-**Train dataset - Unique values category distribution:**
+
+### Train Dataset - Category Distribution (Unique values):
 ```
 Number of uniques values in each category:
 Category
@@ -105,7 +107,7 @@ Every transaction is assigned to one of 10 spending categories:
   - **Global model:** The global model is a highly generalised model, recieving weight updates from all users. This (ideally) makes it a jack-of-all-trades but master of none model.
 
 ### 💡 Continuous Learning
-  - This allows users to finetune the selected model based on recategorised transactions. Finetuning the global model has reduced influence compared to finetuning the personalised model.
+  - This allows users to finetune the selected model based on re-categorised transactions. Finetuning the global model has reduced influence compared to finetuning the personalised model.
     
 ### 🔍 Other notable features
 - Keyword-based merchant classification using REGEX.
@@ -113,11 +115,11 @@ Every transaction is assigned to one of 10 spending categories:
 - Clean normalisation of merchant names (“TESCO 1234” → “Tesco”).
 
 ## 📝 Editable Transactions Table
+A highly customisable table that stores uploaded transaction data.
 
 <img width="1525" height="1226" alt="transactions-page" src="https://github.com/user-attachments/assets/5d0a9837-daf6-44aa-9648-0ccb38ede919" />
 
-A highly customisable table that stores uploaded transaction data.
-Features include:
+### Table Features
 - **Fully custom undo/redo system** - supports row editing, row deletion, row addition.
 - **Model finetuning on user re-categorised rows.**
 - **Filtering by uploaded CSV.**
@@ -130,12 +132,12 @@ Features include:
   
 ## 📁 CSV Upload & Parsing
 
-<img width="2557" height="1141" alt="upload-page" src="https://github.com/user-attachments/assets/06e3c536-dd7b-411a-84ce-af251f3e12bb" />
-
 Implements a robust, multi-stage, upload process, allowing the user to map bank CSV columns to values expected by the system. Allows the saving of mappings to streamline future uploads. 
 Implements graceful error-handling and warns the user if it is suspected that a column has been incorrectly mapped.
 
-Upload stages:
+<img width="2557" height="1141" alt="upload-page" src="https://github.com/user-attachments/assets/06e3c536-dd7b-411a-84ce-af251f3e12bb" />
+
+### Upload stages
 - **Upload CSV:** The bank CSV is parsed using react-papaparse.
 - **Column mapping:** Provides the user an interface to map their bank's CSV to the systems expected columns.
   - Transaction Date => Supporting EU or US format.
