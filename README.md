@@ -3,7 +3,9 @@
 A web-based spending tracker that helps users understand, categorise, and visualise their bank transaction history.
 Simply upload a CSV file exported from your bank, and the app automatically categorises your transactions and generates meaningful insights.
 
-<img width="1525" height="1213" alt="dashboard-page" src="https://github.com/user-attachments/assets/f2934e24-a78c-42c9-9774-658f9f97424b" />
+<img width="1332" height="1178" alt="dashboard-page-dark" src="https://github.com/user-attachments/assets/8ab00a41-38b5-4861-8362-f0487881e2b3" />
+<img width="1104" height="1184" alt="dashboard-page-light" src="https://github.com/user-attachments/assets/b00979a4-73f9-49ed-b337-1a35f9ef255a" />
+
 
 # 🛠 Tech Stack
 
